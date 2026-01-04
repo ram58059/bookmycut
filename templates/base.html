@@ -78,11 +78,20 @@
                                 class="text-gold font-light">SALON</span></span>
                     </a>
                 </div>
-                <!-- Mobile menu button -->
-                <div class="flex items-center md:hidden">
-                    <button type="button" class="text-brown hover:text-gold">
-                        <i class="fas fa-bars text-2xl"></i>
-                    </button>
+
+                <!-- Desktop CTA Button & Mobile Menu -->
+                <div class="flex items-center space-x-6">
+                    <a href="{% url 'gender_selection' %}"
+                        class="hidden md:inline-flex items-center bg-brown hover:bg-gold text-white font-medium px-6 py-2.5 rounded-full shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg text-sm uppercase tracking-wider">
+                        <span>Book Now</span>
+                    </a>
+
+                    <!-- Mobile menu button -->
+                    <div class="flex items-center md:hidden">
+                        <button type="button" class="text-brown hover:text-gold transition-colors p-2">
+                            <i class="fas fa-bars text-2xl"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

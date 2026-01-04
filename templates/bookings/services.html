@@ -1,6 +1,49 @@
 {% extends 'base.html' %}
-
 {% block content %}
+<style>
+    .s-title {
+        @apply font-bold text-lg transition-colors;
+        color: var(--primary-brown);
+    }
+
+    .s-title:hover {
+        color: var(--primary-gold);
+    }
+
+    .s-meta {
+        @apply flex items-center text-sm text-gray-500 mt-2 space-x-3;
+    }
+
+    .s-dur {
+        @apply flex items-center;
+    }
+
+    .s-icon {
+        @apply far fa-clock mr-1.5;
+        color: var(--primary-gold);
+    }
+
+    .s-price {
+        @apply font-bold text-lg;
+        color: var(--primary-brown);
+    }
+
+    /* Checkbox visual feedback */
+    input:checked~.check-indicator {
+        color: var(--primary-gold);
+    }
+
+    input:checked~.check-indicator i {
+        font-weight: 900;
+        transform: scale(1.1);
+    }
+
+    input:checked~.card-highlight {
+        border-color: var(--primary-gold);
+        background-color: rgba(212, 175, 55, 0.05);
+    }
+</style>
+
 <div class="max-w-7xl mx-auto px-4 py-8">
     <div class="text-center mb-12">
         <h1 class="text-4xl font-bold text-brown mb-4">Our <span class="text-gold">Services</span></h1>
@@ -23,7 +66,6 @@
 
     <form method="post" action="{% url 'service_list' %}">
         {% csrf_token %}
-
         <div class="space-y-12">
             {% for category, services in grouped_services.items %}
             <div class="service-category">
@@ -34,19 +76,13 @@
                         class="glass-card relative rounded-xl p-6 cursor-pointer transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 select-none group">
                         <input type="checkbox" name="services" value="{{ service.id }}" class="peer sr-only"
                             onchange="toggleCard(this)">
-
-                        <!-- Check/Circle Indicator -->
                         <div
-                            class="absolute top-4 right-4 text-gray-300 transition-colors duration-300 peer-checked:text-gold z-10">
-                            <i
-                                class="far fa-check-circle text-2xl peer-checked:fas peer-checked:scale-110 transform transition-transform"></i>
+                            class="check-indicator absolute top-4 right-4 text-gray-300 transition-colors duration-300 z-10">
+                            <i class="far fa-check-circle text-2xl transform transition-transform"></i>
                         </div>
-
-                        <!-- Card Border & Background Highlight using peer-checked -->
                         <div
-                            class="absolute inset-0 border-2 border-transparent peer-checked:border-gold peer-checked:bg-gold/5 rounded-xl transition-all duration-300 pointer-events-none">
+                            class="card-highlight absolute inset-0 border-2 border-transparent rounded-xl transition-all duration-300 pointer-events-none">
                         </div>
-
                         <div class="flex items-start space-x-4 relative z-10">
                             {% if service.image %}
                             <img src="{{ service.image.url }}" alt="{{ service.name }}"
@@ -57,14 +93,11 @@
                                 <i class="fas fa-spa text-xl"></i>
                             </div>
                             {% endif %}
-
                             <div class="flex-grow">
-                                <h3 class="font-bold text-lg text-brown group-hover:text-gold transition-colors">{{
-                                    service.name }}</h3>
-                                <div class="flex items-center text-sm text-gray-500 mt-2 space-x-3">
-                                    <span class="flex items-center"><i class="far fa-clock mr-1.5 text-gold"></i> {{
-                                        service.duration_minutes }}m</span>
-                                    <span class="font-bold text-lg text-brown">₹{{ service.price }}</span>
+                                <h3 class="s-title">{{ service.name }}</h3>
+                                <div class="s-meta">
+                                    <span class="s-dur"><i class="s-icon"></i>{{ service.duration_minutes }} min</span>
+                                    <span class="s-price">₹{{ service.price }}</span>
                                 </div>
                                 {% if service.description %}
                                 <p class="text-sm text-gray-400 mt-2 leading-relaxed">{{
@@ -78,44 +111,26 @@
             </div>
             {% endfor %}
         </div>
-
         <div
             class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-yellow-100 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50">
             <div class="max-w-7xl mx-auto flex justify-between items-center px-4">
-                <div class="text-gray-600 font-medium">
-                    <span id="selectedCount" class="text-gold font-bold text-xl">0</span> services selected
-                </div>
+                <div class="text-gray-600 font-medium"><span id="selectedCount"
+                        class="text-gold font-bold text-xl">0</span> services selected</div>
                 <button type="submit"
                     class="bg-brown hover:bg-gold text-white px-8 py-3 rounded-full font-bold shadow-lg transform transition hover:-translate-y-1 hover:shadow-xl flex items-center">
-                    Continue to Date & Time <i class="fas fa-arrow-right ml-2"></i>
+                    Continue <i class="fas fa-arrow-right ml-2"></i>
                 </button>
             </div>
         </div>
-        <div class="h-28"></div> <!-- Spacer for fixed footer -->
+        <div class="h-28"></div>
     </form>
     {% endif %}
-
     <script>
-        // Counter script and manual class toggle for robustness
         const checkboxes = document.querySelectorAll('input[type="checkbox"]');
         const countSpan = document.getElementById('selectedCount');
-
-        function updateCount() {
-            const count = document.querySelectorAll('input[type="checkbox"]:checked').length;
-            countSpan.textContent = count;
-        }
-
-        function toggleCard(checkbox) {
-            updateCount();
-            // Additional check if we want to add specific classes via JS, 
-            // but Tailwind 'peer-checked' logic above should handle visual state.
-        }
-
-        checkboxes.forEach(cb => {
-            cb.addEventListener('change', () => toggleCard(cb));
-        });
-
-        // Initial count
+        function updateCount() { countSpan.textContent = document.querySelectorAll('input[type="checkbox"]:checked').length; }
+        function toggleCard(checkbox) { updateCount(); }
+        checkboxes.forEach(cb => { cb.addEventListener('change', () => toggleCard(cb)); });
         updateCount();
     </script>
 </div>

@@ -1,11 +1,16 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="hero">
-    <div class="container hero-container">
-        <h1 class="hero-title">Experience the Art of Grooming</h1>
-        <p class="hero-subtitle">Premium haircuts and styling for the modern gentleman.</p>
-        <a href="{% url 'service_list' %}" class="btn btn-solid">Book Appointment</a>
+<section class="hero py-32 text-center bg-gradient-to-b from-white to-soft-cream">
+    <div class="container mx-auto px-4">
+        <h1 class="text-5xl md:text-6xl font-bold text-brown mb-6 font-serif">Experience the Art of <span
+                class="text-gold">Grooming</span></h1>
+        <p class="text-xl text-gray-600 mb-10 max-w-2xl mx-auto font-light">Premium haircuts and styling for the modern
+            gentleman. Where tradition meets contemporary elegance.</p>
+        <a href="{% url 'gender_selection' %}"
+            class="inline-block bg-brown hover:bg-gold text-white font-bold py-4 px-10 rounded-full shadow-lg transform transition-all duration-300 hover:-translate-y-1 hover:shadow-xl text-lg tracking-wide uppercase">
+            Book Appointment <i class="fas fa-arrow-right ml-2 text-sm"></i>
+        </a>
     </div>
 </section>
 
@@ -34,27 +39,6 @@
 </section>
 
 <style>
-    .hero {
-        padding: 8rem 0 6rem;
-        text-align: center;
-    }
-
-    .hero-title {
-        font-family: var(--font-serif);
-        font-size: 3.5rem;
-        color: var(--color-text);
-        margin-bottom: 1.5rem;
-    }
-
-    .hero-subtitle {
-        font-size: 1.2rem;
-        color: var(--color-text-muted);
-        margin-bottom: 2.5rem;
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
-    }
-
     .services {
         padding: 6rem 0;
     }
