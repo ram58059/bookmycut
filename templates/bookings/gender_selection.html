@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-12">
+    <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-brown mb-4">Select <span class="text-gold">Gender</span></h1>
+        <p class="text-gray-600">Please select who this appointment is for</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+        <!-- Boy Card -->
+        <div onclick="selectGender('Boy')"
+            class="glass-card rounded-2xl p-8 cursor-pointer hover:shadow-xl transition transform hover:-translate-y-2 group">
+            <div class="text-center">
+                <div
+                    class="w-32 h-32 mx-auto bg-brown rounded-full flex items-center justify-center mb-6 group-hover:bg-gold transition">
+                    <i class="fas fa-male text-6xl text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-brown mb-2">Gentleman</h3>
+                <p class="text-gray-500">Premium grooming services</p>
+                <div class="mt-6">
+                    <span
+                        class="inline-block px-6 py-2 border border-brown text-brown rounded-full group-hover:bg-brown group-hover:text-white transition">Select</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Girl Card -->
+        <div onclick="selectGender('Girl')"
+            class="glass-card rounded-2xl p-8 cursor-pointer hover:shadow-xl transition transform hover:-translate-y-2 group">
+            <div class="text-center">
+                <div
+                    class="w-32 h-32 mx-auto bg-red-50 rounded-full flex items-center justify-center mb-6 group-hover:bg-pink-100 transition">
+                    <i class="fas fa-female text-6xl text-brown"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-brown mb-2">Lady</h3>
+                <p class="text-gray-500">Luxury spa & styling</p>
+                <div class="mt-6">
+                    <span
+                        class="inline-block px-6 py-2 border border-brown text-brown rounded-full group-hover:bg-brown group-hover:text-white transition">Select</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Form -->
+    <form id="genderForm" action="{% url 'gender_selection' %}" method="post" class="hidden">
+        {% csrf_token %}
+        <input type="hidden" name="gender" id="genderInput">
+    </form>
+</div>
+
+<script>
+    function selectGender(gender) {
+        document.getElementById('genderInput').value = gender;
+        document.getElementById('genderForm').submit();
+    }
+</script>
+{% endblock %}

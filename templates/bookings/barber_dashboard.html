@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container" style="padding: 4rem 0;">
+    <h2 class="section-title" style="text-align: left; margin-bottom: 2rem;">Upcoming Appointments</h2>
+    {% if appointments %}
+    <div class="services-grid">
+        {% for appointment in appointments %}
+        <div class="service-card">
+            <h3 class="service-name">{{ appointment.service.name }}</h3>
+            <p class="service-desc">Customer: {{ appointment.customer.username }}</p>
+            <p class="service-desc">Date: {{ appointment.date }}</p>
+            <p class="service-desc">Time: {{ appointment.time }}</p>
+            <p class="service-price" style="margin-top: 1rem; font-size: 1rem;">Status: {{
+                appointment.get_status_display }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color: var(--color-text-muted);">No upcoming appointments.</p>
+    {% endif %}
+</div>
+{% endblock %}

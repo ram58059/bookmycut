@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="section">
+    <div class="container" style="text-align: center;">
+        <div class="success-card">
+            <div class="success-icon">✓</div>
+            <h1 class="section-title">Booking Confirmed!</h1>
+            <p>Your appointment has been successfully scheduled.</p>
+
+            {% if booking %}
+            <div class="booking-details-card">
+                <p><strong>Date:</strong> {{ booking.date }}</p>
+                <p><strong>Time:</strong> {{ booking.time }}</p>
+                <p><strong>Booking ID:</strong> #{{ booking.id }}</p>
+            </div>
+
+            <p class="text-muted" style="margin-top: 2rem;">
+                A confirmation message has been sent to {{ booking.customer_phone }} via SMS and WhatsApp.
+            </p>
+            {% endif %}
+
+            <div style="margin-top: 2rem;">
+                <a href="{% url 'home' %}" class="btn btn-primary">Return to Home</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container" style="text-align: center; padding: 6rem 0;">
+    <h1 style="font-family: var(--font-serif); color: var(--color-gold); margin-bottom: 1.5rem;">Booking Confirmed!</h1>
+    <p style="color: var(--color-text); margin-bottom: 2rem;">Your appointment has been successfully scheduled.</p>
+    <a href="{% url 'home' %}" class="btn btn-primary">Return Home</a>
+</div>
+{% endblock %}

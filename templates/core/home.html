@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero">
+    <div class="container hero-container">
+        <h1 class="hero-title">Experience the Art of Grooming</h1>
+        <p class="hero-subtitle">Premium haircuts and styling for the modern gentleman.</p>
+        <a href="{% url 'service_list' %}" class="btn btn-solid">Book Appointment</a>
+    </div>
+</section>
+
+<section id="services" class="services">
+    <div class="container">
+        <h2 class="section-title">Our Services</h2>
+        <div class="services-grid">
+            <!-- Placeholder for services loop -->
+            <div class="service-card">
+                <h3 class="service-name">Classic Cut</h3>
+                <p class="service-price">$40</p>
+                <p class="service-desc">Traditional scissor cut with hot towel finish.</p>
+            </div>
+            <div class="service-card">
+                <h3 class="service-name">Beard Trim</h3>
+                <p class="service-price">$25</p>
+                <p class="service-desc">Shape and style your beard to perfection.</p>
+            </div>
+            <div class="service-card">
+                <h3 class="service-name">The Royal Treatment</h3>
+                <p class="service-price">$75</p>
+                <p class="service-desc">Full haircut, beard trim, and facial massage.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .hero {
+        padding: 8rem 0 6rem;
+        text-align: center;
+    }
+
+    .hero-title {
+        font-family: var(--font-serif);
+        font-size: 3.5rem;
+        color: var(--color-text);
+        margin-bottom: 1.5rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1.2rem;
+        color: var(--color-text-muted);
+        margin-bottom: 2.5rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .services {
+        padding: 6rem 0;
+    }
+
+    .section-title {
+        font-family: var(--font-serif);
+        font-size: 2.5rem;
+        color: var(--color-gold);
+        text-align: center;
+        margin-bottom: 4rem;
+    }
+
+    .services-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+
+    .service-card {
+        background-color: var(--color-bg-light);
+        padding: 2rem;
+        border-radius: 8px;
+        border: 1px solid rgba(212, 175, 55, 0.1);
+        transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .service-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--color-gold);
+    }
+
+    .service-name {
+        font-family: var(--font-serif);
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        color: var(--color-text);
+    }
+
+    .service-price {
+        color: var(--color-gold);
+        font-weight: 600;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+
+    .service-desc {
+        color: var(--color-text-muted);
+    }
+</style>
+{% endblock %}

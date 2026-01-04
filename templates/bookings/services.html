@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-brown mb-4">Our <span class="text-gold">Services</span></h1>
+        <p class="text-gray-600">Select services for your appointment</p>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-8 mx-auto max-w-3xl" role="alert">
+        <p>{{ error }}</p>
+    </div>
+    {% endif %}
+
+    {% if not grouped_services %}
+    <div class="text-center py-12">
+        <div class="text-6xl text-gray-200 mb-4"><i class="fas fa-cut"></i></div>
+        <p class="text-xl text-gray-500">No services available for the selected category yet.</p>
+        <a href="{% url 'gender_selection' %}" class="inline-block mt-4 text-gold hover:underline">Go Back</a>
+    </div>
+    {% else %}
+
+    <form method="post" action="{% url 'service_list' %}">
+        {% csrf_token %}
+
+        <div class="space-y-12">
+            {% for category, services in grouped_services.items %}
+            <div class="service-category">
+                <h2 class="text-2xl font-bold text-brown mb-6 border-b border-yellow-100 pb-2">{{ category }}</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for service in services %}
+                    <label
+                        class="glass-card relative rounded-xl p-6 cursor-pointer transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 select-none group">
+                        <input type="checkbox" name="services" value="{{ service.id }}" class="peer sr-only"
+                            onchange="toggleCard(this)">
+
+                        <!-- Check/Circle Indicator -->
+                        <div
+                            class="absolute top-4 right-4 text-gray-300 transition-colors duration-300 peer-checked:text-gold z-10">
+                            <i
+                                class="far fa-check-circle text-2xl peer-checked:fas peer-checked:scale-110 transform transition-transform"></i>
+                        </div>
+
+                        <!-- Card Border & Background Highlight using peer-checked -->
+                        <div
+                            class="absolute inset-0 border-2 border-transparent peer-checked:border-gold peer-checked:bg-gold/5 rounded-xl transition-all duration-300 pointer-events-none">
+                        </div>
+
+                        <div class="flex items-start space-x-4 relative z-10">
+                            {% if service.image %}
+                            <img src="{{ service.image.url }}" alt="{{ service.name }}"
+                                class="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm">
+                            {% else %}
+                            <div
+                                class="w-16 h-16 rounded-full bg-soft-cream border border-yellow-100 flex items-center justify-center text-brown shadow-sm group-hover:border-gold transition-colors">
+                                <i class="fas fa-spa text-xl"></i>
+                            </div>
+                            {% endif %}
+
+                            <div class="flex-grow">
+                                <h3 class="font-bold text-lg text-brown group-hover:text-gold transition-colors">{{
+                                    service.name }}</h3>
+                                <div class="flex items-center text-sm text-gray-500 mt-2 space-x-3">
+                                    <span class="flex items-center"><i class="far fa-clock mr-1.5 text-gold"></i> {{
+                                        service.duration_minutes }}m</span>
+                                    <span class="font-bold text-lg text-brown">₹{{ service.price }}</span>
+                                </div>
+                                {% if service.description %}
+                                <p class="text-sm text-gray-400 mt-2 leading-relaxed">{{
+                                    service.description|truncatechars:60 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div
+            class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-yellow-100 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50">
+            <div class="max-w-7xl mx-auto flex justify-between items-center px-4">
+                <div class="text-gray-600 font-medium">
+                    <span id="selectedCount" class="text-gold font-bold text-xl">0</span> services selected
+                </div>
+                <button type="submit"
+                    class="bg-brown hover:bg-gold text-white px-8 py-3 rounded-full font-bold shadow-lg transform transition hover:-translate-y-1 hover:shadow-xl flex items-center">
+                    Continue to Date & Time <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+        <div class="h-28"></div> <!-- Spacer for fixed footer -->
+    </form>
+    {% endif %}
+
+    <script>
+        // Counter script and manual class toggle for robustness
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        const countSpan = document.getElementById('selectedCount');
+
+        function updateCount() {
+            const count = document.querySelectorAll('input[type="checkbox"]:checked').length;
+            countSpan.textContent = count;
+        }
+
+        function toggleCard(checkbox) {
+            updateCount();
+            // Additional check if we want to add specific classes via JS, 
+            // but Tailwind 'peer-checked' logic above should handle visual state.
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', () => toggleCard(cb));
+        });
+
+        // Initial count
+        updateCount();
+    </script>
+</div>
+{% endblock %}

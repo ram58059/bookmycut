@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-12">
+    <div class="text-center mb-10">
+        <h1 class="text-4xl font-bold text-brown mb-4">Select <span class="text-gold">Date & Time</span></h1>
+        <p class="text-gray-600">Choose a convenient slot for your appointment</p>
+    </div>
+
+    <div class="glass-card rounded-2xl p-8 shadow-sm border border-yellow-50 relative overflow-hidden">
+        <!-- Decorative bg element -->
+        <div class="absolute top-0 right-0 w-32 h-32 bg-gold/5 rounded-bl-full pointer-events-none"></div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Left Column: Date Picker -->
+            <div class="md:col-span-1 border-r border-yellow-100 md:pr-8">
+                <h3 class="text-xl font-bold text-brown mb-6 flex items-center">
+                    <i class="far fa-calendar-alt mr-3 text-gold"></i> Date
+                </h3>
+
+                <form method="get" id="dateForm" class="space-y-4">
+                    <div class="relative">
+                        <input type="date" name="date" id="date"
+                            class="w-full p-4 pl-10 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold text-gray-700 font-medium shadow-sm transition-all cursor-pointer"
+                            value="{{ selected_date|date:'Y-m-d' }}" min="{{ today|date:'Y-m-d' }}"
+                            onchange="this.form.submit()" required>
+                        <i
+                            class="fas fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2 text-center">Tap to change date</p>
+                </form>
+            </div>
+
+            <!-- Right Column: Slots -->
+            <div class="md:col-span-2 md:pl-4">
+                <h3 class="text-xl font-bold text-brown mb-2 flex items-center justify-between">
+                    <span><i class="far fa-clock mr-3 text-gold"></i> Available Slots</span>
+                    {% if selected_date %}
+                    <span
+                        class="text-sm font-normal text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-100 shadow-sm">
+                        {{ selected_date|date:"F j, Y" }}
+                    </span>
+                    {% endif %}
+                </h3>
+
+                {% if selected_date %}
+                <p class="text-sm text-gray-500 mb-6">Duration required: <span class="font-bold text-brown">{{
+                        num_services }} hr(s)</span></p>
+
+                {% if slots %}
+                <div class="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    {% for slot in slots %}
+                    <form method="post" action="{% url 'date_time_selection' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+                        <input type="hidden" name="time" value="{{ slot|time:'H:i' }}">
+                        <button type="submit"
+                            class="w-full py-3 px-2 rounded-lg border border-brown/20 text-brown hover:bg-gold hover:border-gold hover:text-white transition-all duration-200 text-sm font-bold shadow-sm hover:shadow-md active:transform active:scale-95 flex flex-col items-center justify-center group">
+                            <span>{{ slot|time:"g:i" }}</span>
+                            <span class="text-[10px] uppercase font-normal opacity-70 group-hover:opacity-100">{{
+                                slot|time:"A" }}</span>
+                        </button>
+                    </form>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div
+                    class="flex flex-col items-center justify-center py-12 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                    <i class="far fa-frown text-4xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500 font-medium">No slots available for this date.</p>
+                    <p class="text-sm text-gray-400">Please try selecting another date.</p>
+                </div>
+                {% endif %}
+                {% else %}
+                <div
+                    class="flex flex-col items-center justify-center h-64 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                    <i class="far fa-calendar-check text-4xl text-gray-300 mb-3 animate-bounce"></i>
+                    <p class="text-gray-500 font-medium">Select a date to view slots</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-8 text-center">
+        <a href="{% url 'service_list' %}"
+            class="text-gray-400 hover:text-brown text-sm transition flex items-center justify-center">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Services
+        </a>
+    </div>
+</div>
+
+<style>
+    /* Custom Scrollbar for slots area */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #D4AF37;
+        border-radius: 4px;
+        opacity: 0.5;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #b5952f;
+    }
+</style>
+{% endblock %}

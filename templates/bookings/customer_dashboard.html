@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container" style="padding: 4rem 0;">
+    <h2 class="section-title" style="text-align: left; margin-bottom: 2rem;">My Bookings</h2>
+    {% if bookings %}
+    <div class="services-grid">
+        {% for booking in bookings %}
+        <div class="service-card">
+            <h3 class="service-name">{{ booking.service.name }}</h3>
+            <p class="service-desc">Date: {{ booking.date }}</p>
+            <p class="service-desc">Time: {{ booking.time }}</p>
+            <p class="service-desc">Barber: {{ booking.barber.username|default:"Any" }}</p>
+            <p class="service-price" style="margin-top: 1rem; font-size: 1rem;">Status: {{ booking.get_status_display }}
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color: var(--color-text-muted);">You have no bookings yet.</p>
+    <a href="{% url 'book_appointment' %}" class="btn btn-solid" style="margin-top: 1rem;">Book Now</a>
+    {% endif %}
+</div>
+{% endblock %}
