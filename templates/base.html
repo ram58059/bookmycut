@@ -6,64 +6,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zion Salon & Spa</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="{% static 'css/output.css' %}" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Google Fonts: Outfit for a premium look -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-gold: #D4AF37;
-            --primary-brown: #4A3728;
-            --soft-cream: #FDFBF7;
-            --text-dark: #2C2C2C;
-        }
-
-        body {
-            font-family: 'Outfit', sans-serif;
-            background-color: var(--soft-cream);
-            color: var(--text-dark);
-        }
-
-        .text-gold {
-            color: var(--primary-gold);
-        }
-
-        .bg-gold {
-            background-color: var(--primary-gold);
-        }
-
-        .border-gold {
-            border-color: var(--primary-gold);
-        }
-
-        .text-brown {
-            color: var(--primary-brown);
-        }
-
-        .bg-brown {
-            background-color: var(--primary-brown);
-        }
-
-        .btn-primary {
-            background-color: var(--primary-brown);
-            color: white;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-gold);
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        /* Glassmorphism for cards */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            box-shadow: 0 8px 32px 0 rgba(74, 55, 40, 0.1);
-        }
-    </style>
 </head>
 
 <body class="min-h-screen flex flex-col">

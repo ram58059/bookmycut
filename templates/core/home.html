@@ -41,14 +41,16 @@
 <style>
     .services {
         padding: 6rem 0;
+        background-color: var(--soft-cream);
     }
 
     .section-title {
-        font-family: var(--font-serif);
+        font-family: 'Outfit', serif;
         font-size: 2.5rem;
-        color: var(--color-gold);
+        color: var(--primary-gold);
         text-align: center;
         margin-bottom: 4rem;
+        font-weight: 700;
     }
 
     .services-grid {
@@ -58,34 +60,38 @@
     }
 
     .service-card {
-        background-color: var(--color-bg-light);
+        background-color: white;
         padding: 2rem;
-        border-radius: 8px;
+        border-radius: 12px;
         border: 1px solid rgba(212, 175, 55, 0.1);
-        transition: transform 0.3s ease, border-color 0.3s ease;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     }
 
     .service-card:hover {
         transform: translateY(-5px);
-        border-color: var(--color-gold);
+        border-color: var(--primary-gold);
+        box-shadow: 0 10px 15px rgba(212, 175, 55, 0.1);
     }
 
     .service-name {
-        font-family: var(--font-serif);
+        font-family: 'Outfit', serif;
         font-size: 1.5rem;
         margin-bottom: 0.5rem;
-        color: var(--color-text);
+        color: var(--primary-brown);
+        font-weight: 600;
     }
 
     .service-price {
-        color: var(--color-gold);
+        color: var(--primary-gold);
         font-weight: 600;
         font-size: 1.2rem;
         margin-bottom: 1rem;
     }
 
     .service-desc {
-        color: var(--color-text-muted);
+        color: #666;
+        line-height: 1.6;
     }
 </style>
 {% endblock %}

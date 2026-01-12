@@ -1,31 +1,176 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="section">
-    <div class="container" style="text-align: center;">
-        <div class="success-card">
-            <div class="success-icon">✓</div>
-            <h1 class="section-title">Booking Confirmed!</h1>
-            <p>Your appointment has been successfully scheduled.</p>
+<style>
+    @keyframes checkmark-circle {
+        0% {
+            stroke-dashoffset: 166;
+            opacity: 0;
+        }
 
-            {% if booking %}
-            <div class="booking-details-card">
-                <p><strong>Date:</strong> {{ booking.date }}</p>
-                <p><strong>Time:</strong> {{ booking.time }}</p>
-                <p><strong>Booking ID:</strong> #{{ booking.id }}</p>
+        100% {
+            stroke-dashoffset: 0;
+            opacity: 1;
+        }
+    }
+
+    @keyframes checkmark {
+        0% {
+            stroke-dashoffset: 48;
+            opacity: 0;
+        }
+
+        100% {
+            stroke-dashoffset: 0;
+            opacity: 1;
+        }
+    }
+
+    @keyframes scale-up {
+        0% {
+            transform: scale(0.5);
+            opacity: 0;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    @keyframes fade-up {
+        0% {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+
+        100% {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .success-svg {
+        width: 100px;
+        height: 100px;
+        display: block;
+        margin: 0 auto;
+    }
+
+    .success-circle {
+        stroke-dasharray: 166;
+        stroke-dashoffset: 166;
+        stroke-width: 2;
+        stroke: #D4AF37;
+        /* Gold */
+        fill: none;
+        animation: checkmark-circle 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+    }
+
+    .success-check {
+        transform-origin: 50% 50%;
+        stroke-dasharray: 48;
+        stroke-dashoffset: 48;
+        stroke-width: 3;
+        stroke: #D4AF37;
+        /* Gold */
+        fill: none;
+        animation: checkmark 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.6s forwards;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(212, 175, 55, 0.2);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    }
+
+    .animate-scale-up {
+        animation: scale-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    .animate-fade-up {
+        opacity: 0;
+        animation: fade-up 0.5s ease-out 0.8s forwards;
+    }
+
+    .animate-fade-up-delay {
+        opacity: 0;
+        animation: fade-up 0.5s ease-out 1s forwards;
+    }
+</style>
+
+<div
+    class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white to-orange-50">
+    <div class="max-w-md w-full glass-card rounded-2xl p-8 text-center animate-scale-up relative overflow-hidden">
+        <!-- Top decorative flair -->
+        <div
+            class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-gold to-transparent opacity-50">
+        </div>
+
+        <div class="mb-6 relative">
+            <svg class="success-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                <circle class="success-circle" cx="26" cy="26" r="25" />
+                <path class="success-check" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+            </svg>
+        </div>
+
+        <h2 class="text-3xl font-extrabold text-brown mb-2 animate-fade-up">
+            Booking Confirmed!
+        </h2>
+        <p class="text-gray-500 mb-8 animate-fade-up">
+            We're excited to see you soon.
+        </p>
+
+        {% if booking %}
+        <div class="bg-orange-50/50 rounded-xl p-6 mb-8 border border-orange-100 animate-fade-up-delay text-left">
+            <div class="flex items-center justify-between mb-4 pb-4 border-b border-orange-100/50">
+                <span class="text-gray-500 text-sm">Booking ID</span>
+                <span class="font-mono font-bold text-brown">#{{ booking.id }}</span>
             </div>
 
-            <p class="text-muted" style="margin-top: 2rem;">
-                A confirmation message has been sent to {{ booking.customer_phone }} via SMS and WhatsApp.
-            </p>
-            {% endif %}
+            <div class="space-y-3">
+                <div class="flex items-start">
+                    <div class="w-8 flex-shrink-0 text-center text-gold"><i class="far fa-calendar-alt"></i></div>
+                    <div>
+                        <p class="font-semibold text-brown">{{ booking.date|date:"F j, Y" }}</p>
+                        <p class="text-xs text-gray-400">Date</p>
+                    </div>
+                </div>
 
-            <div style="margin-top: 2rem;">
-                <a href="{% url 'home' %}" class="btn btn-primary">Return to Home</a>
+                <div class="flex items-start">
+                    <div class="w-8 flex-shrink-0 text-center text-gold"><i class="far fa-clock"></i></div>
+                    <div>
+                        <p class="font-semibold text-brown">{{ booking.time|time:"g:i A" }}</p>
+                        <p class="text-xs text-gray-400">Time</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start">
+                    <div class="w-8 flex-shrink-0 text-center text-gold"><i class="fas fa-cut"></i></div>
+                    <div>
+                        <p class="font-semibold text-brown">{{ booking.services.count }} Services</p>
+                        <p class="text-xs text-gray-400">
+                            {% for s in booking.services.all %}
+                            {{ s.name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <div class="animate-fade-up-delay">
+            <p class="text-sm text-gray-400 mb-6">
+                A confirmation has been sent to <span class="text-brown font-medium">{{ booking.customer_phone }}</span>
+            </p>
+
+            <a href="{% url 'home' %}"
+                class="inline-flex items-center justify-center w-full px-6 py-3 border border-transparent text-base font-bold rounded-full text-white bg-brown hover:bg-gold transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg">
+                Return to Home
+            </a>
+        </div>
+        {% endif %}
     </div>
-</section>
-
-
+</div>
 {% endblock %}

@@ -30,6 +30,14 @@ class ServiceListView(View):
 
         services = Service.objects.filter(gender=selected_gender)
         
+        # Pre-select services if returning from calendar
+        selected_service_ids = request.session.get('selected_service_ids', [])
+        # Convert to ints for comparison in template
+        try:
+            selected_service_ids = [int(i) for i in selected_service_ids]
+        except (ValueError, TypeError):
+            selected_service_ids = []
+
         grouped_services = {}
         category_order = [
             'Facials', 'Hair Spa', 'Reflexology / Massage', 'Express Face Masks',
@@ -53,7 +61,8 @@ class ServiceListView(View):
 
         return render(request, 'bookings/services.html', {
             'grouped_services': grouped_services,
-            'selected_gender': selected_gender
+            'selected_gender': selected_gender,
+            'selected_service_ids': selected_service_ids
         })
 
     def post(self, request):
@@ -103,6 +112,12 @@ class DateTimeSelectionView(View):
             start_hour = 10
             end_hour = 22
             
+            # If today, ensuring time slot is after current time
+            now = timezone.now()
+            if selected_date == now.date():
+                # E.g. if now is 15:30, next slot is 16:00.
+                start_hour = max(start_hour, now.hour + 1)
+
             # Fetch existing bookings
             existing_bookings = Booking.objects.filter(
                 date=selected_date

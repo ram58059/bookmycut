@@ -75,7 +75,7 @@
                     <label
                         class="glass-card relative rounded-xl p-6 cursor-pointer transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 select-none group">
                         <input type="checkbox" name="services" value="{{ service.id }}" class="peer sr-only"
-                            onchange="toggleCard(this)">
+                            onchange="toggleCard(this)" {% if service.id in selected_service_ids %}checked{% endif %}>
                         <div
                             class="check-indicator absolute top-4 right-4 text-gray-300 transition-colors duration-300 z-10">
                             <i class="far fa-check-circle text-2xl transform transition-transform"></i>
