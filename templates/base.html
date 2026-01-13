@@ -26,7 +26,11 @@
                 </div>
 
                 <!-- Desktop CTA Button & Mobile Menu -->
-                <div class="flex items-center space-x-6">
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'hairstyle_gallery' %}"
+                        class="hidden md:inline-flex items-center text-brown hover:text-gold font-bold px-4 py-2.5 transition-all duration-300 hover:-translate-y-0.5 text-sm uppercase tracking-wider">
+                        <span>Hairstyles</span>
+                    </a>
                     <a href="{% url 'gender_selection' %}"
                         class="hidden md:inline-flex items-center bg-brown hover:bg-gold text-white font-medium px-6 py-2.5 rounded-full shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg text-sm uppercase tracking-wider">
                         <span>Book Now</span>

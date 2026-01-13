@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-stone-50 py-16">
+
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Header -->
+        <div class="text-center mb-16 space-y-3">
+            <h1 class="text-4xl font-bold text-stone-900 tracking-tight">
+                Our Styles
+            </h1>
+            <p class="text-stone-500 text-base font-medium uppercase tracking-widest">
+                Curated Collection
+            </p>
+        </div>
+
+        <!-- Strict Uniform Square Grid -->
+        <!-- 
+           - Grid: Standard grid-cols
+           - Gap: Consistent gap-8 (equal space)
+           - Aspect: Square (1:1) for exactly equal size
+           - Rounded: rounded-2xl
+        -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8">
+
+            {% for image in images %}
+            <div class="group relative cursor-zoom-in transition-all duration-300 hover:-translate-y-1"
+                onclick="openLightbox('{% static image.url %}')">
+
+                <!-- Square Aspect Ratio Container -->
+                <div
+                    class="aspect-square w-full relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 bg-white">
+                    <img src="{% static image.url %}" alt="Style {{ image.id }}"
+                        class="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110"
+                        loading="lazy">
+
+                    <!-- Overlay -->
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300">
+                    </div>
+                </div>
+
+            </div>
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+    <!-- Booking CTA -->
+    <div class="fixed bottom-10 right-10 z-40">
+        <a href="{% url 'gender_selection' %}"
+            class="flex items-center justify-center w-16 h-16 bg-stone-900 text-white rounded-full shadow-2xl hover:scale-110 transition-all duration-300 group hover:bg-stone-800">
+            <i class="fas fa-calendar-alt text-xl"></i>
+        </a>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox" class="fixed inset-0 z-[60] hidden" aria-modal="true">
+        <div class="absolute inset-0 bg-black/95 backdrop-blur-md transition-opacity duration-300 opacity-0"
+            id="lightbox-bg"></div>
+
+        <button class="absolute top-8 right-8 text-white/70 hover:text-white transition-colors z-50 p-2"
+            onclick="closeLightbox()">
+            <i class="fas fa-times text-2xl"></i>
+        </button>
+
+        <div class="relative w-full h-full flex items-center justify-center p-4 md:p-12 pointer-events-none">
+            <img id="lightbox-img" src="" alt="Full view"
+                class="max-w-full max-h-full w-auto h-auto object-contain shadow-2xl transition-all duration-300 opacity-0 scale-95 pointer-events-auto rounded-lg select-none">
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const lightbox = document.getElementById('lightbox');
+    const lightboxBg = document.getElementById('lightbox-bg');
+    const lightboxImg = document.getElementById('lightbox-img');
+
+    function openLightbox(src) {
+        lightbox.classList.remove('hidden');
+        lightboxImg.src = src;
+
+        void lightbox.offsetWidth;
+
+        lightboxBg.classList.remove('opacity-0');
+        lightboxImg.classList.remove('opacity-0', 'scale-95');
+        lightboxImg.classList.add('scale-100');
+
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        lightboxBg.classList.add('opacity-0');
+        lightboxImg.classList.remove('scale-100');
+        lightboxImg.classList.add('opacity-0', 'scale-95');
+
+        setTimeout(() => {
+            lightbox.classList.add('hidden');
+            lightboxImg.src = '';
+        }, 300);
+
+        document.body.style.overflow = '';
+    }
+
+    lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox || e.target === lightboxBg) closeLightbox();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === "Escape") closeLightbox();
+    });
+</script>
+{% endblock %}
