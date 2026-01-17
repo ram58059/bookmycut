@@ -1,0 +1,75 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header %}Cancellation Analytics{% endblock %}
+{% block subheader %}Insights into lost bookings{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <!-- Key Stat -->
+    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center justify-between">
+        <div>
+            <p class="text-sm font-medium text-gray-500">Overall Cancellation Rate</p>
+            <h3 class="text-3xl font-bold text-red-600 mt-2">{{ data.rate }}%</h3>
+            <p class="text-sm text-gray-400 mt-1">{{ data.total_cancelled }} total cancellations</p>
+        </div>
+        <div class="p-4 bg-red-50 rounded-full">
+            <i class="fas fa-chart-line text-red-500 text-2xl"></i>
+        </div>
+    </div>
+
+    <!-- Empty placeholder slot or another stat -->
+    <div
+        class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center justify-center text-center text-gray-400">
+        <p>Keep cancellations below 10% for optimal efficiency.</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- By Service -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Cancellations by Service</h3>
+        <canvas id="serviceChart"></canvas>
+    </div>
+
+    <!-- By Time -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Most Cancelled Times (Hour of Day)</h3>
+        <canvas id="timeChart"></canvas>
+    </div>
+</div>
+
+<script>
+    // Service Chart
+    new Chart(document.getElementById('serviceChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ service_labels| safe }},
+        datasets: [{
+            label: 'Cancellations',
+            data: {{ service_data| safe }},
+        backgroundColor: 'rgba(239, 68, 68, 0.6)',
+        borderColor: 'rgb(239, 68, 68)',
+        borderWidth: 1
+            }]
+        },
+        options: { indexAxis: 'y', responsive: true }
+    });
+
+    // Time Chart
+    new Chart(document.getElementById('timeChart'), {
+        type: 'line',
+        data: {
+            labels: {{ hourly_labels| safe }},
+        datasets: [{
+            label: 'Cancellations',
+            data: {{ hourly_data| safe }},
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        fill: true,
+        tension: 0.4
+            }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+</script>
+{% endblock %}

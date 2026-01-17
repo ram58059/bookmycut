@@ -1,0 +1,105 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header %}Utilization Metrics{% endblock %}
+{% block subheader %}Efficiency tracking for the last 7 days{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <p class="text-sm font-medium text-gray-500">Overall Utilization (7d)</p>
+        <h3 class="text-3xl font-bold text-gray-800 mt-2">{{ data.overall_utilization }}%</h3>
+        <p class="text-xs text-gray-400 mt-1">{{ data.total_booked }} / {{ data.total_capacity }} slots booked</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <p class="text-sm font-medium text-gray-500">Avg Idle Hours / Day</p>
+        <h3 class="text-3xl font-bold text-gray-800 mt-2">{{ data.avg_idle_hours }}h</h3>
+        <p class="text-xs text-gray-400 mt-1">Time without bookings</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center justify-center">
+        {% if data.overall_utilization > 70 %}
+        <div class="text-center text-green-600">
+            <i class="fas fa-check-circle text-3xl mb-2"></i>
+            <p class="font-bold">High Efficiency</p>
+        </div>
+        {% elif data.overall_utilization > 40 %}
+        <div class="text-center text-amber-500">
+            <i class="fas fa-minus-circle text-3xl mb-2"></i>
+            <p class="font-bold">Moderate Efficiency</p>
+        </div>
+        {% else %}
+        <div class="text-center text-red-500">
+            <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
+            <p class="font-bold">Underutilized</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">Utilization vs Idle Hours</h3>
+    <canvas id="utilChart" height="100"></canvas>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <table class="w-full text-left">
+        <thead>
+            <tr class="bg-gray-50 text-gray-500 text-sm">
+                <th class="px-6 py-4">Date</th>
+                <th class="px-6 py-4">Booked Slots</th>
+                <th class="px-6 py-4">Utilization</th>
+                <th class="px-6 py-4">Idle Hours</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for day in data.daily_stats %}
+            <tr>
+                <td class="px-6 py-4 text-gray-800 font-medium">{{ day.date|date:"D, M d" }}</td>
+                <td class="px-6 py-4">{{ day.booked }} / {{ day.total_slots }}</td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm w-12">{{ day.utilization }}%</span>
+                        <div class="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-blue-500" style="width: {{ day.utilization }}%"></div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 text-gray-500">{{ day.idle_hours }}h</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    new Chart(document.getElementById('utilChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ days| safe }},
+        datasets: [
+        {
+            label: 'Utilization %',
+            data: {{ util_data| safe }},
+        backgroundColor: '#3b82f6',
+        yAxisID: 'y'
+                },
+        {
+            label: 'Idle Hours',
+            data: {{ idle_data| safe }},
+        backgroundColor: '#9ca3af',
+        type: 'line',
+        yAxisID: 'y1'
+                }
+    ]
+        },
+        options: {
+        responsive: true,
+        scales: {
+            y: { beginAtZero: true, max: 100, position: 'left' },
+            y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } }
+        }
+    }
+    });
+</script>
+{% endblock %}
