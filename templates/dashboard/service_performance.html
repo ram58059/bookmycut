@@ -1,0 +1,95 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header %}Service Performance{% endblock %}
+{% block subheader %}Analyze which services are driving your business{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <!-- Bookings Chart -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Bookings by Service</h3>
+        <canvas id="bookingsChart"></canvas>
+    </div>
+
+    <!-- Revenue Chart -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Revenue by Service</h3>
+        <canvas id="revenueChart"></canvas>
+    </div>
+</div>
+
+<!-- Detailed Table -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="p-6 border-b border-gray-100">
+        <h3 class="text-lg font-bold text-gray-800">Service Breakdown</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="bg-gray-50 text-gray-500 text-sm uppercase tracking-wider">
+                    <th class="px-6 py-4 font-medium">Service Name</th>
+                    <th class="px-6 py-4 font-medium">Category</th>
+                    <th class="px-6 py-4 font-medium">Price</th>
+                    <th class="px-6 py-4 font-medium">Total Bookings</th>
+                    <th class="px-6 py-4 font-medium">Total Revenue</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for service in services %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 font-medium text-gray-800">{{ service.name }}</td>
+                    <td class="px-6 py-4 text-gray-600">{{ service.category }}</td>
+                    <td class="px-6 py-4 text-gray-600">${{ service.price }}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold">
+                            {{ service.booking_count }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 font-bold text-green-600">
+                        ${{ service.revenue|default:"0.00"|floatformat:2 }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const labels = {{ labels| safe }};
+
+    // Bookings Chart
+    new Chart(document.getElementById('bookingsChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Bookings',
+                data: {{ bookings_data| safe }
+    },
+        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+        borderColor: 'rgb(59, 130, 246)',
+        borderWidth: 1
+            }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    // Revenue Chart
+    new Chart(document.getElementById('revenueChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Revenue ($)',
+                data: {{ revenue_data| safe }
+    },
+        backgroundColor: 'rgba(16, 185, 129, 0.6)',
+        borderColor: 'rgb(16, 185, 129)',
+        borderWidth: 1
+            }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+</script>
+{% endblock %}

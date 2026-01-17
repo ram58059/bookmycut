@@ -1,0 +1,225 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header %}Overview{% endblock %}
+{% block subheader %}Here's what's happening in your shop today.{% endblock %}
+
+{% block content %}
+
+<!-- Smart Insights Grid -->
+{% if smart_insights %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    {% for insight in smart_insights %}
+    <div
+        class="bg-white rounded-xl shadow-sm p-4 border-l-4 flex items-start space-x-3
+        {% if insight.type == 'warning' %}border-red-500{% elif insight.type == 'success' %}border-green-500{% elif insight.type == 'info' %}border-blue-500{% else %}border-amber-500{% endif %}">
+        <div class="flex-shrink-0 mt-1">
+            <i
+                class="fas {{ insight.icon }} {% if insight.type == 'warning' %}text-red-500{% elif insight.type == 'success' %}text-green-500{% elif insight.type == 'info' %}text-blue-500{% else %}text-amber-500{% endif %}"></i>
+        </div>
+        <div>
+            <p class="text-sm font-medium text-gray-800">{{ insight.text }}</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- KPI Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Bookings -->
+    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Total Bookings</p>
+                <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ kpis.total_bookings }}</h3>
+            </div>
+            <div class="p-2 bg-blue-50 rounded-lg">
+                <i class="fas fa-calendar-check text-blue-500"></i>
+            </div>
+        </div>
+        <div class="mt-4 flex items-center text-sm">
+            <span class="text-gray-400">Lifetime</span>
+        </div>
+    </div>
+
+    <!-- Revenue -->
+    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Total Revenue</p>
+                <h3 class="text-2xl font-bold text-gray-800 mt-1">${{ kpis.revenue|floatformat:2 }}</h3>
+            </div>
+            <div class="p-2 bg-green-50 rounded-lg">
+                <i class="fas fa-dollar-sign text-green-500"></i>
+            </div>
+        </div>
+        <div class="mt-4 flex items-center text-sm">
+            <span class="text-gray-500">Recent (30d): ${{ kpis.recent_revenue|floatformat:2 }}</span>
+        </div>
+    </div>
+
+    <!-- Customers -->
+    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Total Customers</p>
+                <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ kpis.total_customers }}</h3>
+            </div>
+            <div class="p-2 bg-purple-50 rounded-lg">
+                <i class="fas fa-users text-purple-500"></i>
+            </div>
+        </div>
+        <div class="mt-4 flex items-center text-sm">
+            <span class="text-gray-400">Unique phone numbers</span>
+        </div>
+    </div>
+
+    <!-- Cancellation Rate -->
+    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500">Cancellation Rate</p>
+                <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ kpis.cancellation_rate }}%</h3>
+            </div>
+            <div class="p-2 bg-red-50 rounded-lg">
+                <i class="fas fa-ban text-red-500"></i>
+            </div>
+        </div>
+        <div class="mt-4 flex items-center text-sm">
+            <span class="text-gray-500">{{ kpis.cancelled }} cancelled bookings</span>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <!-- Revenue Trend Chart -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Revenue Trend (Last 30 Days)</h3>
+        <div class="h-80">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Booking Status Chart -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Booking Status Distribution</h3>
+        <div class="h-64 flex justify-center">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Bookings Table -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="p-6 border-b border-gray-100">
+        <h3 class="text-lg font-bold text-gray-800">Recent Bookings</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="bg-gray-50 text-gray-500 text-sm uppercase tracking-wider">
+                    <th class="px-6 py-4 font-medium">Customer</th>
+                    <th class="px-6 py-4 font-medium">Service</th>
+                    <th class="px-6 py-4 font-medium">Date & Time</th>
+                    <th class="px-6 py-4 font-medium">Status</th>
+                    <th class="px-6 py-4 font-medium">Amount</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for booking in recent_bookings %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4">
+                        <span class="font-medium text-gray-800">{{ booking.customer_phone }}</span>
+                    </td>
+                    <td class="px-6 py-4 text-gray-600">
+                        {% for service in booking.services.all %}
+                        {{ service.name }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </td>
+                    <td class="px-6 py-4 text-gray-600">
+                        {{ booking.date }} at {{ booking.time }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-medium 
+                            {% if booking.status == 'completed' %}bg-green-100 text-green-700
+                            {% elif booking.status == 'confirmed' %}bg-blue-100 text-blue-700
+                            {% elif booking.status == 'cancelled' %}bg-red-100 text-red-700
+                            {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                            {{ booking.status|title }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 font-medium text-gray-800">
+                        ${{ booking.services.all|join:"," }}
+                        <!-- Placeholder logic, ideal to sum in view or model method -->
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                        No bookings found yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Revenue Line Chart
+    const ctxRevenue = document.getElementById('revenueChart').getContext('2d');
+    new Chart(ctxRevenue, {
+        type: 'line',
+        data: {
+            labels: {{ trend_labels| safe }},
+        datasets: [{
+            label: 'Revenue',
+            data: {{ trend_data| safe }},
+        borderColor: '#f59e0b', // Amber-500
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4
+            }]
+        },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+            x: { grid: { display: false } }
+        }
+    }
+    });
+
+    // Status Pie Chart
+    const ctxStatus = document.getElementById('statusChart').getContext('2d');
+    new Chart(ctxStatus, {
+        type: 'doughnut',
+        data: {
+            labels: {{ status_labels| safe }},
+        datasets: [{
+            data: {{ status_data| safe }},
+        backgroundColor: [
+            '#10b981', // Green (Completed)
+            '#ef4444', // Red (Cancelled)
+            '#f59e0b', // Amber (Pending)
+            '#3b82f6'  // Blue (Confirmed)
+        ],
+        borderWidth: 0
+            }]
+        },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom' }
+        }
+    }
+    });
+</script>
+{% endblock %}
