@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-md mx-auto px-4 py-16">
+    <div class="bg-white rounded-2xl p-8 shadow-sm border border-yellow-50 text-center">
+        <div class="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-mobile-alt text-2xl text-gold"></i>
+        </div>
+        
+        <h2 class="text-2xl font-bold text-brown mb-2">Verify Your Number</h2>
+        <p class="text-gray-600 mb-8">We've sent a 6-digit code to your mobile number. Please enter it below to confirm your booking.</p>
+
+        {% if error %}
+        <div class="bg-red-50 text-red-700 p-3 rounded-lg mb-6 text-sm">
+            <i class="fas fa-exclamation-circle mr-1"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            <div>
+                <input type="text" name="otp" maxlength="6" placeholder="0 0 0 0 0 0" 
+                    class="w-full text-center text-3xl tracking-[0.5em] font-bold py-4 border-b-2 border-gray-200 focus:border-gold outline-none transition-colors text-brown"
+                    autofocus required pattern="[0-9]*" inputmode="numeric">
+            </div>
+
+            <button type="submit" class="w-full btn-primary py-4 rounded-xl font-bold shadow-lg">
+                Verify OTP
+            </button>
+        </form>
+        
+        <p class="mt-6 text-sm text-gray-500">
+            Didn't receive code? <span class="text-gold font-medium cursor-pointer">Resend</span>
+        </p>
+    </div>
+</div>
+{% endblock %}

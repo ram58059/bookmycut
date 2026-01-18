@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-md mx-auto px-4 py-16">
+    <div class="bg-white rounded-2xl p-8 shadow-sm border border-yellow-50 text-center">
+        <h2 class="text-2xl font-bold text-brown mb-4">Cancel Booking?</h2>
+        <p class="text-gray-600 mb-2">Are you sure you want to cancel your appointment?</p>
+        
+        <div class="bg-gray-50 rounded-lg p-4 my-6 text-left">
+            <p><span class="font-bold">Date:</span> {{ booking.date }}</p>
+            <p><span class="font-bold">Time:</span> {{ booking.time }}</p>
+            <p><span class="font-bold">Services:</span> {{ booking.services.all|join:", " }}</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="flex space-x-4">
+                <a href="{% url 'home' %}" class="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold transition">
+                    Keep It
+                </a>
+                <button type="submit" class="flex-1 px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg transition">
+                    Yes, Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,5 +1,6 @@
 from django.db import models
-from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
 
 class Service(models.Model):
     name = models.CharField(max_length=100)
@@ -13,31 +14,68 @@ class Service(models.Model):
     def __str__(self):
         return self.name
 
+class CustomerTrust(models.Model):
+    phone_number = models.CharField(max_length=15, unique=True)
+    successful_bookings = models.IntegerField(default=0)
+    no_shows = models.IntegerField(default=0)
+    late_cancellations = models.IntegerField(default=0)
+    
+    TRUST_LEVEL_CHOICES = [
+        ('high', 'High'),
+        ('medium', 'Medium'),
+        ('low', 'Low'),
+    ]
+    trust_level = models.CharField(max_length=10, choices=TRUST_LEVEL_CHOICES, default='medium')
+    
+    def update_trust_score(self):
+        # Simple algorithm
+        total = self.successful_bookings + self.no_shows + self.late_cancellations
+        if total == 0:
+            self.trust_level = 'medium'
+            return
+
+        bad_ratio = (self.no_shows + self.late_cancellations) / total
+        
+        if bad_ratio > 0.5 or self.no_shows > 2:
+            self.trust_level = 'low'
+        elif self.successful_bookings > 5 and bad_ratio < 0.1:
+            self.trust_level = 'high'
+        else:
+            self.trust_level = 'medium'
+        self.save()
+
+    def __str__(self):
+        return f"{self.phone_number} - {self.trust_level}"
+
 class Booking(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
+        ('pending', 'Pending Verification'), # Held for 5 mins
         ('confirmed', 'Confirmed'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
+        ('no_show', 'No Show'),
     ]
 
     # Guest information
     customer_phone = models.CharField(max_length=15)
     customer_gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], default='Male')
     
-    # Relationships
-    # Removed customer FK
-    # Removed barber FK for now as per requirements it wasn't explicitly asked to choose a barber, just time slots. 
-    # But for slot management we might need to know which barber is available? 
-    # The requirement says "allocate 1 hour for each time slot from 10 am to 10 pm". It implies generic slots.
-    # I will keep it simple: We check global availability. Or maybe we assume 1 barber for simplicity unless specified.
-    # Actually, let's just model the slots.
-    
     services = models.ManyToManyField(Service)
     date = models.DateField()
     time = models.TimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Anti-Abuse & Verification
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    otp = models.CharField(max_length=6, blank=True, null=True)
+    otp_created_at = models.DateTimeField(blank=True, null=True)
+    is_verified = models.BooleanField(default=False)
+    
+    def is_otp_expired(self):
+        if not self.otp_created_at:
+            return True
+        return timezone.now() > self.otp_created_at + timedelta(minutes=5)
 
     def __str__(self):
-        return f"Booking {self.id} - {self.customer_phone} on {self.date} at {self.time}"
+        return f"Booking {self.id} - {self.customer_phone} ({self.status})"

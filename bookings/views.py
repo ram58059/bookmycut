@@ -1,9 +1,12 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.utils import timezone
+from django.db.models import Q
+from django.contrib import messages
 from datetime import datetime, time, timedelta
-from .models import Service, Booking
+from .models import Service, Booking, CustomerTrust
 from .forms import GuestDetailsForm
+from . import utils
 
 # New Wizard Views
 class GenderSelectionView(View):
@@ -119,10 +122,17 @@ class DateTimeSelectionView(View):
                 start_hour = max(start_hour, now.hour + 1)
 
             # Fetch existing bookings
+            # Logic: Confirmed/Completed block slots.
+            # Pending blocks slots ONLY if < 5 mins old (held for verification).
+            # Cancelled/NoShow do not block slots.
+            
+            cutoff_time = timezone.now() - timedelta(minutes=5)
+            
             existing_bookings = Booking.objects.filter(
                 date=selected_date
-            ).exclude(
-                status='cancelled'
+            ).filter(
+                Q(status__in=['confirmed', 'completed']) |
+                Q(status='pending', otp_created_at__gt=cutoff_time)
             ).prefetch_related('services')
             
             booked_hours = set()
@@ -135,8 +145,6 @@ class DateTimeSelectionView(View):
                     booked_hours.add(booking_start + i)
             
             # Find consecutive available slots
-            # Last possible start time must allow proper duration
-            # e.g. if close at 22, and duration is 2. Last start is 20 (20-21, 21-22). 20+2 = 22.
             for h in range(start_hour, end_hour):
                 if h + num_services > end_hour:
                     break
@@ -194,6 +202,17 @@ class BookingConfirmationView(View):
     def post(self, request):
         form = GuestDetailsForm(request.POST)
         if form.is_valid():
+            # Rate Limiting & Abuse Check
+            phone = form.cleaned_data['customer_phone']
+            ip = utils.get_client_ip(request)
+            
+            allowed, message = utils.check_rate_limits(phone, ip)
+            if not allowed:
+                return render(request, 'bookings/error.html', {'message': message})
+            
+            # Trust Score Check (Optional: Block low trust users or forcing manual review?)
+            # For now we just proceed, but we could enforce rules here.
+            
             # Retrieve session data
             selected_service_ids = request.session.get('selected_service_ids')
             date_str = request.session.get('selected_date')
@@ -202,30 +221,37 @@ class BookingConfirmationView(View):
             if not (selected_service_ids and date_str and time_str):
                 return redirect('service_list')
             
-            # Create Booking
+            # Create Pending Booking
             booking = form.save(commit=False)
             booking.date = date_str
             booking.time = time_str
             booking.customer_gender = request.session.get('selected_gender', 'Male')
-            booking.save()
+            booking.status = 'pending' # Pending verification
+            booking.ip_address = ip
             
+            # Generate OTP
+            booking.otp = utils.generate_otp()
+            booking.otp_created_at = timezone.now()
+            booking.is_verified = False
+            
+            booking.save()
             booking.services.set(selected_service_ids)
             booking.save()
             
-            # Clear session
+            # Send OTP
+            utils.send_otp_sms(booking.customer_phone, booking.otp)
+            
+            # Store ID in session for verification step
+            request.session['pending_booking_id'] = booking.id
+            
+            # Clear selection session data (not booking ID)
             del request.session['selected_service_ids']
             del request.session['selected_date']
             del request.session['selected_time']
             
-            # Send Notification (Mock)
-            # "Also send a message of booking details to the user’s whatsapp mobile number and also as a text message."
-            # We will just log it or simulate it in success view
-            request.session['last_booking_id'] = booking.id
-            
-            return redirect('booking_success')
+            return redirect('otp_verification')
         
-        # If invalid, re-render confirmation (should ideally handle this better)
-        # Re-fetch services for display
+        # If invalid, re-render confirmation
         selected_service_ids = request.session.get('selected_service_ids')
         services = Service.objects.filter(id__in=selected_service_ids)
         total_price = sum(s.price for s in services)
@@ -239,6 +265,56 @@ class BookingConfirmationView(View):
             'error': 'Please correct the errors below.'
         })
 
+class OTPVerificationView(View):
+    def get(self, request):
+        booking_id = request.session.get('pending_booking_id')
+        if not booking_id:
+            return redirect('home')
+        
+        booking = get_object_or_404(Booking, id=booking_id)
+        
+        # Check if already verified
+        if booking.status == 'confirmed':
+             return redirect('booking_success')
+             
+        # Check expiration
+        if booking.is_otp_expired():
+             return render(request, 'bookings/error.html', {'message': 'OTP Expired. Please start over.'})
+             
+        return render(request, 'bookings/otp_verify.html', {'booking': booking})
+
+    def post(self, request):
+        booking_id = request.session.get('pending_booking_id')
+        if not booking_id:
+            return redirect('home')
+            
+        booking = get_object_or_404(Booking, id=booking_id)
+        entered_otp = request.POST.get('otp')
+        
+        if booking.is_otp_expired():
+             return render(request, 'bookings/error.html', {'message': 'OTP Expired. Please start over.'})
+
+        if entered_otp == booking.otp:
+            # Success!
+            booking.is_verified = True
+            booking.status = 'confirmed'
+            booking.save()
+            
+            # Update Trust Stats
+            utils.update_trust_score(booking.customer_phone, 'new_booking') # Just updates created
+            
+            # Send Confirmation
+            utils.send_confirmation_sms(booking.customer_phone, f"Date: {booking.date} Time: {booking.time}")
+            
+            request.session['last_booking_id'] = booking.id
+            del request.session['pending_booking_id']
+            return redirect('booking_success')
+        else:
+            return render(request, 'bookings/otp_verify.html', {
+                'booking': booking,
+                'error': 'Invalid OTP. Please try again.'
+            })
+
 class BookingSuccessView(View):
     def get(self, request):
         booking_id = request.session.get('last_booking_id')
@@ -247,6 +323,35 @@ class BookingSuccessView(View):
             
         booking = Booking.objects.filter(id=booking_id).first()
         return render(request, 'bookings/success.html', {'booking': booking})
+
+class CancelBookingView(View):
+    def get(self, request, booking_id):
+        # In real app, verify signature/token. Here mock with ID.
+        booking = get_object_or_404(Booking, id=booking_id)
+        return render(request, 'bookings/cancel_confirm.html', {'booking': booking})
+        
+    def post(self, request, booking_id):
+        booking = get_object_or_404(Booking, id=booking_id)
+        
+        if booking.status in ['cancelled', 'completed']:
+            return render(request, 'bookings/error.html', {'message': 'Booking already processed.'})
+            
+        # Check for late cancellation (e.g., < 24 hours)
+        appointment_datetime = datetime.combine(booking.date, booking.time)
+        now = datetime.now()
+        is_late = (appointment_datetime - now) < timedelta(hours=24)
+        
+        booking.status = 'cancelled'
+        booking.save()
+        
+        # Update Trust
+        if is_late:
+            utils.update_trust_score(booking.customer_phone, 'late_cancel')
+        else:
+            # Regular cancel
+            pass 
+            
+        return render(request, 'bookings/error.html', {'message': 'Booking cancelled successfully.'}) # Reusing error template for msg
 
 # Deprecated/Placeholders (to be removed once URLs are updated)
 def book_appointment(request):
