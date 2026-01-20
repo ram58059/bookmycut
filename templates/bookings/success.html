@@ -149,10 +149,10 @@
                 <div class="flex items-start">
                     <div class="w-8 flex-shrink-0 text-center text-gold"><i class="fas fa-cut"></i></div>
                     <div>
-                        <p class="font-semibold text-brown">{{ booking.services.count }} Services</p>
+                        <p class="font-semibold text-brown">{{ bookings.count }} Services</p>
                         <p class="text-xs text-gray-400">
-                            {% for s in booking.services.all %}
-                            {{ s.name }}{% if not forloop.last %}, {% endif %}
+                            {% for b in bookings %}
+                            {{ b.service.name }} ({{ b.time|time:"g:i A" }}){% if not forloop.last %}, <br>{% endif %}
                             {% endfor %}
                         </p>
                     </div>

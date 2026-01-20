@@ -40,7 +40,7 @@ def overview(request):
     kpis = analytics.get_kpis()
     revenue_trend = analytics.get_revenue_trend(days=30)
     service_performance = analytics.get_service_performance()[:5] # Top 5
-    recent_bookings = Booking.objects.prefetch_related('services').order_by('-created_at')[:5]
+    recent_bookings = Booking.objects.select_related('service').order_by('-created_at')[:5]
     
     # Prepare data for Chart.js
     trend_labels = [entry['day'].strftime('%d %b') for entry in revenue_trend]

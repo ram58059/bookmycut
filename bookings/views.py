@@ -2,11 +2,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.utils import timezone
 from django.db.models import Q
+from django.db import transaction, IntegrityError
 from django.contrib import messages
 from datetime import datetime, time, timedelta
 from .models import Service, Booking, CustomerTrust
 from .forms import GuestDetailsForm
 from . import utils
+import uuid
 
 # New Wizard Views
 class GenderSelectionView(View):
@@ -121,28 +123,29 @@ class DateTimeSelectionView(View):
                 # E.g. if now is 15:30, next slot is 16:00.
                 start_hour = max(start_hour, now.hour + 1)
 
+            # Cleanup Stale Bookings (Requirement: block only if pending < 5 mins)
+            cutoff_time = timezone.now() - timedelta(minutes=5)
+            
+            # Delete stale pending bookings to free up slots immediately
+            Booking.objects.filter(
+                status='pending',
+                otp_created_at__lt=cutoff_time
+            ).delete()
+
             # Fetch existing bookings
             # Logic: Confirmed/Completed block slots.
-            # Pending blocks slots ONLY if < 5 mins old (held for verification).
-            # Cancelled/NoShow do not block slots.
-            
-            cutoff_time = timezone.now() - timedelta(minutes=5)
+            # Pending blocks slots (we just deleted stale ones, so all remaining pending are valid blocks)
             
             existing_bookings = Booking.objects.filter(
                 date=selected_date
             ).filter(
-                Q(status__in=['confirmed', 'completed']) |
-                Q(status='pending', otp_created_at__gt=cutoff_time)
-            ).prefetch_related('services')
+                status__in=['confirmed', 'completed', 'pending']
+            )
             
             booked_hours = set()
             for booking in existing_bookings:
-                # Each booking takes N hours where N = num of services
-                # Logic: We assume each service takes 1 hour as per requirement
-                duration_hours = booking.services.count()
-                booking_start = booking.time.hour
-                for i in range(duration_hours):
-                    booked_hours.add(booking_start + i)
+                # Each booking now represents ONE service = ONE hour
+                booked_hours.add(booking.time.hour)
             
             # Find consecutive available slots
             for h in range(start_hour, end_hour):
@@ -221,30 +224,57 @@ class BookingConfirmationView(View):
             if not (selected_service_ids and date_str and time_str):
                 return redirect('service_list')
             
-            # Create Pending Booking
-            booking = form.save(commit=False)
-            booking.date = date_str
-            booking.time = time_str
-            booking.customer_gender = request.session.get('selected_gender', 'Male')
-            booking.status = 'pending' # Pending verification
-            booking.ip_address = ip
+            services = Service.objects.filter(id__in=selected_service_ids)
+            # Reorder services to match input order if necessary, but here we just take them
+            # Limitation: The order in 'services' QuerySet is not guaranteed to match selection order,
+            # but for 2-3 services it's acceptable. Ideally we preserve order.
             
-            # Generate OTP
-            booking.otp = utils.generate_otp()
-            booking.otp_created_at = timezone.now()
-            booking.is_verified = False
+            # Create Bookings Transactionally
+            group_id = uuid.uuid4()
+            otp = utils.generate_otp()
+            now_time = timezone.now()
             
-            booking.save()
-            booking.services.set(selected_service_ids)
-            booking.save()
+            start_time_obj = datetime.strptime(time_str, '%H:%M:%S').time() if len(time_str) > 5 else datetime.strptime(time_str, '%H:%M').time()
+            start_hour = start_time_obj.hour
             
-            # Send OTP
-            utils.send_otp_sms(booking.customer_phone, booking.otp)
+            try:
+                with transaction.atomic():
+                    for idx, service_id in enumerate(selected_service_ids):
+                        service = services.get(id=service_id) # Inefficient loop query but safe for n=small
+                        
+                        booking_time = time(start_hour + idx, 0)
+                        
+                        booking = Booking(
+                            customer_phone=phone,
+                            customer_gender=request.session.get('selected_gender', 'Male'),
+                            service=service,
+                            booking_group_id=group_id,
+                            date=date_str,
+                            time=booking_time,
+                            status='pending',
+                            ip_address=ip,
+                            otp=otp,
+                            otp_created_at=now_time,
+                            is_verified=False
+                        )
+                        booking.save()
+                        
+            except IntegrityError:
+                # Slot was taken mid-process
+                return render(request, 'bookings/error.html', {
+                    'message': 'One of the selected time slots was just booked by another user. Please try again.'
+                })
+            except Exception as e:
+                 return render(request, 'bookings/error.html', {'message': f'An error occurred: {str(e)}'})
+
+            
+            # Send OTP (once for the group)
+            utils.send_otp_sms(phone, otp)
             
             # Store ID in session for verification step
-            request.session['pending_booking_id'] = booking.id
+            request.session['pending_group_id'] = str(group_id)
             
-            # Clear selection session data (not booking ID)
+            # Clear selection session data
             del request.session['selected_service_ids']
             del request.session['selected_date']
             del request.session['selected_time']
@@ -267,11 +297,15 @@ class BookingConfirmationView(View):
 
 class OTPVerificationView(View):
     def get(self, request):
-        booking_id = request.session.get('pending_booking_id')
-        if not booking_id:
+        group_id = request.session.get('pending_group_id')
+        if not group_id:
             return redirect('home')
         
-        booking = get_object_or_404(Booking, id=booking_id)
+        bookings = Booking.objects.filter(booking_group_id=group_id)
+        if not bookings.exists():
+            return redirect('service_list')
+            
+        booking = bookings.first()
         
         # Check if already verified
         if booking.status == 'confirmed':
@@ -284,11 +318,15 @@ class OTPVerificationView(View):
         return render(request, 'bookings/otp_verify.html', {'booking': booking})
 
     def post(self, request):
-        booking_id = request.session.get('pending_booking_id')
-        if not booking_id:
+        group_id = request.session.get('pending_group_id')
+        if not group_id:
             return redirect('home')
             
-        booking = get_object_or_404(Booking, id=booking_id)
+        bookings = Booking.objects.filter(booking_group_id=group_id)
+        if not bookings.exists():
+             return redirect('service_list')
+             
+        booking = bookings.first()
         entered_otp = request.POST.get('otp')
         
         if booking.is_otp_expired():
@@ -296,18 +334,16 @@ class OTPVerificationView(View):
 
         if entered_otp == booking.otp:
             # Success!
-            booking.is_verified = True
-            booking.status = 'confirmed'
-            booking.save()
+            bookings.update(is_verified=True, status='confirmed')
             
             # Update Trust Stats
-            utils.update_trust_score(booking.customer_phone, 'new_booking') # Just updates created
+            utils.update_trust_score(booking.customer_phone, 'new_booking') 
             
             # Send Confirmation
             utils.send_confirmation_sms(booking.customer_phone, f"Date: {booking.date} Time: {booking.time}")
             
-            request.session['last_booking_id'] = booking.id
-            del request.session['pending_booking_id']
+            request.session['last_booking_group_id'] = group_id
+            del request.session['pending_group_id']
             return redirect('booking_success')
         else:
             return render(request, 'bookings/otp_verify.html', {
@@ -317,34 +353,48 @@ class OTPVerificationView(View):
 
 class BookingSuccessView(View):
     def get(self, request):
-        booking_id = request.session.get('last_booking_id')
-        if not booking_id:
+        group_id = request.session.get('last_booking_group_id')
+        if not group_id:
             return redirect('service_list')
             
-        booking = Booking.objects.filter(id=booking_id).first()
-        return render(request, 'bookings/success.html', {'booking': booking})
+        bookings = Booking.objects.filter(booking_group_id=group_id)
+        booking = bookings.first()
+        return render(request, 'bookings/success.html', {'booking': booking, 'bookings': bookings})
 
 class CancelBookingView(View):
     def get(self, request, booking_id):
         # In real app, verify signature/token. Here mock with ID.
         booking = get_object_or_404(Booking, id=booking_id)
-        return render(request, 'bookings/cancel_confirm.html', {'booking': booking})
+        # Find all related bookings
+        bookings = Booking.objects.filter(booking_group_id=booking.booking_group_id)
+        
+        return render(request, 'bookings/cancel_confirm.html', {'booking': booking, 'bookings': bookings})
         
     def post(self, request, booking_id):
         booking = get_object_or_404(Booking, id=booking_id)
+        bookings = Booking.objects.filter(booking_group_id=booking.booking_group_id)
         
         if booking.status in ['cancelled', 'completed']:
             return render(request, 'bookings/error.html', {'message': 'Booking already processed.'})
             
         # Check for late cancellation (e.g., < 24 hours)
         appointment_datetime = datetime.combine(booking.date, booking.time)
-        now = datetime.now()
+        now = timezone.now() # Use timezone aware now
+        # Naive vs Aware check: combine creates naive. 
+        # Better:
+        try:
+             appointment_datetime = timezone.make_aware(datetime.combine(booking.date, booking.time))
+        except:
+             # If settings are naive
+             appointment_datetime = datetime.combine(booking.date, booking.time)
+             now = datetime.now()
+
         is_late = (appointment_datetime - now) < timedelta(hours=24)
         
-        booking.status = 'cancelled'
-        booking.save()
+        # Cancel ALL
+        bookings.update(status='cancelled')
         
-        # Update Trust
+        # Update Trust (counts as 1 cancellation event for the group)
         if is_late:
             utils.update_trust_score(booking.customer_phone, 'late_cancel')
         else:

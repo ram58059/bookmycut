@@ -133,9 +133,7 @@
                         <span class="font-medium text-gray-800">{{ booking.customer_phone }}</span>
                     </td>
                     <td class="px-6 py-4 text-gray-600">
-                        {% for service in booking.services.all %}
-                        {{ service.name }}{% if not forloop.last %}, {% endif %}
-                        {% endfor %}
+                        {{ booking.service.name }}
                     </td>
                     <td class="px-6 py-4 text-gray-600">
                         {{ booking.date }} at {{ booking.time }}
@@ -150,8 +148,7 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 font-medium text-gray-800">
-                        ${{ booking.services.all|join:"," }}
-                        <!-- Placeholder logic, ideal to sum in view or model method -->
+                        ${{ booking.service.price }}
                     </td>
                 </tr>
                 {% empty %}

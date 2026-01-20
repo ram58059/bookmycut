@@ -57,10 +57,16 @@ class Booking(models.Model):
     ]
 
     # Guest information
+    # Guest information
     customer_phone = models.CharField(max_length=15)
     customer_gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], default='Male')
     
-    services = models.ManyToManyField(Service)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, default=1, related_name='bookings') 
+    # NOTE: Default provided to allow migration, but practically required.
+    
+    booking_group_id = models.UUIDField(null=True, blank=True) 
+    # Used to group multiple services booked in one go
+    
     date = models.DateField()
     time = models.TimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -72,10 +78,15 @@ class Booking(models.Model):
     otp_created_at = models.DateTimeField(blank=True, null=True)
     is_verified = models.BooleanField(default=False)
     
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['service', 'date', 'time'], name='unique_service_slot')
+        ]
+
     def is_otp_expired(self):
         if not self.otp_created_at:
             return True
         return timezone.now() > self.otp_created_at + timedelta(minutes=5)
 
     def __str__(self):
-        return f"Booking {self.id} - {self.customer_phone} ({self.status})"
+        return f"Booking {self.id} - {self.customer_phone} ({self.service.name} @ {self.time})"

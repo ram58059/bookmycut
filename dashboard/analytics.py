@@ -23,14 +23,14 @@ def get_kpis():
         completed_count=Count('id', filter=Q(status='completed')),
         cancelled_count=Count('id', filter=Q(status='cancelled')),
         pending_count=Count('id', filter=Q(status='pending')),
-        total_revenue=Sum('services__price', filter=Q(status='completed')),
-        avg_value=Avg('services__price', filter=Q(status='completed')),
+        total_revenue=Sum('service__price', filter=Q(status='completed')),
+        avg_value=Avg('service__price', filter=Q(status='completed')),
     )
     
     # Recent (Last 30 days)
     recent_qs = total_qs.filter(date__gte=date_30_days_ago)
     recent_aggs = recent_qs.aggregate(
-         recent_revenue=Sum('services__price', filter=Q(status='completed')),
+         recent_revenue=Sum('service__price', filter=Q(status='completed')),
          recent_bookings=Count('id')
     )
     
@@ -62,7 +62,7 @@ def get_revenue_trend(days=30):
     ).annotate(
         day=TruncDay('date')
     ).values('day').annotate(
-        daily_revenue=Sum('services__price'),
+        daily_revenue=Sum('service__price'),
         daily_count=Count('id')
     ).order_by('day')
     
@@ -77,8 +77,8 @@ def get_service_performance():
     # Performance of top services
     # Revenue = price * completed bookings (since price is on Service model)
     return Service.objects.annotate(
-        booking_count=Count('booking'),
-        completed_count=Count('booking', filter=Q(booking__status='completed'))
+        booking_count=Count('bookings'),
+        completed_count=Count('bookings', filter=Q(bookings__status='completed'))
     ).annotate(
         revenue=F('price') * F('completed_count')
     ).order_by('-booking_count')
@@ -123,8 +123,8 @@ def get_cancellation_analytics():
     rate = (cancelled / total) * 100
     
     # By Service
-    service_cancellations = Service.objects.filter(booking__status='cancelled').annotate(
-        cancelled_count=Count('booking')
+    service_cancellations = Service.objects.filter(bookings__status='cancelled').annotate(
+        cancelled_count=Count('bookings')
     ).order_by('-cancelled_count')[:5]
     
     # By Time of Day (Hourly)
