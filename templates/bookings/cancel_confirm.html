@@ -9,7 +9,11 @@
         <div class="bg-gray-50 rounded-lg p-4 my-6 text-left">
             <p><span class="font-bold">Date:</span> {{ booking.date }}</p>
             <p><span class="font-bold">Time:</span> {{ booking.time }}</p>
-            <p><span class="font-bold">Services:</span> {{ booking.services.all|join:", " }}</p>
+            <p><span class="font-bold">Services:</span> 
+                {% for b in bookings %}
+                {{ b.service.name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </p>
         </div>
 
         <form method="post">
