@@ -74,7 +74,7 @@ class Booking(models.Model):
     
     # Anti-Abuse & Verification
     ip_address = models.GenericIPAddressField(null=True, blank=True)
-    otp = models.CharField(max_length=6, blank=True, null=True)
+    otp = models.CharField(max_length=128, blank=True, null=True) # Changed max_length to store hash
     otp_created_at = models.DateTimeField(blank=True, null=True)
     is_verified = models.BooleanField(default=False)
     

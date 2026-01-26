@@ -54,7 +54,7 @@
                 </div>
                 {% endif %}
 
-                <form method="post" class="space-y-6">
+                <form method="post" class="space-y-6" id="booking-form">
                     {% csrf_token %}
 
                     <div>
@@ -87,6 +87,8 @@
                         {% endif %}
                         <p class="text-xs text-gray-500 mt-2">We will send booking confirmation to this number.</p>
                     </div>
+                    
+
 
                     <div class="flex items-center justify-between pt-6">
                         <a href="{% url 'date_time_selection' %}"
@@ -94,9 +96,6 @@
                             <i class="fas fa-arrow-left mr-2"></i> Back
                         </a>
                         <div class="flex flex-col items-end">
-                            <div class="text-xs text-gray-400 mb-2">
-                                <i class="fas fa-shield-alt text-green-500"></i> Protected by reCAPTCHA
-                            </div>
                             <button type="submit"
                                 class="btn-primary px-8 py-3 rounded-full font-bold shadow-lg flex items-center">
                                 Confirm Booking <i class="fas fa-check ml-2"></i>

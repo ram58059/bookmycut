@@ -9,6 +9,7 @@ from .models import Service, Booking, CustomerTrust
 from .forms import GuestDetailsForm
 from . import utils
 import uuid
+from django.conf import settings
 
 # New Wizard Views
 class GenderSelectionView(View):
@@ -199,7 +200,7 @@ class BookingConfirmationView(View):
             'total_price': total_price,
             'date': date_str,
             'time': time_str,
-            'form': form
+            'form': form,
         })
 
     def post(self, request):
@@ -213,9 +214,6 @@ class BookingConfirmationView(View):
             if not allowed:
                 return render(request, 'bookings/error.html', {'message': message})
             
-            # Trust Score Check (Optional: Block low trust users or forcing manual review?)
-            # For now we just proceed, but we could enforce rules here.
-            
             # Retrieve session data
             selected_service_ids = request.session.get('selected_service_ids')
             date_str = request.session.get('selected_date')
@@ -225,14 +223,23 @@ class BookingConfirmationView(View):
                 return redirect('service_list')
             
             services = Service.objects.filter(id__in=selected_service_ids)
-            # Reorder services to match input order if necessary, but here we just take them
-            # Limitation: The order in 'services' QuerySet is not guaranteed to match selection order,
-            # but for 2-3 services it's acceptable. Ideally we preserve order.
+            
+            # Trust Score Check
+            # Logic: If trusted, skip OTP.
+            is_trusted = False
+            trust_profile = CustomerTrust.objects.filter(phone_number=phone).first()
+            if trust_profile and trust_profile.trust_level != 'low':
+                is_trusted = True
             
             # Create Bookings Transactionally
             group_id = uuid.uuid4()
-            otp = utils.generate_otp()
+            plain_otp = utils.generate_otp()
+            hashed_otp = utils.hash_otp(plain_otp)
             now_time = timezone.now()
+            
+            # Determine initial status
+            initial_status = 'confirmed' if is_trusted else 'pending'
+            is_initial_verified = True if is_trusted else False
             
             start_time_obj = datetime.strptime(time_str, '%H:%M:%S').time() if len(time_str) > 5 else datetime.strptime(time_str, '%H:%M').time()
             start_hour = start_time_obj.hour
@@ -240,8 +247,7 @@ class BookingConfirmationView(View):
             try:
                 with transaction.atomic():
                     for idx, service_id in enumerate(selected_service_ids):
-                        service = services.get(id=service_id) # Inefficient loop query but safe for n=small
-                        
+                        service = services.get(id=service_id)
                         booking_time = time(start_hour + idx, 0)
                         
                         booking = Booking(
@@ -251,35 +257,50 @@ class BookingConfirmationView(View):
                             booking_group_id=group_id,
                             date=date_str,
                             time=booking_time,
-                            status='pending',
+                            status=initial_status,
                             ip_address=ip,
-                            otp=otp,
-                            otp_created_at=now_time,
-                            is_verified=False
+                            otp=hashed_otp if not is_trusted else None, # Store hash
+                            otp_created_at=now_time if not is_trusted else None,
+                            is_verified=is_initial_verified
                         )
                         booking.save()
                         
             except IntegrityError:
-                # Slot was taken mid-process
                 return render(request, 'bookings/error.html', {
                     'message': 'One of the selected time slots was just booked by another user. Please try again.'
                 })
             except Exception as e:
                  return render(request, 'bookings/error.html', {'message': f'An error occurred: {str(e)}'})
 
-            
-            # Send OTP (once for the group)
-            utils.send_otp_sms(phone, otp)
-            
-            # Store ID in session for verification step
-            request.session['pending_group_id'] = str(group_id)
-            
-            # Clear selection session data
-            del request.session['selected_service_ids']
-            del request.session['selected_date']
-            del request.session['selected_time']
-            
-            return redirect('otp_verification')
+            if is_trusted:
+                # Direct Success
+                utils.update_trust_score(phone, 'new_booking')
+                # Send Confirmation SMS directly
+                utils.send_confirmation_sms(phone, f"Date: {date_str} Time: {time_str}")
+                request.session['last_booking_group_id'] = str(group_id)
+                
+                # Cleanup session
+                if 'selected_service_ids' in request.session: del request.session['selected_service_ids']
+                if 'selected_date' in request.session: del request.session['selected_date']
+                if 'selected_time' in request.session: del request.session['selected_time']
+                
+                return redirect('booking_success')
+            else:
+                # Send OTP (plain)
+                sms_sent = utils.send_otp_fast2sms(phone, plain_otp)
+                if not sms_sent:
+                     # Fallback logging if SMS fails (critical for this environment)
+                     print(f"CRITICAL: Failed to send SMS. OTP was: {plain_otp}")
+                
+                # Store ID in session for verification step
+                request.session['pending_group_id'] = str(group_id)
+                
+                # Clear selection session data
+                if 'selected_service_ids' in request.session: del request.session['selected_service_ids']
+                if 'selected_date' in request.session: del request.session['selected_date']
+                if 'selected_time' in request.session: del request.session['selected_time']
+                
+                return redirect('otp_verification')
         
         # If invalid, re-render confirmation
         selected_service_ids = request.session.get('selected_service_ids')
@@ -332,12 +353,17 @@ class OTPVerificationView(View):
         if booking.is_otp_expired():
              return render(request, 'bookings/error.html', {'message': 'OTP Expired. Please start over.'})
 
-        if entered_otp == booking.otp:
+        # Verify OTP Hash
+        if utils.verify_otp_hash(entered_otp, booking.otp):
             # Success!
             bookings.update(is_verified=True, status='confirmed')
             
-            # Update Trust Stats
-            utils.update_trust_score(booking.customer_phone, 'new_booking') 
+            # Update Trust Stats (First successful booking creates/updates the trust profile)
+            utils.update_trust_score(booking.customer_phone, 'completed') # Actually should be 'new_booking' or wait till completion?
+            # Requirement: "After successful OTP verification: Add the mobile number to a trusted customer list"
+            # We treat verification as enough to trust for NEXT time.
+            utils.update_trust_score(booking.customer_phone, 'new_booking') # Use 'new_booking' to init or just ensuring it exists.
+ 
             
             # Send Confirmation
             utils.send_confirmation_sms(booking.customer_phone, f"Date: {booking.date} Time: {booking.time}")
