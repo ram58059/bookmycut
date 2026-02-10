@@ -171,7 +171,7 @@ def get_utilization_metrics():
     # Map to ensure all days are present
     for i in range(7):
         d = start_date + timedelta(days=i)
-        found = next((item for item in bookings_last_7d if item['day'].date() == d), None)
+        found = next((item for item in bookings_last_7d if item['day'] == d), None)
         booked = found['booked_slots'] if found else 0
         total_booked += booked
         

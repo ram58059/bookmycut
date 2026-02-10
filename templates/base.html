@@ -27,6 +27,7 @@
 
                 <!-- Desktop CTA Button & Mobile Menu -->
                 <div class="flex items-center space-x-4">
+                    
                     <a href="{% url 'hairstyle_gallery' %}"
                         class="hidden md:inline-flex items-center text-brown hover:text-gold font-bold px-4 py-2.5 transition-all duration-300 hover:-translate-y-0.5 text-sm uppercase tracking-wider">
                         <span>Hairstyles</span>
@@ -36,12 +37,48 @@
                         <span>Book Now</span>
                     </a>
 
-                    <!-- Mobile menu button -->
-                    <div class="flex items-center md:hidden">
-                        <button type="button" class="text-brown hover:text-gold transition-colors p-2">
-                            <i class="fas fa-bars text-2xl"></i>
-                        </button>
+                    <!-- Auth Links -->
+                    <div class="flex items-center space-x-4 ml-4">
+                        <div class="relative">
+                            <button id="user-menu-btn" class="flex items-center text-brown hover:text-gold transition-colors focus:outline-none p-1">
+                                <i class="fas fa-user-circle text-4xl"></i>
+                            </button>
+                            <!-- Dropdown -->
+                            <div id="user-menu-dropdown" class="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-xl border border-yellow-100 py-1 hidden z-50 whitespace-nowrap">
+                                
+                                <!-- General Menu Items (Visible on all, or arguably only mobile if we used CSS classes, but for simplicity showing all as a "Quick Menu") -->
+                                <a href="{% url 'home' %}" class="block md:hidden px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
+                                    <i class="fas fa-home mr-2 text-gold"></i> Home
+                                </a>
+                                <a href="{% url 'hairstyle_gallery' %}" class="block md:hidden px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
+                                    <i class="fas fa-cut mr-2 text-gold"></i> Hairstyles
+                                </a>
+                                <a href="{% url 'gender_selection' %}" class="block md:hidden px-4 py-2 text-sm text-brown font-bold bg-yellow-50 hover:bg-yellow-100 mb-1">
+                                    <i class="fas fa-calendar-alt mr-2"></i> Book Now
+                                </a>
+                                <div class="border-t border-yellow-50 md:hidden my-1"></div>
+
+                                {% if user.is_authenticated %}
+                                    <div class="px-4 py-3 border-b border-yellow-50">
+                                        <p class="text-xs text-gray-500">Signed in as</p>
+                                        <p class="text-sm font-bold text-brown truncate">{{ user.phone_number }}</p>
+                                    </div>
+                                    <a href="{% url 'my_orders' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
+                                        <i class="fas fa-clipboard-list mr-2 text-gold"></i> My Orders
+                                    </a>
+                                    <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700">
+                                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'login' %}" class="block px-4 py-2 text-sm text-brown hover:bg-yellow-50 hover:text-gold font-medium">
+                                        <i class="fas fa-sign-in-alt mr-2"></i> Login
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Mobile menu button REMOVED -->
                 </div>
             </div>
         </div>
@@ -49,6 +86,16 @@
 
     <!-- Main Content -->
     <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {% if messages %}
+        <div class="mt-4">
+            {% for message in messages %}
+            <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {% block content %}
         {% endblock %}
     </main>
@@ -88,6 +135,26 @@
             </div>
         </div>
     </footer>
+
+    <!-- Navigation Script -->
+    <script>
+        const userBtn = document.getElementById('user-menu-btn');
+        const userDropdown = document.getElementById('user-menu-dropdown');
+
+        if(userBtn && userDropdown) {
+            userBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('hidden');
+            });
+
+            // Close on click outside
+            document.addEventListener('click', (e) => {
+                if (!userBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.add('hidden');
+                }
+            });
+        }
+    </script>
 </body>
 
 </html>

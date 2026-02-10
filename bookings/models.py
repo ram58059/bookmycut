@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 class Service(models.Model):
     name = models.CharField(max_length=100)
@@ -50,8 +50,10 @@ class CustomerTrust(models.Model):
 class Booking(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending Verification'), # Held for 5 mins
+        ('payment_pending', 'Payment Pending'),
         ('confirmed', 'Confirmed'),
         ('completed', 'Completed'),
+        ('payment_failed', 'Payment Failed'),
         ('cancelled', 'Cancelled'),
         ('no_show', 'No Show'),
     ]
@@ -59,6 +61,7 @@ class Booking(models.Model):
     # Guest information
     # Guest information
     customer_phone = models.CharField(max_length=15)
+    customer_email = models.EmailField(blank=True, null=True)
     customer_gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], default='Male')
     
     service = models.ForeignKey(Service, on_delete=models.CASCADE, default=1, related_name='bookings') 
@@ -78,6 +81,10 @@ class Booking(models.Model):
     otp_created_at = models.DateTimeField(blank=True, null=True)
     is_verified = models.BooleanField(default=False)
     
+    # Payment Info
+    razorpay_order_id = models.CharField(max_length=100, null=True, blank=True)
+    razorpay_payment_id = models.CharField(max_length=100, null=True, blank=True)
+    
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['service', 'date', 'time'], name='unique_service_slot')
@@ -87,6 +94,19 @@ class Booking(models.Model):
         if not self.otp_created_at:
             return True
         return timezone.now() > self.otp_created_at + timedelta(minutes=5)
+
+    @property
+    def is_cancellable(self):
+        if self.status != 'confirmed':
+            return False
+        # Create aware datetime for appointment
+        try:
+            appt_dt = timezone.make_aware(datetime.combine(self.date, self.time))
+        except:
+             # If settings are naive (though Django usually aware)
+             appt_dt = datetime.combine(self.date, self.time)
+        
+        return appt_dt > timezone.now()
 
     def __str__(self):
         return f"Booking {self.id} - {self.customer_phone} ({self.service.name} @ {self.time})"

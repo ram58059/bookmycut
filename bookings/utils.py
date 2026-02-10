@@ -4,8 +4,13 @@ import requests
 import hashlib
 import json
 from django.utils import timezone
-from datetime import timedelta
+from django.utils import timezone
+from datetime import timedelta, datetime
 from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+import urllib.parse
 from .models import Booking, CustomerTrust
 
 # ============================
@@ -31,32 +36,29 @@ def generate_otp(length=4):
     return ''.join(random.choices(string.digits, k=length))
 
 # ============================
-# SMS Service (Fast2SMS)
+# Voice OTP Service (2factor.in)
 # ============================
 
-def send_otp_fast2sms(phone, otp):
+def send_voice_otp_2factor(phone, otp):
     """
-    Sends OTP via Fast2SMS API.
+    Sends OTP via Voice Call using 2factor.in API.
     """
-    url = "https://www.fast2sms.com/dev/bulkV2"
+    api_key = "a77e1e1a-fa06-11f0-a6b2-0200cd936042"
     
-    # Fast2SMS Token (Provided by user)
-    token = "k3wFoMtxz4WqUvBniQsZ7ymf89DjLIOc2HPA6VRKGJCE5NXhag4gxl28CFrIVk7p5o0u3dYPAHqvQKGJ"
+    # 2factor.in requires phone number. check if we need country code.
+    # Usually it handles it, or we assume +91.
     
-    payload = f"variables_values={otp}&route=otp&numbers={phone}"
-    headers = {
-        'authorization': token,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Cache-Control': 'no-cache',
-    }
+    url = f"https://2factor.in/API/V1/{api_key}/VOICE/{phone}/{otp}"
     
     try:
-        response = requests.request("POST", url, data=payload, headers=headers)
-        # Log response for debugging (print to console in dev)
-        print(f"Fast2SMS Response: {response.text}")
-        return response.json().get('return') == True
+        response = requests.get(url)
+        # print(f"2Factor Voice Response: {response.text}") # Optional logging
+        data = response.json()
+        if data.get('Status') == 'Success':
+            return True
+        return False
     except Exception as e:
-        print(f"Error sending SMS: {e}")
+        print(f"Error sending Voice OTP: {e}")
         return False
 
 def send_confirmation_sms(phone, booking_details):
@@ -69,7 +71,38 @@ def send_confirmation_sms(phone, booking_details):
     print(f"DTO SENDING SMS TO {phone}: Booking Confirmed! {booking_details}")
     print(f"========================================")
 
-
+def send_booking_confirmation_email(booking):
+    """
+    Sends a booking confirmation email to the customer.
+    """
+    subject = 'Booking Confirmation - BookMyCut'
+    from_email = settings.DEFAULT_FROM_EMAIL
+    to = [booking.customer_email]
+    
+    # Simple text content for now, can be enhanced with HTML template
+    text_content = f"""
+    Dear Customer,
+    
+    Your booking with BookMyCut has been confirmed!
+    
+    Service: {booking.service.name}
+    Date: {booking.date}
+    Time: {booking.time}
+    Price: ₹{booking.service.price}
+    
+    Thank you for choosing us!
+    
+    Regards,
+    The BookMyCut Team
+    """
+    
+    try:
+        msg = EmailMultiAlternatives(subject, text_content, from_email, to)
+        msg.send()
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
 
 # ============================
 # Core Logic & Anti-Abuse

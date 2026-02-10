@@ -45,9 +45,30 @@
 </style>
 
 <div class="max-w-7xl mx-auto px-4 py-8">
-    <div class="text-center mb-12">
+    <div class="text-center mb-8">
         <h1 class="text-4xl font-bold text-brown mb-4">Our <span class="text-gold">Services</span></h1>
         <p class="text-gray-600">Select services for your appointment</p>
+    </div>
+
+    <!-- Search & Filter Section -->
+    <div class="mb-10 sticky top-0 bg-soft-cream/95 backdrop-blur-md z-40 py-4 shadow-sm -mx-4 px-4 md:px-0 md:mx-0 transition-all border-b border-yellow-50">
+        <div class="max-w-4xl mx-auto space-y-4">
+            <!-- Search -->
+            <div class="relative w-full">
+                <i class="fas fa-search absolute left-5 top-1/2 transform -translate-y-1/2 text-gold text-lg"></i>
+                <input type="text" id="serviceSearch" placeholder="Search for a service..." 
+                    class="w-full pl-20 pr-6 py-4 rounded-2xl border border-yellow-100 bg-white focus:border-gold focus:ring-2 focus:ring-yellow-100 outline-none transition-all shadow-sm text-gray-700 placeholder-gray-400 text-lg">
+            </div>
+            
+            <!-- Category Filters -->
+            <div class="flex space-x-3 overflow-x-auto pb-2 px-1 md:px-0 no-scrollbar items-center">
+                <button class="filter-btn bg-brown text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 whitespace-nowrap border border-transparent ring-2 ring-transparent focus:outline-none" data-category="all">All Services</button>
+                
+                {% for category in grouped_services %}
+                <button class="filter-btn bg-white text-gray-600 border border-yellow-100 px-6 py-2.5 rounded-full text-sm font-medium transition-all shadow-sm hover:shadow-md hover:border-gold hover:text-brown transform hover:-translate-y-0.5 whitespace-nowrap focus:outline-none" data-category="{{ category }}">{{ category }}</button>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 
     {% if error %}
@@ -68,7 +89,7 @@
         {% csrf_token %}
         <div class="space-y-12">
             {% for category, services in grouped_services.items %}
-            <div class="service-category">
+            <div class="service-category" data-category-name="{{ category }}">
                 <h2 class="text-2xl font-bold text-brown mb-6 border-b border-yellow-100 pb-2">{{ category }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {% for service in services %}
@@ -132,6 +153,84 @@
         function toggleCard(checkbox) { updateCount(); }
         checkboxes.forEach(cb => { cb.addEventListener('change', () => toggleCard(cb)); });
         updateCount();
+
+        // Search and Filter Logic
+        const searchInput = document.getElementById('serviceSearch');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const serviceCategories = document.querySelectorAll('.service-category');
+        const serviceCards = document.querySelectorAll('.glass-card');
+
+        // Filter Buttons
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Update active state
+                filterBtns.forEach(b => {
+                    b.classList.remove('bg-brown', 'text-white');
+                    b.classList.add('bg-white', 'text-gray-600', 'border', 'border-yellow-100');
+                });
+                btn.classList.remove('bg-white', 'text-gray-600', 'border', 'border-yellow-100');
+                btn.classList.add('bg-brown', 'text-white');
+
+                const category = btn.getAttribute('data-category');
+                
+                serviceCategories.forEach(catDiv => {
+                    if (category === 'all' || catDiv.getAttribute('data-category-name') === category) {
+                        catDiv.classList.remove('hidden');
+                    } else {
+                        catDiv.classList.add('hidden');
+                    }
+                });
+                
+                // Clear search when changing category filter for better UX
+                searchInput.value = '';
+                serviceCards.forEach(card => card.classList.remove('hidden')); 
+            });
+        });
+
+        // Search Functionality
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            
+            // If searching, reset category filter to All internally (visually keep buttons or reset? Let's reset visual too)
+            if (term.length > 0) {
+                 // specific UX choice: search searches EVERYTHING, so we show all categories that have matches
+                 filterBtns.forEach(b => {
+                    b.classList.remove('bg-brown', 'text-white');
+                    b.classList.add('bg-white', 'text-gray-600', 'border', 'border-yellow-100');
+                 });
+                 // simple approach: don't highlight any specific category button if mostly searching, or highlight 'All'
+                 const allBtn = document.querySelector('[data-category="all"]');
+                 if(allBtn) {
+                     allBtn.classList.remove('bg-white', 'text-gray-600', 'border', 'border-yellow-100');
+                     allBtn.classList.add('bg-brown', 'text-white');
+                 }
+            }
+
+            serviceCategories.forEach(catDiv => {
+                let hasVisibleService = false;
+                const cards = catDiv.querySelectorAll('.glass-card');
+                
+                cards.forEach(card => {
+                    const title = card.querySelector('.s-title').textContent.toLowerCase();
+                    if (title.includes(term)) {
+                        card.classList.remove('hidden');
+                        hasVisibleService = true;
+                    } else {
+                        card.classList.add('hidden');
+                    }
+                });
+
+                // Hide category if no services match (and search is active)
+                if (term.length > 0 && !hasVisibleService) {
+                    catDiv.classList.add('hidden');
+                } else if (term.length === 0) {
+                    // Reset visibility based on current "All" selection (which we forced above)
+                    catDiv.classList.remove('hidden');
+                } else {
+                    catDiv.classList.remove('hidden');
+                }
+            });
+        });
     </script>
 </div>
 {% endblock %}

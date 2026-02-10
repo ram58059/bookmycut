@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmed</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f9f9f9; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333333;">
+    <div style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        
+        <!-- Header -->
+        <div style="background-color: #fef08a; padding: 40px 20px; text-align: center;">
+            <h1 style="color: #854d0e; margin: 0; font-size: 28px; letter-spacing: -0.5px;">Booking Confirmed!</h1>
+            <p style="margin: 10px 0 0; color: #854d0e; font-size: 16px;">We can't wait to see you.</p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 40px 30px;">
+            <p style="font-size: 16px; line-height: 1.5; margin-bottom: 25px;">
+                Hello,
+                <br><br>
+                Great news! Your appointment at <strong>BookMyCut</strong> is officially confirmed. Here are the details for your upcoming visit:
+            </p>
+
+            <!-- Booking Details Card -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b; width: 140px; font-weight: 500;">Service</td>
+                        <td style="padding: 8px 0; color: #334155; font-weight: 600;">{{ service_name }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b; font-weight: 500;">Date</td>
+                        <td style="padding: 8px 0; color: #334155; font-weight: 600;">{{ date }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b; font-weight: 500;">Time</td>
+                        <td style="padding: 8px 0; color: #334155; font-weight: 600;">{{ time }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b; font-weight: 500;">Booking ID</td>
+                        <td style="padding: 8px 0; color: #334155; font-family: monospace;">{{ booking_id }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Shop Info & Map Button -->
+            <div style="text-align: center; border-top: 1px solid #f1f5f9; padding-top: 30px;">
+                <p style="color: #64748b; margin-bottom: 5px; font-size: 14px;">LOCATION</p>
+                <h3 style="margin: 0 0 10px; color: #0f172a;">Zion Salon & Spa</h3>
+                <!-- Placeholder Address - You may want to update this if you have the real address -->
+                <p style="margin: 0 0 25px; color: #475569;">123 Fashion Street, Trendy District</p>
+                
+                <a href="{{ google_maps_url }}" style="display: inline-block; background-color: #eab308; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 50px; font-weight: bold; font-size: 16px; transition: background-color 0.2s;">
+                    Get Directions
+                </a>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+                Need to reschedule? Reply to this email or call us at (555) 123-4567.
+            </p>
+            <p style="margin: 10px 0 0; color: #cbd5e1; font-size: 12px;">
+                &copy; {% now "Y" %} BookMyCut. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

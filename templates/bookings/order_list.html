@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="py-12 bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-brown">My Orders</h1>
+            <p class="text-gray-600 mt-2">Manage your appointments and booking history</p>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-yellow-100 overflow-hidden">
+            {% if bookings %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-yellow-50">
+                    <thead class="bg-amber-50/50">
+                        <tr>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-brown uppercase tracking-wider">Booking ID</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-brown uppercase tracking-wider">Service</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-brown uppercase tracking-wider">Date & Time</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-brown uppercase tracking-wider">Amount</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-brown uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-brown uppercase tracking-wider">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-yellow-50">
+                        {% for booking in bookings %}
+                        <tr class="hover:bg-amber-50/30 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                #{{ booking.id }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                {{ booking.service.name }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                <div class="flex flex-col">
+                                    <span class="font-medium">{{ booking.date }}</span>
+                                    <span class="text-gray-500 text-xs">{{ booking.time|time:"h:i A" }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                ₹{{ booking.service.price }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if booking.status == 'confirmed' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Confirmed
+                                    </span>
+                                {% elif booking.status == 'cancelled' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        Cancelled
+                                    </span>
+                                {% elif booking.status == 'completed' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        Completed
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        {{ booking.status|title }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {% if booking.is_cancellable %}
+                                    <button onclick="openCancelModal('{{ booking.id }}', '{{ booking.service.name }}', '{{ booking.date }}', '{{ booking.time|time:'h:i A' }}')" 
+                                            class="text-red-500 hover:text-red-700 font-medium hover:underline transition">
+                                        Cancel
+                                    </button>
+                                {% else %}
+                                    <span class="text-gray-300 cursor-not-allowed">--</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-12 text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-50 mb-4">
+                    <i class="fas fa-calendar-times text-2xl text-brown/50"></i>
+                </div>
+                <h3 class="text-lg font-medium text-brown">No bookings found</h3>
+                <p class="text-gray-500 mt-2 mb-6">You haven't made any appointments yet.</p>
+                <a href="{% url 'gender_selection' %}" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-brown hover:bg-gold transition-all duration-300">
+                    Book Now
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Confirmation Modal -->
+<div id="cancelModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeCancelModal()"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <i class="fas fa-exclamation-triangle text-red-600"></i>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                            Cancel Booking?
+                        </h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500">
+                                Are you sure you want to cancel the appointment for <strong id="modal-service" class="text-gray-800"></strong> on <span id="modal-date"></span> at <span id="modal-time"></span>?
+                            </p>
+                            <p class="text-sm text-yellow-600 mt-3 font-medium bg-yellow-50 p-3 rounded-md border border-yellow-200">
+                                <i class="fas fa-info-circle mr-1"></i> The payment will be credited back to your account within 2–7 business days.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <form id="cancelForm" method="POST" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Yes, Cancel Order
+                    </button>
+                </form>
+                <button type="button" onclick="closeCancelModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Keep Booking
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openCancelModal(id, service, date, time) {
+        document.getElementById('modal-service').textContent = service;
+        document.getElementById('modal-date').textContent = date;
+        document.getElementById('modal-time').textContent = time;
+        
+        // Update Form Action
+        const form = document.getElementById('cancelForm');
+        form.action = `/bookings/cancel/${id}/`; // Ensure this matches urls.py pattern
+        
+        document.getElementById('cancelModal').classList.remove('hidden');
+    }
+
+    function closeCancelModal() {
+        document.getElementById('cancelModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}

@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.views import View
+from django.http import JsonResponse
 from django.utils import timezone
 from django.db.models import Q
 from django.db import transaction, IntegrityError
@@ -9,7 +11,14 @@ from .models import Service, Booking, CustomerTrust
 from .forms import GuestDetailsForm
 from . import utils
 import uuid
+import json
 from django.conf import settings
+import razorpay
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import login
+from users.models import User
 
 # New Wizard Views
 class GenderSelectionView(View):
@@ -46,8 +55,8 @@ class ServiceListView(View):
 
         grouped_services = {}
         category_order = [
-            'Facials', 'Hair Spa', 'Reflexology / Massage', 'Express Face Masks',
-            'Haircut Combos', 'Hair Services', 'Hair Colour', 'Streaks'
+            'Haircut Services', 'General', 'Facials', 'Hair Spa', 'Reflexology / Massage', 'Express Face Masks',
+            'Haircut Combos', 'Hair Colour', 'Streaks'
         ]
         
         all_services = list(services)
@@ -161,7 +170,12 @@ class DateTimeSelectionView(View):
                         break
                 
                 if is_valid:
-                    slots.append(time(h, 0))
+                    # Explicitly creating datetime.time object as requested
+                    t_obj = time(h, 0)
+                    slots.append(t_obj)
+                    # Debug print to verify type in console
+                    if len(slots) == 1:
+                        print(f"DEBUG: Slot type is {type(t_obj)}")
 
         return render(request, 'bookings/calendar.html', {
             'slots': slots,
@@ -207,7 +221,11 @@ class BookingConfirmationView(View):
         form = GuestDetailsForm(request.POST)
         if form.is_valid():
             # Rate Limiting & Abuse Check
-            phone = form.cleaned_data['customer_phone']
+            if request.user.is_authenticated:
+                phone = request.user.phone_number
+            else:
+                phone = form.cleaned_data['customer_phone']
+            
             ip = utils.get_client_ip(request)
             
             allowed, message = utils.check_rate_limits(phone, ip)
@@ -224,13 +242,16 @@ class BookingConfirmationView(View):
             
             services = Service.objects.filter(id__in=selected_service_ids)
             
-            # Trust Score Check
-            # Logic: If trusted, skip OTP.
-            is_trusted = False
-            trust_profile = CustomerTrust.objects.filter(phone_number=phone).first()
-            if trust_profile and trust_profile.trust_level != 'low':
-                is_trusted = True
-            
+            # Determine if trusted or logged in
+            if request.user.is_authenticated:
+                is_trusted_user = True
+            else:
+                is_trusted_user = False
+                # Trust Score Check for Guests
+                trust_profile = CustomerTrust.objects.filter(phone_number=phone).first()
+                if trust_profile and trust_profile.trust_level != 'low':
+                    is_trusted_user = True
+
             # Create Bookings Transactionally
             group_id = uuid.uuid4()
             plain_otp = utils.generate_otp()
@@ -238,8 +259,8 @@ class BookingConfirmationView(View):
             now_time = timezone.now()
             
             # Determine initial status
-            initial_status = 'confirmed' if is_trusted else 'pending'
-            is_initial_verified = True if is_trusted else False
+            initial_status = 'payment_pending' if is_trusted_user else 'pending'
+            is_initial_verified = True if is_trusted_user else False
             
             start_time_obj = datetime.strptime(time_str, '%H:%M:%S').time() if len(time_str) > 5 else datetime.strptime(time_str, '%H:%M').time()
             start_hour = start_time_obj.hour
@@ -259,8 +280,8 @@ class BookingConfirmationView(View):
                             time=booking_time,
                             status=initial_status,
                             ip_address=ip,
-                            otp=hashed_otp if not is_trusted else None, # Store hash
-                            otp_created_at=now_time if not is_trusted else None,
+                            otp=hashed_otp if not is_trusted_user else None, # Store hash only if needed
+                            otp_created_at=now_time if not is_trusted_user else None,
                             is_verified=is_initial_verified
                         )
                         booking.save()
@@ -272,25 +293,22 @@ class BookingConfirmationView(View):
             except Exception as e:
                  return render(request, 'bookings/error.html', {'message': f'An error occurred: {str(e)}'})
 
-            if is_trusted:
-                # Direct Success
-                utils.update_trust_score(phone, 'new_booking')
-                # Send Confirmation SMS directly
-                utils.send_confirmation_sms(phone, f"Date: {date_str} Time: {time_str}")
-                request.session['last_booking_group_id'] = str(group_id)
+            if is_trusted_user:
+                # Direct to Payment
+                request.session['pending_group_id'] = str(group_id)
                 
-                # Cleanup session
+                # Cleanup selection session
                 if 'selected_service_ids' in request.session: del request.session['selected_service_ids']
                 if 'selected_date' in request.session: del request.session['selected_date']
                 if 'selected_time' in request.session: del request.session['selected_time']
-                
-                return redirect('booking_success')
+
+                return redirect('payment_process')
             else:
-                # Send OTP (plain)
-                sms_sent = utils.send_otp_fast2sms(phone, plain_otp)
+                # Send OTP (Voice)
+                sms_sent = utils.send_voice_otp_2factor(phone, plain_otp)
                 if not sms_sent:
-                     # Fallback logging if SMS fails (critical for this environment)
-                     print(f"CRITICAL: Failed to send SMS. OTP was: {plain_otp}")
+                     # Fallback logging
+                     print(f"CRITICAL: Failed to send Voice OTP. OTP was: {plain_otp}")
                 
                 # Store ID in session for verification step
                 request.session['pending_group_id'] = str(group_id)
@@ -356,26 +374,151 @@ class OTPVerificationView(View):
         # Verify OTP Hash
         if utils.verify_otp_hash(entered_otp, booking.otp):
             # Success!
-            bookings.update(is_verified=True, status='confirmed')
+            # bookings.update(is_verified=True, status='confirmed') # OLD
             
-            # Update Trust Stats (First successful booking creates/updates the trust profile)
-            utils.update_trust_score(booking.customer_phone, 'completed') # Actually should be 'new_booking' or wait till completion?
-            # Requirement: "After successful OTP verification: Add the mobile number to a trusted customer list"
-            # We treat verification as enough to trust for NEXT time.
-            utils.update_trust_score(booking.customer_phone, 'new_booking') # Use 'new_booking' to init or just ensuring it exists.
- 
-            
-            # Send Confirmation
-            utils.send_confirmation_sms(booking.customer_phone, f"Date: {booking.date} Time: {booking.time}")
-            
-            request.session['last_booking_group_id'] = group_id
-            del request.session['pending_group_id']
-            return redirect('booking_success')
+            # Auto-Login (New Requirement)
+            try:
+                user, created = User.objects.get_or_create(phone_number=booking.customer_phone)
+                if created:
+                    user.username = booking.customer_phone
+                    user.save()
+                login(request, user)
+            except Exception as e:
+                print(f"Auto-login failed: {e}")
+
+            # New Flow: OTP Verified -> Payment Pending -> Payment Process View
+            bookings.update(is_verified=True, status='payment_pending')
+            return redirect('payment_process')
+
         else:
             return render(request, 'bookings/otp_verify.html', {
                 'booking': booking,
                 'error': 'Invalid OTP. Please try again.'
             })
+
+@method_decorator(csrf_exempt, name='dispatch')
+class PaymentProcessView(View):
+    def get(self, request):
+        group_id = request.session.get('pending_group_id')
+        if not group_id:
+            return redirect('home')
+            
+        bookings = Booking.objects.filter(booking_group_id=group_id)
+        if not bookings.exists():
+            return redirect('service_list')
+            
+        # If already confirmed, skip payment
+        if bookings.first().status == 'confirmed':
+            return redirect('booking_success')
+            
+        # Initialize Razorpay
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        
+        # Calculate Amount
+        total_amount = sum(b.service.price for b in bookings)
+        amount_paise = int(total_amount * 100)
+        
+        booking = bookings.first()
+        
+        # Create Order (if not already exists for this group to avoid duplicates on refresh)
+        if booking.razorpay_order_id:
+            order_id = booking.razorpay_order_id
+        else:
+            order_currency = 'INR'
+            order_receipt = str(group_id)
+            notes = {'booking_group_id': str(group_id)}
+            try:
+                payment_order = client.order.create(dict(amount=amount_paise, currency=order_currency, receipt=order_receipt, notes=notes))
+                order_id = payment_order['id']
+                bookings.update(razorpay_order_id=order_id, status='payment_pending')
+            except Exception as e:
+                print(f"Razorpay Order Error: {e}")
+                return render(request, 'bookings/error.html', {'message': 'Error initializing payment.'})
+
+        context = {
+            'booking': booking,
+            'bookings': bookings,
+            'total_amount': total_amount,
+            'razorpay_order_id': order_id,
+            'razorpay_merchant_key': settings.RAZORPAY_KEY_ID,
+            'razorpay_amount': amount_paise,
+            'currency': 'INR',
+            'razorpay_amount': amount_paise,
+            'currency': 'INR',
+            'callback_url': reverse('payment_verify'), # Dynamic URL construction
+            'customer_phone': booking.customer_phone,
+            'customer_email': booking.customer_email or ''
+        }
+        
+        return render(request, 'bookings/payment.html', context)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class PaymentVerificationView(View):
+    def post(self, request):
+        payment_id = request.POST.get('razorpay_payment_id')
+        order_id = request.POST.get('razorpay_order_id')
+        signature = request.POST.get('razorpay_signature')
+        
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        
+        try:
+            # Verify Signature
+            data = {
+                'razorpay_order_id': order_id,
+                'razorpay_payment_id': payment_id,
+                'razorpay_signature': signature
+            }
+            client.utility.verify_payment_signature(data)
+            
+            # SUCCESS
+            bookings = Booking.objects.filter(razorpay_order_id=order_id)
+            if not bookings.exists():
+                 return render(request, 'bookings/error.html', {'message': 'Order not found.'})
+            
+            # Transition Status
+            bookings.update(
+                status='confirmed',
+                razorpay_payment_id=payment_id
+            )
+            
+            first_booking = bookings.first()
+            
+            # Update Trust
+            utils.update_trust_score(first_booking.customer_phone, 'new_booking')
+            
+            # Send Email (NOW we send it)
+            # We can send one email for the group
+            # Ideally utils.send_booking_confirmation_email handles single booking object, 
+            # if we want to show all services, we might need to adjust utils or just send for first.
+            # Current util sends for 'booking', mentioning service name.
+            # If multiple services, we send multiple emails OR update util.
+            # Let's send for each to be safe/consistent with previous logic, 
+            # OR better: update util to handle group (but that's extra scope).
+            # The previous logic in BookingConfirmationView loop was to send for each.
+            
+            for b in bookings:
+                utils.send_booking_confirmation_email(b)
+                
+            utils.send_confirmation_sms(first_booking.customer_phone, f"Confirmed! Date: {first_booking.date} Time: {first_booking.time}")
+            
+            # Set session for Success Page
+            request.session['last_booking_group_id'] = str(first_booking.booking_group_id)
+            
+            # Clean up pending session if exists (though we might be in a new tab/session context if redirect happens differently, 
+            # but usually it's same browser session)
+            if 'pending_group_id' in request.session:
+                del request.session['pending_group_id']
+                
+            return redirect('booking_success')
+            
+        except razorpay.errors.SignatureVerificationError:
+            # FAILURE
+            bookings = Booking.objects.filter(razorpay_order_id=order_id)
+            bookings.update(status='payment_failed')
+            return render(request, 'bookings/error.html', {'message': 'Payment Verification Failed. Please contact support if money was deducted.'})
+        except Exception as e:
+            print(f"Payment Verification Error: {e}")
+            return render(request, 'bookings/error.html', {'message': 'An error occurred during payment verification.'})
 
 class BookingSuccessView(View):
     def get(self, request):
@@ -427,7 +570,8 @@ class CancelBookingView(View):
             # Regular cancel
             pass 
             
-        return render(request, 'bookings/error.html', {'message': 'Booking cancelled successfully.'}) # Reusing error template for msg
+        messages.success(request, "Your booking has been cancelled. The payment will be credited back to your account within 2–7 business days.")
+        return redirect('my_orders')
 
 # Deprecated/Placeholders (to be removed once URLs are updated)
 def book_appointment(request):
@@ -441,3 +585,10 @@ def customer_dashboard(request):
 
 def barber_dashboard(request):
     return redirect('home')
+
+class OrderListView(LoginRequiredMixin, View):
+    login_url = '/users/login/'
+    
+    def get(self, request):
+        bookings = Booking.objects.filter(customer_phone=request.user.phone_number).order_by('-date', '-time')
+        return render(request, 'bookings/order_list.html', {'bookings': bookings})

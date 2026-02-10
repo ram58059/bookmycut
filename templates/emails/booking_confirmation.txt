@@ -1,0 +1,23 @@
+Confirmed: {{ service_name }}
+
+Hello,
+
+Great news! Your appointment at BookMyCut is officially confirmed.
+
+BOOKING DETAILS
+----------------------------
+Service: {{ service_name }}
+Date:    {{ date }}
+Time:    {{ time }}
+ID:      {{ booking_id }}
+
+LOCATION
+----------------------------
+Zion Salon & Spa
+123 Fashion Street, Trendy District
+
+Get Directions: {{ google_maps_url }}
+
+We look forward to seeing you!
+
+Need help? Reply to this email.

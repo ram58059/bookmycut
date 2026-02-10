@@ -53,8 +53,9 @@ def populate_zion_services():
             {'name': 'Haircut + Trim/Shave + Moisturising Spa', 'price': 799},
             {'name': 'Haircut + Trim/Shave + Ammonia-Free Colour', 'price': 999},
             {'name': 'Haircut + Trim/Shave + Ammonia-Free Colour + De-Tan', 'price': 1299},
+            {'name': 'Haircut + Trim/Shave + Ammonia-Free Colour + De-Tan', 'price': 1299},
         ],
-        'Hair Services': [
+        'Haircut Services': [
             {'name': 'Haircut (includes hair wash)', 'price': 250},
             {'name': 'Kids Cut (Boy)', 'price': 200},
             {'name': 'Beard Trim', 'price': 120},
@@ -75,8 +76,21 @@ def populate_zion_services():
         ]
     }
 
+    # Image mapping
+    category_images = {
+        'Facials': 'services/facials.jpg',
+        'Hair Spa': 'services/hair_spa.jpg',
+        'Reflexology / Massage': 'services/reflexology.jpg',
+        'Express Face Masks': 'services/face_masks.jpg',
+        'Haircut Combos': 'services/haircut_combos.jpg',
+        'Haircut Services': 'services/hair_services.jpg',
+        'Hair Colour': 'services/hair_colour.jpg',
+        'Streaks': 'services/streaks.jpg'
+    }
+
     count = 0
     for category, services in boy_services.items():
+        image_path = category_images.get(category)
         for s_data in services:
             # Handle specific durations if provided, else default 60
             duration = s_data.get('duration', 60)
@@ -90,7 +104,8 @@ def populate_zion_services():
                 price=s_data['price'],
                 duration_minutes=duration,
                 category=category,
-                gender='Boy'
+                gender='Boy',
+                image=image_path
             )
             count += 1
             

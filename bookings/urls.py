@@ -1,20 +1,25 @@
 from django.urls import path
-from .views import (
-    GenderSelectionView,
-    ServiceListView, 
-    DateTimeSelectionView, 
-    BookingConfirmationView, 
-    BookingSuccessView,
-    OTPVerificationView,
-    CancelBookingView
-)
+from . import views, views_ajax
 
 urlpatterns = [
-    path('book/gender/', GenderSelectionView.as_view(), name='gender_selection'),
-    path('book/services/', ServiceListView.as_view(), name='service_list'),
-    path('book/calendar/', DateTimeSelectionView.as_view(), name='date_time_selection'),
-    path('book/confirm/', BookingConfirmationView.as_view(), name='booking_confirmation'),
-    path('book/verify-otp/', OTPVerificationView.as_view(), name='otp_verification'),
-    path('book/success/', BookingSuccessView.as_view(), name='booking_success'),
-    path('book/cancel/<int:booking_id>/', CancelBookingView.as_view(), name='cancel_booking'),
+    # Wizard Steps
+    path('gender/', views.GenderSelectionView.as_view(), name='gender_selection'),
+    path('services/', views.ServiceListView.as_view(), name='service_list'),
+    path('date-time/', views.DateTimeSelectionView.as_view(), name='date_time_selection'),
+    path('confirm/', views.BookingConfirmationView.as_view(), name='booking_confirmation'),
+    
+    # Verification & Payment
+    path('verify-otp/', views.OTPVerificationView.as_view(), name='otp_verification'),
+    path('payment/', views.PaymentProcessView.as_view(), name='payment_process'),
+    path('payment/verify/', views.PaymentVerificationView.as_view(), name='payment_verify'),
+    path('success/', views.BookingSuccessView.as_view(), name='booking_success'), # New Success
+    
+    # User Dashboard
+    path('orders/', views.OrderListView.as_view(), name='my_orders'),
+    path('cancel/<int:booking_id>/', views.CancelBookingView.as_view(), name='cancel_booking'),
+
+    # AJAX Endpoints (Restoring these!)
+    path('api/initiate-booking/', views_ajax.InitiateBookingView.as_view(), name='api_initiate_booking'),
+    path('api/verify-otp/', views_ajax.VerifyBookingOTPView.as_view(), name='api_verify_otp'),
+    path('api/resend-otp/', views_ajax.ResendOTPView.as_view(), name='api_resend_otp'),
 ]

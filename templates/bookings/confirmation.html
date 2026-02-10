@@ -7,7 +7,7 @@
         <p class="text-gray-600">Please review your appointment details</p>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         <!-- Summary Card -->
         <div class="lg:col-span-1">
             <div class="glass-card rounded-2xl p-8 sticky top-24">
@@ -57,50 +57,43 @@
                 <form method="post" class="space-y-6" id="booking-form">
                     {% csrf_token %}
 
+                    <!-- Phone Field -->
                     <div>
-                        <label for="{{ form.customer_phone.id_for_label }}"
-                            class="block text-sm font-medium text-gray-700 mb-2">Mobile Number</label>
+                        <label for="{{ form.customer_phone.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Mobile Number</label>
                         {{ form.customer_phone }}
-                        <!-- Tailwind styling for form field -->
-                        <style>
-                            #id_customer_phone {
-                                width: 100%;
-                                padding: 1rem;
-                                border-radius: 0.75rem;
-                                border: 1px solid #e5e7eb;
-                                background-color: #f9fafb;
-                                transition: all 0.2s;
-                                font-size: 1rem;
-                                color: #4A3728;
-                            }
-
-                            #id_customer_phone:focus {
-                                outline: none;
-                                border-color: #D4AF37;
-                                background-color: #fff;
-                                box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1);
-                            }
-                        </style>
-
                         {% if form.customer_phone.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.customer_phone.errors.0 }}</p>
                         {% endif %}
-                        <p class="text-xs text-gray-500 mt-2">We will send booking confirmation to this number.</p>
                     </div>
-                    
 
+                    <!-- Email Field -->
+                    <div>
+                        <label for="{{ form.customer_email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        {{ form.customer_email }}
+                        <div id="email-error" class="hidden text-red-500 text-sm mt-1">Please enter a valid email address</div>
+                        <p class="text-xs text-gray-500 mt-2">We will send booking confirmation specifics to these contacts.</p>
+                    </div>
 
+                    <!-- Notice Block -->
+                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-6 flex items-start">
+                        <i class="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
+                        <div>
+                            <p class="text-sm text-blue-800 font-medium">Verification Required</p>
+                            <p class="text-sm text-blue-700 mt-1">
+                                You will receive a 4-digit OTP via voice call to verify your booking. 
+                                Booking confirmation details will also be sent to your email.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
                     <div class="flex items-center justify-between pt-6">
-                        <a href="{% url 'date_time_selection' %}"
-                            class="text-gray-500 hover:text-brown transition flex items-center">
+                        <a href="{% url 'date_time_selection' %}" class="text-gray-500 hover:text-brown transition flex items-center">
                             <i class="fas fa-arrow-left mr-2"></i> Back
                         </a>
-                        <div class="flex flex-col items-end">
-                            <button type="submit"
-                                class="btn-primary px-8 py-3 rounded-full font-bold shadow-lg flex items-center">
-                                Confirm Booking <i class="fas fa-check ml-2"></i>
-                            </button>
-                        </div>
+                        <button type="submit" class="btn-primary px-8 py-3 rounded-full font-bold shadow-lg flex items-center">
+                            Confirm Booking <i class="fas fa-check ml-2"></i>
+                        </button>
                     </div>
                 </form>
             </div>
@@ -108,5 +101,292 @@
     </div>
 </div>
 
+<!-- OTP Verification Modal (Placed outside main grid) -->
+<div id="otp-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center animate-fade-in" style="z-index: 9999;">
+    <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative transform transition-all scale-100 mx-4">
+        <!-- Close Button -->
+        <button type="button" onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+        </button>
 
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-phone-alt text-2xl text-gold"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-brown">Verify It's You</h3>
+            <p class="text-gray-500 text-sm mt-2">
+                We're calling you with a 4-digit OTP.<br>
+                Please enter it below to confirm.
+            </p>
+        </div>
+
+        <div class="space-y-6">
+            <div>
+                <input type="text" id="otp-input" maxlength="4" 
+                    class="w-full text-center text-3xl font-bold tracking-[0.5em] py-4 border-2 border-gray-200 rounded-xl focus:border-gold focus:outline-none focus:ring-4 focus:ring-yellow-100 transition-all placeholder-gray-300"
+                    placeholder="0000">
+                <p id="otp-error" class="hidden text-red-500 text-sm mt-2 text-center"></p>
+            </div>
+
+            <button type="button" id="verify-btn" onclick="verifyOTP()"
+                class="w-full btn-primary py-3 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center relative overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed">
+                <span>Confirm Booking</span>
+                <i class="fas fa-arrow-right ml-2"></i>
+                <!-- Loader -->
+                <div id="verify-loader" class="absolute inset-0 bg-gold flex items-center justify-center hidden">
+                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+            </button>
+
+            <div class="text-center text-sm">
+                <p class="text-gray-500 mb-2">Didn't receive the call?</p>
+                <button type="button" id="resend-btn" onclick="resendOTP()" disabled
+                    class="text-gold font-medium hover:text-brown disabled:text-gray-400 disabled:cursor-not-allowed transition">
+                    Resend Call <span id="timer">(30s)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let groupId = null;
+let resendTimer = null;
+let timeLeft = 30;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('booking-form');
+    const emailInput = document.getElementById('id_customer_email');
+    const phoneInput = document.getElementById('id_customer_phone');
+    const emailError = document.getElementById('email-error');
+
+    // Real-time Email Validation
+    emailInput.addEventListener('input', function() {
+        validateEmailField();
+    });
+    
+    // Real-time Phone Validation (Basic)
+    phoneInput.addEventListener('input', function() {
+        if(this.value.length >= 10) {
+            this.classList.remove('input-error');
+        }
+    });
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Validate Inputs
+        const isEmailValid = validateEmailField();
+        const isPhoneValid = validatePhoneField();
+        
+        if (!isEmailValid || !isPhoneValid) {
+            return;
+        }
+
+        // Show Button Loader
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        submitBtn.disabled = true;
+
+        // API Call
+        try {
+            const response = await fetch('{% url "api_initiate_booking" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    customer_phone: phoneInput.value,
+                    customer_email: emailInput.value
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    // Show OTP Modal
+                    groupId = data.group_id;
+                    showModal();
+                    startResendTimer();
+                }
+            } else {
+                alert(data.message || 'Something went wrong');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Network error. Please try again.');
+        } finally {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    });
+});
+
+function validateEmailField() {
+    const emailInput = document.getElementById('id_customer_email');
+    const emailError = document.getElementById('email-error');
+    const email = emailInput.value;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    // Add validation styles dynamically for inputs that might not have them yet
+    if (!emailRegex.test(email)) {
+        emailInput.classList.add('border-red-500', 'bg-red-50');
+        emailInput.classList.remove('border-gray-200', 'bg-gray-50');
+        emailError.classList.remove('hidden');
+        return false;
+    } else {
+        emailInput.classList.remove('border-red-500', 'bg-red-50');
+        emailInput.classList.add('border-gray-200', 'bg-gray-50');
+        emailError.classList.add('hidden');
+        return true;
+    }
+}
+
+function validatePhoneField() {
+    const phoneInput = document.getElementById('id_customer_phone');
+    if (phoneInput.value.length < 10) {
+         phoneInput.classList.add('border-red-500', 'bg-red-50');
+        return false;
+    }
+    phoneInput.classList.remove('border-red-500', 'bg-red-50');
+    return true;
+}
+
+function showModal() {
+    document.getElementById('otp-modal').classList.remove('hidden');
+    document.getElementById('otp-input').focus();
+}
+
+function closeModal() {
+    document.getElementById('otp-modal').classList.add('hidden');
+}
+
+// Auto-submit OTP
+const otpInput = document.getElementById('otp-input');
+otpInput.addEventListener('input', function() {
+    this.value = this.value.replace(/[^0-9]/g, '');
+    if (this.value.length === 4) {
+        verifyOTP();
+    }
+});
+
+async function verifyOTP() {
+    const otp = otpInput.value;
+    if (otp.length < 4) return;
+    
+    const verifyBtn = document.getElementById('verify-btn');
+    const loader = document.getElementById('verify-loader');
+    const errorMsg = document.getElementById('otp-error');
+    
+    verifyBtn.disabled = true;
+    loader.classList.remove('hidden');
+    errorMsg.classList.add('hidden');
+    
+    try {
+        const response = await fetch('{% url "api_verify_otp" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                group_id: groupId,
+                otp: otp
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.redirect) {
+                window.location.href = data.redirect;
+            } else {
+                window.location.href = '{% url "booking_success" %}';
+            }
+        } else {
+            errorMsg.innerText = data.message || 'Incorrect OTP';
+            errorMsg.classList.remove('hidden');
+            otpInput.classList.add('border-red-500', 'animate-shake');
+            setTimeout(() => otpInput.classList.remove('animate-shake'), 500);
+        }
+    } catch (err) {
+        errorMsg.innerText = 'Network error';
+        errorMsg.classList.remove('hidden');
+    } finally {
+        verifyBtn.disabled = false;
+        loader.classList.add('hidden');
+    }
+}
+
+async function resendOTP() {
+    const resendBtn = document.getElementById('resend-btn');
+    resendBtn.disabled = true;
+    resendBtn.innerText = 'Sending...';
+    
+    try {
+        const response = await fetch('{% url "api_resend_otp" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({ group_id: groupId })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            timeLeft = 30;
+            startResendTimer();
+            alert('Voice call initiated again.');
+        } else {
+            alert(data.message || 'Failed to resend');
+            resendBtn.disabled = false;
+            resendBtn.innerText = 'Resend Call';
+        }
+    } catch (err) {
+        alert('Network Error');
+    }
+}
+
+function startResendTimer() {
+    const resendBtn = document.getElementById('resend-btn');
+    const timerSpan = document.getElementById('timer');
+    resendBtn.disabled = true;
+    
+    clearInterval(resendTimer);
+    resendTimer = setInterval(() => {
+        timeLeft--;
+        timerSpan.innerText = `(${timeLeft}s)`;
+        
+        if (timeLeft <= 0) {
+            clearInterval(resendTimer);
+            resendBtn.disabled = false;
+            resendBtn.innerHTML = 'Resend Call';
+        } else {
+            resendBtn.innerHTML = `Resend Call <span id="timer">(${timeLeft}s)</span>`;
+        }
+    }, 1000);
+}
+</script>
+
+<style>
+/* Scoped Animation Only */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+.animate-shake {
+    animation: shake 0.2s ease-in-out 0s 2;
+}
+.input-error {
+    border-color: #ef4444 !important;
+    background-color: #fef2f2 !important;
+}
+</style>
 {% endblock %}
