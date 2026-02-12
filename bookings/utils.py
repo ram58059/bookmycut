@@ -75,34 +75,89 @@ def send_booking_confirmation_email(booking):
     """
     Sends a booking confirmation email to the customer.
     """
-    subject = 'Booking Confirmation - BookMyCut'
+    subject = 'Booking Confirmed - ZionStyle'
     from_email = settings.DEFAULT_FROM_EMAIL
     to = [booking.customer_email]
     
-    # Simple text content for now, can be enhanced with HTML template
-    text_content = f"""
-    Dear Customer,
+    # Render HTML content
+    html_content = render_to_string('emails/booking_confirmation.html', {'booking': booking})
+    text_content = strip_tags(html_content)
     
-    Your booking with BookMyCut has been confirmed!
+    # Generate Customer ICS
+    start_dt = datetime.combine(booking.date, booking.time)
+    end_dt = start_dt + timedelta(minutes=60) # Assuming 1 hour per service
     
-    Service: {booking.service.name}
-    Date: {booking.date}
-    Time: {booking.time}
-    Price: ₹{booking.service.price}
+    # Convert to UTC or use local time with TZID is complex without libraries. 
+    # We will use floating time (local) which usually works for single timezone apps, 
+    # or simple UTC conversion if timezone is uniform. 
+    # Let's try to format as YYYYMMDDTHHMMSS (Floating)
     
-    Thank you for choosing us!
-    
-    Regards,
-    The BookMyCut Team
-    """
-    
+    customer_ics = generate_ics_content(
+        summary=f"Appointment at ZionStyle: {booking.service.name}",
+        description=f"Service: {booking.service.name}\nPrice: {booking.service.price}\nLocation: Zion Salon & Spa, Tirunelveli.",
+        start_dt=start_dt,
+        end_dt=end_dt,
+        location="Zion Salon & Spa, Tirunelveli",
+        uid=f"customer-{booking.booking_group_id}-{booking.id}@zionstyle.com"
+    )
+
     try:
+        # Customer Email
         msg = EmailMultiAlternatives(subject, text_content, from_email, to)
+        msg.attach_alternative(html_content, "text/html")
+        msg.attach('invite.ics', customer_ics, 'text/calendar')
         msg.send()
+        
+        # Admin Notification Email
+        admin_subject = f"New Booking: {booking.customer_phone} - {booking.service.name}"
+        admin_body = f"Customer: {booking.customer_phone}\nService: {booking.service.name}\nDate: {booking.date}\nTime: {booking.time}"
+        
+        admin_ics = generate_ics_content(
+            summary=f"Booking: {booking.customer_phone} - {booking.service.name}",
+            description=f"Customer: {booking.customer_phone}\nService: {booking.service.name}\nEmail: {booking.customer_email}",
+            start_dt=start_dt,
+            end_dt=end_dt,
+            location="Zion Salon & Spa, Tirunelveli",
+            uid=f"admin-{booking.booking_group_id}-{booking.id}@zionstyle.com"
+        )
+        
+        admin_msg = EmailMultiAlternatives(admin_subject, admin_body, from_email, [from_email]) # sending to self/admin
+        admin_msg.attach('booking.ics', admin_ics, 'text/calendar')
+        admin_msg.send()
+        
         return True
     except Exception as e:
         print(f"Error sending email: {e}")
         return False
+
+def generate_ics_content(summary, description, start_dt, end_dt, location, uid):
+    """
+    Generates iCalendar (RFC 5545) content string.
+    """
+    # Format dates as YYYYMMDDTHHMMSS
+    dt_format = "%Y%m%dT%H%M%S"
+    start_str = start_dt.strftime(dt_format)
+    end_str = end_dt.strftime(dt_format)
+    now_str = datetime.now().strftime(dt_format)
+    
+    ics_content = f"""BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//ZionStyle//Booking System//EN
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+BEGIN:VEVENT
+UID:{uid}
+DTSTAMP:{now_str}
+DTSTART:{start_str}
+DTEND:{end_str}
+SUMMARY:{summary}
+DESCRIPTION:{description}
+LOCATION:{location}
+STATUS:CONFIRMED
+SEQUENCE:0
+END:VEVENT
+END:VCALENDAR"""
+    return ics_content
 
 # ============================
 # Core Logic & Anti-Abuse

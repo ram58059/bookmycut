@@ -1,70 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Booking Confirmed</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f9f9f9; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333333;">
-    <div style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+<body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f9f9f9; color: #333333;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; margin-bottom: 20px;">
         
         <!-- Header -->
-        <div style="background-color: #fef08a; padding: 40px 20px; text-align: center;">
-            <h1 style="color: #854d0e; margin: 0; font-size: 28px; letter-spacing: -0.5px;">Booking Confirmed!</h1>
-            <p style="margin: 10px 0 0; color: #854d0e; font-size: 16px;">We can't wait to see you.</p>
+        <div style="background-color: #4A3728; padding: 30px; text-align: center;">
+            <h1 style="margin: 0; color: #D4AF37; font-size: 28px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase;">ZION<span style="font-weight: 300; color: #ffffff;">STYLE</span></h1>
+            <p style="margin: 5px 0 0; color: #e2e8f0; font-size: 14px; letter-spacing: 1px;">PREMIUM SALON & SPA</p>
         </div>
 
-        <!-- Content -->
+        <!-- Body -->
         <div style="padding: 40px 30px;">
-            <p style="font-size: 16px; line-height: 1.5; margin-bottom: 25px;">
-                Hello,
-                <br><br>
-                Great news! Your appointment at <strong>BookMyCut</strong> is officially confirmed. Here are the details for your upcoming visit:
+            <h2 style="color: #4A3728; margin-top: 0; font-size: 22px;">Booking Confirmed!</h2>
+            <p style="color: #555555; line-height: 1.6; font-size: 16px;">
+                Hi there,
+            </p>
+            <p style="color: #555555; line-height: 1.6; font-size: 16px;">
+                Your appointment has been successfully scheduled. We look forward to pampering you!
             </p>
 
-            <!-- Booking Details Card -->
-            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
+            <!-- Booking Details Box -->
+            <div style="background-color: #FFFDF5; border: 1px solid #F3E5AB; border-radius: 6px; padding: 20px; margin: 25px 0;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
-                        <td style="padding: 8px 0; color: #64748b; width: 140px; font-weight: 500;">Service</td>
-                        <td style="padding: 8px 0; color: #334155; font-weight: 600;">{{ service_name }}</td>
+                        <td style="padding: 8px 0; color: #888888; font-size: 14px; width: 80px;">Service</td>
+                        <td style="padding: 8px 0; color: #4A3728; font-weight: 600; font-size: 16px;">{{ booking.service.name }}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #64748b; font-weight: 500;">Date</td>
-                        <td style="padding: 8px 0; color: #334155; font-weight: 600;">{{ date }}</td>
+                        <td style="padding: 8px 0; color: #888888; font-size: 14px;">Date</td>
+                        <td style="padding: 8px 0; color: #4A3728; font-weight: 600; font-size: 16px;">{{ booking.date|date:"l, F j, Y" }}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #64748b; font-weight: 500;">Time</td>
-                        <td style="padding: 8px 0; color: #334155; font-weight: 600;">{{ time }}</td>
+                        <td style="padding: 8px 0; color: #888888; font-size: 14px;">Time</td>
+                        <td style="padding: 8px 0; color: #4A3728; font-weight: 600; font-size: 16px;">{{ booking.time|time:"g:i A" }}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #64748b; font-weight: 500;">Booking ID</td>
-                        <td style="padding: 8px 0; color: #334155; font-family: monospace;">{{ booking_id }}</td>
+                        <td style="padding: 8px 0; color: #888888; font-size: 14px;">Total</td>
+                        <td style="padding: 8px 0; color: #D4AF37; font-weight: 700; font-size: 16px;">₹{{ booking.service.price }}</td>
                     </tr>
                 </table>
             </div>
 
-            <!-- Shop Info & Map Button -->
-            <div style="text-align: center; border-top: 1px solid #f1f5f9; padding-top: 30px;">
-                <p style="color: #64748b; margin-bottom: 5px; font-size: 14px;">LOCATION</p>
-                <h3 style="margin: 0 0 10px; color: #0f172a;">Zion Salon & Spa</h3>
-                <!-- Placeholder Address - You may want to update this if you have the real address -->
-                <p style="margin: 0 0 25px; color: #475569;">123 Fashion Street, Trendy District</p>
-                
-                <a href="{{ google_maps_url }}" style="display: inline-block; background-color: #eab308; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 50px; font-weight: bold; font-size: 16px; transition: background-color 0.2s;">
+            <!-- Address / Map Button -->
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="https://maps.app.goo.gl/xwdnTFCNmfCiYs6CA" target="_blank" style="display: inline-block; background-color: #4A3728; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 50px; font-weight: 600; font-size: 14px; transition: background-color 0.3s;">
                     Get Directions
                 </a>
+                <p style="margin-top: 20px; color: #888888; font-size: 13px; line-height: 1.5;">
+                    Upstair, SS PLAZA, A4, Cheranmahadevi Rd,<br>
+                    near HP Petrol Bunk, Kodeeswaran Nagar,<br>
+                    Tirunelveli, Tamil Nadu 627006
+                </p>
             </div>
         </div>
 
         <!-- Footer -->
-        <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-            <p style="margin: 0; color: #94a3b8; font-size: 12px;">
-                Need to reschedule? Reply to this email or call us at (555) 123-4567.
-            </p>
-            <p style="margin: 10px 0 0; color: #cbd5e1; font-size: 12px;">
-                &copy; {% now "Y" %} BookMyCut. All rights reserved.
-            </p>
+        <div style="background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 12px; color: #999999;">
+            <p style="margin: 0;">&copy; {% now "Y" %} ZionStyle. All rights reserved.</p>
+            <p style="margin: 5px 0 0;">Need to reschedule? Call us directly.</p>
         </div>
     </div>
 </body>

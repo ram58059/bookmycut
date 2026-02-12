@@ -113,12 +113,22 @@ class DateTimeSelectionView(View):
         slots = []
         selected_date = None
         
+        # Calculate max date (14 days from today)
+        now = timezone.localtime(timezone.now())
+        max_date = now.date() + timedelta(days=14)
+
         if selected_date_str:
             try:
                 selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
-                if selected_date < timezone.now().date():
+                if selected_date < now.date():
                      # Prevent past dates
                      selected_date = None
+                elif selected_date > max_date:
+                    # Prevent dates beyond 14 days
+                    selected_date = None
+                elif selected_date.weekday() == 6:
+                    # Prevent Sundays (6 = Sunday)
+                    selected_date = None
             except ValueError:
                 pass
         
@@ -128,7 +138,6 @@ class DateTimeSelectionView(View):
             end_hour = 22
             
             # If today, ensuring time slot is after current time
-            now = timezone.now()
             if selected_date == now.date():
                 # E.g. if now is 15:30, next slot is 16:00.
                 start_hour = max(start_hour, now.hour + 1)
@@ -181,6 +190,7 @@ class DateTimeSelectionView(View):
             'slots': slots,
             'selected_date': selected_date,
             'today': timezone.now().date(),
+            'max_date': max_date,
             'num_services': num_services
         })
 

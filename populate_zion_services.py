@@ -88,16 +88,45 @@ def populate_zion_services():
         'Streaks': 'services/streaks.jpg'
     }
 
+    # Specific Service Image Mapping
+    service_specific_images = {
+        'Clean-up (Fruit Facial) + De-Tan': 'services/fruit_facial.png',
+        'Gold Facial': 'services/gold_facial.png',
+        'O³ Groom Facial': 'services/gold_facial.png', # Reuse gold for premium
+        'Charcoal Peel-Off': 'services/charcoal_mask.png',
+        'Blackhead Peel-Off': 'services/charcoal_mask.png',
+        'Haircut (includes hair wash)': 'services/mens_haircut.png',
+        'Kids Cut (Boy)': 'services/kids_haircut.png',
+        'Beard Trim': 'services/beard_trim.png',
+        'Shave': 'services/beard_trim.png', # Reuse beard trim for shave
+        'Executive Shave': 'services/beard_trim.png',
+        'Head Shave': 'services/mens_haircut.png',
+        'Hair Wash': 'services/hair_wash.png',
+        'Deep Conditioning': 'services/hair_spa_treatment.png',
+        'Moisturizing': 'services/hair_spa_treatment.png',
+        'Hair Reborn': 'services/hair_spa_treatment.png',
+        'Head Massage (with steam, 30 mins)': 'services/head_massage.png',
+        'Head Massage (without steam, 15 mins)': 'services/head_massage.png',
+        'Neck Massage (15 mins)': 'services/head_massage.png',
+        'Ammonia': 'services/hair_colouring.png',
+        'Ammonia-Free': 'services/hair_colouring.png',
+        '1 Streak': 'services/hair_colouring.png',
+        '5–9 Streaks': 'services/hair_colouring.png',
+        '10–20 Streaks': 'services/hair_colouring.png',
+        'Haircut + Trim/Shave + De-Tan': 'services/mens_haircut.png', # Combos generally use haircut
+    }
+
     count = 0
     for category, services in boy_services.items():
-        image_path = category_images.get(category)
+        # Default category image
+        category_image_path = category_images.get(category)
+        
         for s_data in services:
             # Handle specific durations if provided, else default 60
             duration = s_data.get('duration', 60)
             
-            # Special handling for prices that had ranges or specifics
-            # "Clean-up (Fruit Facial) + De-Tan": ₹700 / ₹899 -> I used 700.
-            # "Deep Conditioning": 200 (Long Hair 250). I used 200.
+            # Check for specific image, else fallback to category image
+            image_path = service_specific_images.get(s_data['name'], category_image_path)
             
             Service.objects.create(
                 name=s_data['name'],

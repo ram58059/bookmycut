@@ -7,6 +7,7 @@ from . import analytics
 from bookings.models import Booking, Service
 from django.db.models import Count
 from django.db.models.functions import ExtractWeekDay
+import json
 
 def is_barber_or_admin(user):
     return user.is_authenticated and (user.is_staff or user.is_superuser or getattr(user, 'is_barber', False))
@@ -44,7 +45,7 @@ def overview(request):
     
     # Prepare data for Chart.js
     trend_labels = [entry['day'].strftime('%d %b') for entry in revenue_trend]
-    trend_data = [entry['daily_revenue'] or 0 for entry in revenue_trend]
+    trend_data = [float(entry['daily_revenue'] or 0) for entry in revenue_trend]
     
     status_distribution = analytics.get_booking_status_distribution()
     status_labels = [item['status'].capitalize() for item in status_distribution]
@@ -70,9 +71,9 @@ def service_performance(request):
     services = analytics.get_service_performance()
     
     # Chart Data
-    labels = [s.name for s in services]
-    bookings_data = [s.booking_count for s in services]
-    revenue_data = [s.revenue or 0 for s in services]
+    labels = json.dumps([s.name for s in services])
+    bookings_data = json.dumps([s.booking_count for s in services])
+    revenue_data = json.dumps([float(s.revenue or 0) for s in services])
     
     context = {
         'page_title': 'Service Performance',

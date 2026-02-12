@@ -13,6 +13,72 @@
 </head>
 
 <body class="min-h-screen flex flex-col">
+    <!-- Custom Page Loader -->
+    <div id="page-loader" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm transition-opacity duration-500">
+        <div class="relative mb-4">
+            <i class="fas fa-scissors text-6xl text-gold animate-snipping"></i>
+        </div>
+        <p class="text-brown font-medium text-lg tracking-widest uppercase animate-pulse">Polishing your look...</p>
+    </div>
+
+    <style>
+        @keyframes snipping {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(-20deg) scale(1.1); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+        .animate-snipping {
+            animation: snipping 1.5s ease-in-out infinite;
+        }
+    </style>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const loader = document.getElementById('page-loader');
+            
+            // Function to hide loader
+            const hideLoader = () => {
+                loader.classList.add('opacity-0', 'pointer-events-none');
+            };
+
+            // Hide on initial load
+            window.addEventListener('load', hideLoader);
+            
+            // Fallback: forcefully hide after 3 seconds if load event misses
+            setTimeout(hideLoader, 3000);
+
+            // Hide when showing from bfcache (back/forward history)
+            window.addEventListener('pageshow', function(event) {
+                if (event.persisted) {
+                    hideLoader();
+                }
+            });
+
+            // Show loader on valid link clicks
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (!link) return;
+
+                // Ignore special clicks (new tab, etc)
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+                
+                // Ignore hash links or javascript:
+                const href = link.getAttribute('href');
+                if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+                if (link.target === '_blank') return;
+
+                // Show loader
+                loader.classList.remove('opacity-0', 'pointer-events-none');
+            });
+            
+            // Handle form submissions
+             document.addEventListener('submit', function(e) {
+                if (!e.defaultPrevented) {
+                     loader.classList.remove('opacity-0', 'pointer-events-none');
+                }
+            });
+        });
+    </script>
     <!-- Navigation -->
     <nav class="bg-white shadow-sm border-b border-yellow-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

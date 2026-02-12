@@ -57,7 +57,7 @@ def get_kpis():
 def get_revenue_trend(days=30):
     start_date = timezone.now().date() - timedelta(days=days)
     trend = Booking.objects.filter(
-        status='completed',
+        status__in=['completed', 'confirmed'],
         date__gte=start_date
     ).annotate(
         day=TruncDay('date')
@@ -78,7 +78,7 @@ def get_service_performance():
     # Revenue = price * completed bookings (since price is on Service model)
     return Service.objects.annotate(
         booking_count=Count('bookings'),
-        completed_count=Count('bookings', filter=Q(bookings__status='completed'))
+        completed_count=Count('bookings', filter=Q(bookings__status__in=['completed', 'confirmed']))
     ).annotate(
         revenue=F('price') * F('completed_count')
     ).order_by('-booking_count')
