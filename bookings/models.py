@@ -110,3 +110,11 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"Booking {self.id} - {self.customer_phone} ({self.service.name} @ {self.time})"
+
+class BlockedDay(models.Model):
+    date = models.DateField(unique=True)
+    reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Blocked: {self.date}"

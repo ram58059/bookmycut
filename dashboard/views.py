@@ -7,6 +7,9 @@ from . import analytics
 from bookings.models import Booking, Service
 from django.db.models import Count
 from django.db.models.functions import ExtractWeekDay
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from datetime import datetime
 import json
 
 def is_barber_or_admin(user):
@@ -70,7 +73,31 @@ def overview(request):
 def service_performance(request):
     services = analytics.get_service_performance()
     
-    # Chart Data
+    # Sorting Logic
+    sort_by = request.GET.get('sort', 'booking_count') # Default sort
+    direction = request.GET.get('direction', 'desc')
+    
+    # Validate sort field to prevent injection/errors
+    valid_sort_fields = {
+        'name': 'name', 
+        'category': 'category', 
+        'price': 'price', 
+        'bookings': 'booking_count', 
+        'revenue': 'revenue'
+    }
+    
+    if sort_by not in valid_sort_fields:
+        sort_by = 'bookings' # Fallback
+        
+    db_sort_field = valid_sort_fields.get(sort_by)
+    
+    if direction == 'desc':
+        db_sort_field = f'-{db_sort_field}'
+        
+    # Apply sorting
+    services = services.order_by(db_sort_field)
+    
+    # Chart Data (needs to match sorted order)
     labels = json.dumps([s.name for s in services])
     bookings_data = json.dumps([s.booking_count for s in services])
     revenue_data = json.dumps([float(s.revenue or 0) for s in services])
@@ -81,6 +108,8 @@ def service_performance(request):
         'labels': labels,
         'bookings_data': bookings_data,
         'revenue_data': revenue_data,
+        'current_sort': sort_by,
+        'current_direction': direction,
     }
     return render(request, 'dashboard/service_performance.html', context)
 
@@ -177,3 +206,79 @@ def utilization(request):
         'idle_data': idle_data,
     }
     return render(request, 'dashboard/utilization.html', context)
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def manage_bookings(request):
+    from bookings.models import BlockedDay
+    
+    today = timezone.now().date()
+    
+    # Handle Actions
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'block_day':
+            date_str = request.POST.get('date')
+            try:
+                block_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                if block_date < today:
+                    messages.error(request, "Cannot block past dates.")
+                else:
+                    # Check for existing bookings
+                    active_bookings = Booking.objects.filter(
+                        date=block_date,
+                        status__in=['confirmed', 'pending', 'payment_pending']
+                    )
+                    if active_bookings.exists():
+                        messages.error(request, f"Cannot block {date_str}. There are {active_bookings.count()} active bookings. Please cancel them first.")
+                    else:
+                        BlockedDay.objects.get_or_create(date=block_date)
+                        messages.success(request, f"Blocked {date_str} successfully.")
+            except ValueError:
+                messages.error(request, "Invalid date format.")
+                
+        elif action == 'unblock_day':
+             date_str = request.POST.get('date')
+             try:
+                 # block_date = datetime.strptime(date_str, '%B %d, %Y').date() # Text format from template filter? No, use ID or ISO
+                 # Better to pass ID, but date is unique. Let's use ID if possible, or ISO date.
+                 # Let's assume ISO date from hidden input
+                 BlockedDay.objects.filter(date=date_str).delete()
+                 messages.success(request, f"Unblocked {date_str}.")
+             except Exception as e:
+                 messages.error(request, f"Error unblocking: {e}")
+
+        elif action == 'cancel_booking_admin':
+            booking_id = request.POST.get('booking_id')
+            booking = get_object_or_404(Booking, id=booking_id)
+            
+            # Cancel logic (similar to user cancel but admin override)
+            # Find group? Or single? User request implies "cancel order", usually means the slot.
+            # If we cancel one slot of a multi-slot booking, it's tricky.
+            # But usually admin wants to clear the schedule.
+            # Let's cancel the specific booking ID.
+            
+            booking.status = 'cancelled'
+            booking.save()
+            
+            # TODO: Notify user via SMS/Email
+            # utils.send_cancellation_notice(booking) 
+            
+            messages.success(request, f"Booking for {booking.customer_phone} cancelled.")
+            
+        return redirect('dashboard_manage_bookings')
+
+    # Data for View
+    future_bookings = Booking.objects.filter(
+        date__gte=today
+    ).order_by('date', 'time').select_related('service')
+    
+    blocked_days = BlockedDay.objects.filter(date__gte=today).order_by('date')
+    
+    context = {
+        'page_title': 'Manage Bookings',
+        'future_bookings': future_bookings,
+        'blocked_days': blocked_days,
+        'today': today,
+    }
+    return render(request, 'dashboard/manage_bookings.html', context)

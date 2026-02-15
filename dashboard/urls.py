@@ -9,4 +9,5 @@ urlpatterns = [
     path('customers/', views.customer_insights, name='dashboard_customers'),
     path('cancellations/', views.cancellation_analytics, name='dashboard_cancellation'),
     path('utilization/', views.utilization, name='dashboard_utilization'),
+    path('manage/', views.manage_bookings, name='dashboard_manage_bookings'),
 ]

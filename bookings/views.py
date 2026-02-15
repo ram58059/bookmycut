@@ -131,8 +131,18 @@ class DateTimeSelectionView(View):
                     selected_date = None
             except ValueError:
                 pass
+            except ValueError:
+                pass
         
+        # Check if day is blocked
+        is_blocked = False
         if selected_date:
+            from .models import BlockedDay
+            if BlockedDay.objects.filter(date=selected_date).exists():
+                is_blocked = True
+                slots = [] # No slots if blocked
+        
+        if selected_date and not is_blocked:
             # Slot generation logic
             start_hour = 10
             end_hour = 22
@@ -191,7 +201,8 @@ class DateTimeSelectionView(View):
             'selected_date': selected_date,
             'today': timezone.now().date(),
             'max_date': max_date,
-            'num_services': num_services
+            'num_services': num_services,
+            'is_blocked': is_blocked if 'is_blocked' in locals() else False
         })
 
     def post(self, request):
@@ -387,14 +398,16 @@ class OTPVerificationView(View):
             # bookings.update(is_verified=True, status='confirmed') # OLD
             
             # Auto-Login (New Requirement)
-            try:
-                user, created = User.objects.get_or_create(phone_number=booking.customer_phone)
-                if created:
-                    user.username = booking.customer_phone
-                    user.save()
-                login(request, user)
-            except Exception as e:
-                print(f"Auto-login failed: {e}")
+            # Auto-Login 
+            if booking.customer_phone and booking.customer_phone != 'None' and len(booking.customer_phone) > 5:
+                try:
+                    user, created = User.objects.get_or_create(phone_number=booking.customer_phone)
+                    if created:
+                        user.username = booking.customer_phone
+                        user.save()
+                    login(request, user)
+                except Exception as e:
+                    print(f"Auto-login failed: {e}")
 
             # New Flow: OTP Verified -> Payment Pending -> Payment Process View
             bookings.update(is_verified=True, status='payment_pending')

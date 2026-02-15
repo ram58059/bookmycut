@@ -31,11 +31,56 @@
         <table class="w-full text-left">
             <thead>
                 <tr class="bg-gray-50 text-gray-500 text-sm uppercase tracking-wider">
-                    <th class="px-6 py-4 font-medium">Service Name</th>
-                    <th class="px-6 py-4 font-medium">Category</th>
-                    <th class="px-6 py-4 font-medium">Price</th>
-                    <th class="px-6 py-4 font-medium">Total Bookings</th>
-                    <th class="px-6 py-4 font-medium">Total Revenue</th>
+                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors" onclick="window.location.href='?sort=name&direction={% if current_sort == 'name' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
+                        <div class="flex items-center space-x-1">
+                            <span>Service Name</span>
+                            {% if current_sort == 'name' %}
+                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                            {% else %}
+                                <i class="fas fa-sort text-gray-300"></i>
+                            {% endif %}
+                        </div>
+                    </th>
+                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors" onclick="window.location.href='?sort=category&direction={% if current_sort == 'category' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
+                        <div class="flex items-center space-x-1">
+                            <span>Category</span>
+                            {% if current_sort == 'category' %}
+                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                            {% else %}
+                                <i class="fas fa-sort text-gray-300"></i>
+                            {% endif %}
+                        </div>
+                    </th>
+                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors" onclick="window.location.href='?sort=price&direction={% if current_sort == 'price' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
+                        <div class="flex items-center space-x-1">
+                            <span>Price</span>
+                            {% if current_sort == 'price' %}
+                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                            {% else %}
+                                <i class="fas fa-sort text-gray-300"></i>
+                            {% endif %}
+                        </div>
+                    </th>
+                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors" onclick="window.location.href='?sort=bookings&direction={% if current_sort == 'bookings' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
+                        <div class="flex items-center space-x-1">
+                            <span>Total Bookings</span>
+                            {% if current_sort == 'bookings' %}
+                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                            {% else %}
+                                <i class="fas fa-sort text-gray-300"></i>
+                            {% endif %}
+                        </div>
+                    </th>
+                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors" onclick="window.location.href='?sort=revenue&direction={% if current_sort == 'revenue' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
+                        <div class="flex items-center space-x-1">
+                            <span>Total Revenue</span>
+                            {% if current_sort == 'revenue' %}
+                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                            {% else %}
+                                <i class="fas fa-sort text-gray-300"></i>
+                            {% endif %}
+                        </div>
+                    </th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">

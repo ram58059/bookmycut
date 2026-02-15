@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zion Salon & Spa</title>
+    <title>{% block title %}Zion Salon & Spa{% endblock %}</title>
     <link href="{% static 'css/output.css' %}" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Google Fonts: Outfit for a premium look -->
@@ -125,16 +125,37 @@
                                 <div class="border-t border-yellow-50 md:hidden my-1"></div>
 
                                 {% if user.is_authenticated %}
-                                    <div class="px-4 py-3 border-b border-yellow-50">
-                                        <p class="text-xs text-gray-500">Signed in as</p>
-                                        <p class="text-sm font-bold text-brown truncate">{{ user.phone_number }}</p>
-                                    </div>
-                                    <a href="{% url 'my_orders' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
-                                        <i class="fas fa-clipboard-list mr-2 text-gold"></i> My Orders
-                                    </a>
-                                    <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700">
-                                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                                    </a>
+                                    {% if user.is_barber or user.is_superuser %}
+                                        <!-- Admin Menu -->
+                                        <div class="px-4 py-3 border-b border-yellow-50 bg-gray-50">
+                                            <p class="text-xs text-gray-500 uppercase tracking-wider">Admin Mode</p>
+                                            <p class="text-sm font-bold text-brown truncate">{{ user.username }}</p>
+                                        </div>
+                                        <a href="{% url 'dashboard_overview' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
+                                            <i class="fas fa-tachometer-alt mr-2 text-gold"></i> Dashboard
+                                        </a>
+                                        <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700">
+                                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                        </a>
+                                    {% else %}
+                                        <!-- Customer Menu -->
+                                        <div class="px-4 py-3 border-b border-yellow-50">
+                                            <p class="text-xs text-gray-500">Signed in as</p>
+                                            <p class="text-sm font-bold text-brown truncate">
+                                                {% if user.phone_number and user.phone_number != 'None' %}
+                                                    {{ user.phone_number }}
+                                                {% else %}
+                                                    {{ user.username }}
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                        <a href="{% url 'my_orders' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
+                                            <i class="fas fa-clipboard-list mr-2 text-gold"></i> My Orders
+                                        </a>
+                                        <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700">
+                                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                        </a>
+                                    {% endif %}
                                 {% else %}
                                     <a href="{% url 'login' %}" class="block px-4 py-2 text-sm text-brown hover:bg-yellow-50 hover:text-gold font-medium">
                                         <i class="fas fa-sign-in-alt mr-2"></i> Login
@@ -197,6 +218,13 @@
                 </div>
             </div>
             <div class="mt-8 pt-8 border-t border-yellow-50 text-center text-gray-500 text-sm">
+                <div class="flex flex-wrap justify-center gap-4 mb-4">
+                    <a href="{% url 'terms' %}" class="hover:text-brown transition-colors">Terms & Conditions</a>
+                    <span class="text-gray-300">|</span>
+                    <a href="{% url 'privacy' %}" class="hover:text-brown transition-colors">Privacy Policy</a>
+                    <span class="text-gray-300">|</span>
+                    <a href="{% url 'refund' %}" class="hover:text-brown transition-colors">Refund & Cancellation Policy</a>
+                </div>
                 <p>&copy; 2025 Zion Salon & Spa. All rights reserved.</p>
             </div>
         </div>
