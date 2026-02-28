@@ -22,12 +22,12 @@ def populate():
 
     # Create Barber
     if not User.objects.filter(username='barber_john').exists():
-        User.objects.create_user(username='barber_john', email='john@example.com', password='password123', is_barber=True)
+        User.objects.create_user(username='barber_john', email='john@example.com', password='password123', is_barber=True, phone_number='1234567890')
         print("Barber created.")
     
     # Create Customer
     if not User.objects.filter(username='customer_dave').exists():
-        User.objects.create_user(username='customer_dave', email='dave@example.com', password='password123', is_barber=False)
+        User.objects.create_user(username='customer_dave', email='dave@example.com', password='password123', is_barber=False, phone_number='0987654321')
         print("Customer created.")
 
 if __name__ == '__main__':

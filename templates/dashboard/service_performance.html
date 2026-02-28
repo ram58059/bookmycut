@@ -24,63 +24,83 @@
 
 <!-- Detailed Table -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-    <div class="p-6 border-b border-gray-100">
+    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
         <h3 class="text-lg font-bold text-gray-800">Service Breakdown</h3>
+        <div class="flex space-x-3">
+            <form method="get" class="flex items-center space-x-2">
+                <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Search services..."
+                    class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button type="submit"
+                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+            <a href="{% url 'dashboard_add_service' %}"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                <i class="fas fa-plus mr-2"></i>Add New Service
+            </a>
+        </div>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full text-left">
             <thead>
                 <tr class="bg-gray-50 text-gray-500 text-sm uppercase tracking-wider">
-                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors" onclick="window.location.href='?sort=name&direction={% if current_sort == 'name' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
+                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors"
+                        onclick="window.location.href='?sort=name&direction={% if current_sort == 'name' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
                         <div class="flex items-center space-x-1">
                             <span>Service Name</span>
                             {% if current_sort == 'name' %}
-                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                            <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
                             {% else %}
-                                <i class="fas fa-sort text-gray-300"></i>
+                            <i class="fas fa-sort text-gray-300"></i>
                             {% endif %}
                         </div>
                     </th>
-                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors" onclick="window.location.href='?sort=category&direction={% if current_sort == 'category' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
+                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors"
+                        onclick="window.location.href='?sort=category&direction={% if current_sort == 'category' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
                         <div class="flex items-center space-x-1">
                             <span>Category</span>
                             {% if current_sort == 'category' %}
-                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                            <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
                             {% else %}
-                                <i class="fas fa-sort text-gray-300"></i>
+                            <i class="fas fa-sort text-gray-300"></i>
                             {% endif %}
                         </div>
                     </th>
-                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors" onclick="window.location.href='?sort=price&direction={% if current_sort == 'price' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
+                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors"
+                        onclick="window.location.href='?sort=price&direction={% if current_sort == 'price' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
                         <div class="flex items-center space-x-1">
                             <span>Price</span>
                             {% if current_sort == 'price' %}
-                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                            <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
                             {% else %}
-                                <i class="fas fa-sort text-gray-300"></i>
+                            <i class="fas fa-sort text-gray-300"></i>
                             {% endif %}
                         </div>
                     </th>
-                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors" onclick="window.location.href='?sort=bookings&direction={% if current_sort == 'bookings' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
+                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors"
+                        onclick="window.location.href='?sort=bookings&direction={% if current_sort == 'bookings' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
                         <div class="flex items-center space-x-1">
                             <span>Total Bookings</span>
                             {% if current_sort == 'bookings' %}
-                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                            <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
                             {% else %}
-                                <i class="fas fa-sort text-gray-300"></i>
+                            <i class="fas fa-sort text-gray-300"></i>
                             {% endif %}
                         </div>
                     </th>
-                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors" onclick="window.location.href='?sort=revenue&direction={% if current_sort == 'revenue' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
+                    <th class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors"
+                        onclick="window.location.href='?sort=revenue&direction={% if current_sort == 'revenue' and current_direction == 'asc' %}desc{% else %}asc{% endif %}'">
                         <div class="flex items-center space-x-1">
                             <span>Total Revenue</span>
                             {% if current_sort == 'revenue' %}
-                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                            <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
                             {% else %}
-                                <i class="fas fa-sort text-gray-300"></i>
+                            <i class="fas fa-sort text-gray-300"></i>
                             {% endif %}
                         </div>
                     </th>
+                    <th class="px-6 py-4 font-medium text-right">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -96,6 +116,16 @@
                     </td>
                     <td class="px-6 py-4 font-bold text-green-600">
                         ₹{{ service.revenue|default:"0.00"|floatformat:2 }}
+                    </td>
+                    <td class="px-6 py-4 text-right space-x-2">
+                        <a href="{% url 'dashboard_edit_service' service.id %}"
+                            class="text-blue-600 hover:text-blue-900">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="{% url 'dashboard_delete_service' service.id %}"
+                            class="text-red-600 hover:text-red-900">
+                            <i class="fas fa-trash"></i>
+                        </a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -114,10 +144,11 @@
             labels: labels,
             datasets: [{
                 label: 'Bookings',
-                data: {{ bookings_data| safe }},
-                backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                borderColor: 'rgb(59, 130, 246)',
-                borderWidth: 1
+                data: {{ bookings_data| safe }
+    },
+        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+        borderColor: 'rgb(59, 130, 246)',
+        borderWidth: 1
             }]
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
@@ -130,10 +161,11 @@
             labels: labels,
             datasets: [{
                 label: 'Revenue (₹)',
-                data: {{ revenue_data| safe }},
-                backgroundColor: 'rgba(16, 185, 129, 0.6)',
-                borderColor: 'rgb(16, 185, 129)',
-                borderWidth: 1
+                data: {{ revenue_data| safe }
+    },
+        backgroundColor: 'rgba(16, 185, 129, 0.6)',
+        borderColor: 'rgb(16, 185, 129)',
+        borderWidth: 1
             }]
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }

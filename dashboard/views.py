@@ -5,7 +5,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from . import analytics
 from bookings.models import Booking, Service
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.db.models.functions import ExtractWeekDay
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -73,6 +73,14 @@ def overview(request):
 def service_performance(request):
     services = analytics.get_service_performance()
     
+    # Handle Search
+    query = request.GET.get('q')
+    if query:
+        services = services.filter(
+            Q(name__icontains=query) | 
+            Q(category__icontains=query)
+        )
+    
     # Sorting Logic
     sort_by = request.GET.get('sort', 'booking_count') # Default sort
     direction = request.GET.get('direction', 'desc')
@@ -110,6 +118,7 @@ def service_performance(request):
         'revenue_data': revenue_data,
         'current_sort': sort_by,
         'current_direction': direction,
+        'query': query,
     }
     return render(request, 'dashboard/service_performance.html', context)
 
@@ -268,6 +277,7 @@ def manage_bookings(request):
             
         return redirect('dashboard_manage_bookings')
 
+
     # Data for View
     future_bookings = Booking.objects.filter(
         date__gte=today
@@ -282,3 +292,64 @@ def manage_bookings(request):
         'today': today,
     }
     return render(request, 'dashboard/manage_bookings.html', context)
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def add_service(request):
+    from .forms import ServiceForm
+    
+    if request.method == 'POST':
+        form = ServiceForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Service added successfully!')
+            return redirect('dashboard_services')
+    else:
+        form = ServiceForm()
+    
+    categories = Service.objects.values_list('category', flat=True).distinct()
+    
+    context = {
+        'page_title': 'Add New Service',
+        'form': form,
+        'categories': categories,
+    }
+    return render(request, 'dashboard/service_form.html', context)
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def edit_service(request, pk):
+    from .forms import ServiceForm
+    service = get_object_or_404(Service, pk=pk)
+    
+    if request.method == 'POST':
+        form = ServiceForm(request.POST, request.FILES, instance=service)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Service updated successfully!')
+            return redirect('dashboard_services')
+    else:
+        form = ServiceForm(instance=service)
+    
+    categories = Service.objects.values_list('category', flat=True).distinct()
+    
+    context = {
+        'page_title': f'Edit Service: {service.name}',
+        'form': form,
+        'service': service, # For delete link or context
+        'categories': categories,
+    }
+    return render(request, 'dashboard/service_form.html', context)
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def delete_service(request, pk):
+    service = get_object_or_404(Service, pk=pk)
+    
+    if request.method == 'POST':
+        service.delete()
+        messages.success(request, 'Service deleted successfully!')
+        return redirect('dashboard_services')
+        
+    context = {
+        'page_title': 'Delete Service',
+        'service': service,
+    }
+    return render(request, 'dashboard/service_confirm_delete.html', context)
