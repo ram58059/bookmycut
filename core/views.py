@@ -40,6 +40,3 @@ def terms(request):
 
 def privacy(request):
     return render(request, 'policies/privacy.html')
-
-def refund(request):
-    return render(request, 'policies/refund.html')

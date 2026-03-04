@@ -8,10 +8,8 @@ urlpatterns = [
     path('date-time/', views.DateTimeSelectionView.as_view(), name='date_time_selection'),
     path('confirm/', views.BookingConfirmationView.as_view(), name='booking_confirmation'),
     
-    # Verification & Payment
+    # Verification
     path('verify-otp/', views.OTPVerificationView.as_view(), name='otp_verification'),
-    path('payment/', views.PaymentProcessView.as_view(), name='payment_process'),
-    path('payment/verify/', views.PaymentVerificationView.as_view(), name='payment_verify'),
     path('success/', views.BookingSuccessView.as_view(), name='booking_success'), # New Success
     
     # User Dashboard

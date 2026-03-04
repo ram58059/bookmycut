@@ -11,6 +11,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 import urllib.parse
+import threading
 from .models import Booking, CustomerTrust
 
 # ============================
@@ -71,16 +72,28 @@ def send_confirmation_sms(phone, booking_details):
     print(f"DTO SENDING SMS TO {phone}: Booking Confirmed! {booking_details}")
     print(f"========================================")
 
-def send_booking_confirmation_email(booking):
+def send_booking_confirmation_email(booking, request=None):
     """
     Sends a booking confirmation email to the customer.
+    (This is the synchronous core function called by the async wrapper)
     """
     subject = 'Booking Confirmed - ZionStyle'
     from_email = settings.DEFAULT_FROM_EMAIL
     to = [booking.customer_email]
-    
+
+    # Calculate group total and list of services for this booking group
+    group_bookings = Booking.objects.filter(booking_group_id=booking.booking_group_id).order_by('time')
+    total_price = sum(b.service.price for b in group_bookings)
+
     # Render HTML content
-    html_content = render_to_string('emails/booking_confirmation.html', {'booking': booking})
+    html_content = render_to_string(
+        'emails/booking_confirmation.html',
+        {
+            'booking': booking,
+            'group_bookings': group_bookings,
+            'total_price': total_price,
+        },
+    )
     text_content = strip_tags(html_content)
     
     # Generate Customer ICS
@@ -98,7 +111,8 @@ def send_booking_confirmation_email(booking):
         start_dt=start_dt,
         end_dt=end_dt,
         location="Zion Salon & Spa, Tirunelveli",
-        uid=f"customer-{booking.booking_group_id}-{booking.id}@zionstyle.com"
+        uid=f"customer-{booking.booking_group_id}-{booking.id}@zionstyle.com",
+        alarm_minutes=60  # Remind customer 1 hour before
     )
 
     try:
@@ -109,8 +123,25 @@ def send_booking_confirmation_email(booking):
         msg.send()
         
         # Admin Notification Email
-        admin_subject = f"New Booking: {booking.customer_phone} - {booking.service.name}"
-        admin_body = f"Customer: {booking.customer_phone}\nService: {booking.service.name}\nDate: {booking.date}\nTime: {booking.time}"
+        admin_subject = f"New Booking Alert: {booking.customer_phone}"
+        
+        # Build Absolute URI if request is provided, otherwise fallback to basic string
+        dashboard_url = "/dashboard/"
+        if request:
+            from django.urls import reverse
+            dashboard_url = request.build_absolute_uri(reverse('dashboard_overview'))
+
+        # Render Admin HTML Profile
+        admin_html_content = render_to_string(
+            'emails/admin_booking_alert.html',
+            {
+                'booking': booking,
+                'group_bookings': group_bookings,
+                'total_price': total_price,
+                'dashboard_url': dashboard_url,
+            },
+        )
+        admin_text_content = strip_tags(admin_html_content)
         
         admin_ics = generate_ics_content(
             summary=f"Booking: {booking.customer_phone} - {booking.service.name}",
@@ -118,19 +149,31 @@ def send_booking_confirmation_email(booking):
             start_dt=start_dt,
             end_dt=end_dt,
             location="Zion Salon & Spa, Tirunelveli",
-            uid=f"admin-{booking.booking_group_id}-{booking.id}@zionstyle.com"
+            uid=f"admin-{booking.booking_group_id}-{booking.id}@zionstyle.com",
+            alarm_minutes=10  # Remind admin 10 minutes before
         )
         
-        admin_msg = EmailMultiAlternatives(admin_subject, admin_body, from_email, [from_email]) # sending to self/admin
+        admin_msg = EmailMultiAlternatives(admin_subject, admin_text_content, from_email, [from_email]) # sending to self/admin
+        admin_msg.attach_alternative(admin_html_content, "text/html")
         admin_msg.attach('booking.ics', admin_ics, 'text/calendar')
         admin_msg.send()
         
         return True
     except Exception as e:
+        import traceback
         print(f"Error sending email: {e}")
+        traceback.print_exc()
         return False
 
-def generate_ics_content(summary, description, start_dt, end_dt, location, uid):
+def send_booking_emails_async(booking, request=None):
+    """
+    Wraps the email sending process in a background thread so it doesn't block the UI.
+    """
+    thread = threading.Thread(target=send_booking_confirmation_email, args=(booking, request))
+    thread.daemon = True
+    thread.start()
+
+def generate_ics_content(summary, description, start_dt, end_dt, location, uid, alarm_minutes=None):
     """
     Generates iCalendar (RFC 5545) content string.
     """
@@ -154,7 +197,17 @@ SUMMARY:{summary}
 DESCRIPTION:{description}
 LOCATION:{location}
 STATUS:CONFIRMED
-SEQUENCE:0
+SEQUENCE:0"""
+
+    if alarm_minutes:
+        ics_content += f"""
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Reminder: {summary}
+TRIGGER:-PT{alarm_minutes}M
+END:VALARM"""
+
+    ics_content += """
 END:VEVENT
 END:VCALENDAR"""
     return ics_content

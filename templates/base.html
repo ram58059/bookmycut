@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Zion Salon & Spa{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
     <link href="{% static 'css/output.css' %}" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Google Fonts: Outfit for a premium look -->
@@ -14,7 +15,8 @@
 
 <body class="min-h-screen flex flex-col">
     <!-- Custom Page Loader -->
-    <div id="page-loader" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm transition-opacity duration-500">
+    <div id="page-loader"
+        class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm transition-opacity duration-500">
         <div class="relative mb-4">
             <i class="fas fa-scissors text-6xl text-gold animate-snipping"></i>
         </div>
@@ -23,19 +25,28 @@
 
     <style>
         @keyframes snipping {
-            0% { transform: rotate(0deg) scale(1); }
-            50% { transform: rotate(-20deg) scale(1.1); }
-            100% { transform: rotate(0deg) scale(1); }
+            0% {
+                transform: rotate(0deg) scale(1);
+            }
+
+            50% {
+                transform: rotate(-20deg) scale(1.1);
+            }
+
+            100% {
+                transform: rotate(0deg) scale(1);
+            }
         }
+
         .animate-snipping {
             animation: snipping 1.5s ease-in-out infinite;
         }
     </style>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", function () {
             const loader = document.getElementById('page-loader');
-            
+
             // Function to hide loader
             const hideLoader = () => {
                 loader.classList.add('opacity-0', 'pointer-events-none');
@@ -43,25 +54,25 @@
 
             // Hide on initial load
             window.addEventListener('load', hideLoader);
-            
+
             // Fallback: forcefully hide after 3 seconds if load event misses
             setTimeout(hideLoader, 3000);
 
             // Hide when showing from bfcache (back/forward history)
-            window.addEventListener('pageshow', function(event) {
+            window.addEventListener('pageshow', function (event) {
                 if (event.persisted) {
                     hideLoader();
                 }
             });
 
             // Show loader on valid link clicks
-            document.addEventListener('click', function(e) {
+            document.addEventListener('click', function (e) {
                 const link = e.target.closest('a');
                 if (!link) return;
 
                 // Ignore special clicks (new tab, etc)
                 if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-                
+
                 // Ignore hash links or javascript:
                 const href = link.getAttribute('href');
                 if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
@@ -70,11 +81,11 @@
                 // Show loader
                 loader.classList.remove('opacity-0', 'pointer-events-none');
             });
-            
+
             // Handle form submissions
-             document.addEventListener('submit', function(e) {
+            document.addEventListener('submit', function (e) {
                 if (!e.defaultPrevented) {
-                     loader.classList.remove('opacity-0', 'pointer-events-none');
+                    loader.classList.remove('opacity-0', 'pointer-events-none');
                 }
             });
         });
@@ -93,7 +104,7 @@
 
                 <!-- Desktop CTA Button & Mobile Menu -->
                 <div class="flex items-center space-x-4">
-                    
+
                     <a href="{% url 'hairstyle_gallery' %}"
                         class="hidden md:inline-flex items-center text-brown hover:text-gold font-bold px-4 py-2.5 transition-all duration-300 hover:-translate-y-0.5 text-sm uppercase tracking-wider">
                         <span>Hairstyles</span>
@@ -106,60 +117,70 @@
                     <!-- Auth Links -->
                     <div class="flex items-center space-x-4 ml-4">
                         <div class="relative">
-                            <button id="user-menu-btn" class="flex items-center text-brown hover:text-gold transition-colors focus:outline-none p-1">
+                            <button id="user-menu-btn"
+                                class="flex items-center text-brown hover:text-gold transition-colors focus:outline-none p-1">
                                 <i class="fas fa-user-circle text-4xl"></i>
                             </button>
                             <!-- Dropdown -->
-                            <div id="user-menu-dropdown" class="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-xl border border-yellow-100 py-1 hidden z-50 whitespace-nowrap">
-                                
+                            <div id="user-menu-dropdown"
+                                class="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-xl border border-yellow-100 py-1 hidden z-50 whitespace-nowrap">
+
                                 <!-- General Menu Items (Visible on all, or arguably only mobile if we used CSS classes, but for simplicity showing all as a "Quick Menu") -->
-                                <a href="{% url 'home' %}" class="block md:hidden px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
+                                <a href="{% url 'home' %}"
+                                    class="block md:hidden px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
                                     <i class="fas fa-home mr-2 text-gold"></i> Home
                                 </a>
-                                <a href="{% url 'hairstyle_gallery' %}" class="block md:hidden px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
+                                <a href="{% url 'hairstyle_gallery' %}"
+                                    class="block md:hidden px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
                                     <i class="fas fa-cut mr-2 text-gold"></i> Hairstyles
                                 </a>
-                                <a href="{% url 'gender_selection' %}" class="block md:hidden px-4 py-2 text-sm text-brown font-bold bg-yellow-50 hover:bg-yellow-100 mb-1">
+                                <a href="{% url 'gender_selection' %}"
+                                    class="block md:hidden px-4 py-2 text-sm text-brown font-bold bg-yellow-50 hover:bg-yellow-100 mb-1">
                                     <i class="fas fa-calendar-alt mr-2"></i> Book Now
                                 </a>
                                 <div class="border-t border-yellow-50 md:hidden my-1"></div>
 
                                 {% if user.is_authenticated %}
-                                    {% if user.is_barber or user.is_superuser %}
-                                        <!-- Admin Menu -->
-                                        <div class="px-4 py-3 border-b border-yellow-50 bg-gray-50">
-                                            <p class="text-xs text-gray-500 uppercase tracking-wider">Admin Mode</p>
-                                            <p class="text-sm font-bold text-brown truncate">{{ user.username }}</p>
-                                        </div>
-                                        <a href="{% url 'dashboard_overview' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
-                                            <i class="fas fa-tachometer-alt mr-2 text-gold"></i> Dashboard
-                                        </a>
-                                        <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700">
-                                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                                        </a>
-                                    {% else %}
-                                        <!-- Customer Menu -->
-                                        <div class="px-4 py-3 border-b border-yellow-50">
-                                            <p class="text-xs text-gray-500">Signed in as</p>
-                                            <p class="text-sm font-bold text-brown truncate">
-                                                {% if user.phone_number and user.phone_number != 'None' %}
-                                                    {{ user.phone_number }}
-                                                {% else %}
-                                                    {{ user.username }}
-                                                {% endif %}
-                                            </p>
-                                        </div>
-                                        <a href="{% url 'my_orders' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
-                                            <i class="fas fa-clipboard-list mr-2 text-gold"></i> My Orders
-                                        </a>
-                                        <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700">
-                                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                                        </a>
-                                    {% endif %}
+                                {% if user.is_barber or user.is_superuser %}
+                                <!-- Admin Menu -->
+                                <div class="px-4 py-3 border-b border-yellow-50 bg-gray-50">
+                                    <p class="text-xs text-gray-500 uppercase tracking-wider">Admin Mode</p>
+                                    <p class="text-sm font-bold text-brown truncate">{{ user.username }}</p>
+                                </div>
+                                <a href="{% url 'dashboard_overview' %}"
+                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
+                                    <i class="fas fa-tachometer-alt mr-2 text-gold"></i> Dashboard
+                                </a>
+                                <a href="{% url 'logout' %}"
+                                    class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700">
+                                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                </a>
                                 {% else %}
-                                    <a href="{% url 'login' %}" class="block px-4 py-2 text-sm text-brown hover:bg-yellow-50 hover:text-gold font-medium">
-                                        <i class="fas fa-sign-in-alt mr-2"></i> Login
-                                    </a>
+                                <!-- Customer Menu -->
+                                <div class="px-4 py-3 border-b border-yellow-50">
+                                    <p class="text-xs text-gray-500">Signed in as</p>
+                                    <p class="text-sm font-bold text-brown truncate">
+                                        {% if user.phone_number and user.phone_number != 'None' %}
+                                        {{ user.phone_number }}
+                                        {% else %}
+                                        {{ user.username }}
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <a href="{% url 'my_orders' %}"
+                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
+                                    <i class="fas fa-clipboard-list mr-2 text-gold"></i> My Orders
+                                </a>
+                                <a href="{% url 'logout' %}"
+                                    class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700">
+                                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                </a>
+                                {% endif %}
+                                {% else %}
+                                <a href="{% url 'login' %}"
+                                    class="block px-4 py-2 text-sm text-brown hover:bg-yellow-50 hover:text-gold font-medium">
+                                    <i class="fas fa-sign-in-alt mr-2"></i> Login
+                                </a>
                                 {% endif %}
                             </div>
                         </div>
@@ -176,7 +197,8 @@
         {% if messages %}
         <div class="mt-4">
             {% for message in messages %}
-            <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
+            <div
+                class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
                 {{ message }}
             </div>
             {% endfor %}
@@ -222,8 +244,6 @@
                     <a href="{% url 'terms' %}" class="hover:text-brown transition-colors">Terms & Conditions</a>
                     <span class="text-gray-300">|</span>
                     <a href="{% url 'privacy' %}" class="hover:text-brown transition-colors">Privacy Policy</a>
-                    <span class="text-gray-300">|</span>
-                    <a href="{% url 'refund' %}" class="hover:text-brown transition-colors">Refund & Cancellation Policy</a>
                 </div>
                 <p>&copy; 2025 Zion Salon & Spa. All rights reserved.</p>
             </div>
@@ -235,7 +255,7 @@
         const userBtn = document.getElementById('user-menu-btn');
         const userDropdown = document.getElementById('user-menu-dropdown');
 
-        if(userBtn && userDropdown) {
+        if (userBtn && userDropdown) {
             userBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 userDropdown.classList.toggle('hidden');

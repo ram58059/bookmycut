@@ -13,4 +13,5 @@ urlpatterns = [
     path('cancellations/', views.cancellation_analytics, name='dashboard_cancellation'),
     path('utilization/', views.utilization, name='dashboard_utilization'),
     path('manage/', views.manage_bookings, name='dashboard_manage_bookings'),
+    path('toggle-otp/', views.toggle_otp, name='toggle_otp'),
 ]

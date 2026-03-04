@@ -53,7 +53,7 @@ def run_verification():
     
     # Test 3: Block Day WITH active booking (Simulate View Logic)
     print("\n--- Test 3: Block Day with Active Booking ---")
-    active_bookings = Booking.objects.filter(date=tomorrow, status__in=['confirmed', 'pending'])
+    active_bookings = Booking.objects.filter(date=tomorrow, status__in=['confirmed', 'pending_otp'])
     if active_bookings.exists():
         print("Logic Check: System should PREVENT blocking.")
         # We manually check the condition the view would check
@@ -69,7 +69,7 @@ def run_verification():
     
     # Test 5: Block Day AFTER cancellation
     print("\n--- Test 5: Block Day after Cancellation ---")
-    active_now = Booking.objects.filter(date=tomorrow, status__in=['confirmed', 'pending'])
+    active_now = Booking.objects.filter(date=tomorrow, status__in=['confirmed', 'pending_otp'])
     if not active_now.exists():
         BlockedDay.objects.create(date=tomorrow, reason="Emergency")
         print("PASS: Blocked day successfully after cancellation.")

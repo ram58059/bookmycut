@@ -22,7 +22,7 @@ def get_kpis():
         total_bookings=Count('id'),
         completed_count=Count('id', filter=Q(status='completed')),
         cancelled_count=Count('id', filter=Q(status='cancelled')),
-        pending_count=Count('id', filter=Q(status='pending')),
+        pending_count=Count('id', filter=Q(status='pending_otp')),
         total_revenue=Sum('service__price', filter=Q(status='completed')),
         avg_value=Avg('service__price', filter=Q(status='completed')),
     )
@@ -227,8 +227,8 @@ def generate_smart_insights():
     # 3. Cancellation Insight
     cancellation = get_cancellation_analytics()
     if cancellation['rate'] > 20:
-         insights.append({
-            'text': f"High cancellation rate detected ({cancellation['rate']}%). Consider deposit policy.",
+        insights.append({
+            'text': f"High cancellation rate detected ({cancellation['rate']}%). Consider stricter confirmation or reminder strategies to reduce last-minute changes.",
             'type': 'warning',
             'icon': 'fa-exclamation-triangle'
         })

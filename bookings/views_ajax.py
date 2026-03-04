@@ -53,13 +53,19 @@ class InitiateBookingView(View):
             if trust_profile and trust_profile.trust_level != 'low':
                 is_trusted = True
                 
+            # Check Global Shop Setting for OTP Bypass
+            from dashboard.models import ShopSetting
+            shop_settings = ShopSetting.load()
+            if not shop_settings.is_otp_enabled:
+                is_trusted = True
+                
             group_id = uuid.uuid4()
             plain_otp = utils.generate_otp()
             hashed_otp = utils.hash_otp(plain_otp)
             now_time = timezone.now()
             
-            # initial_status = 'confirmed' if is_trusted else 'pending' # OLD (Bypassed payment)
-            initial_status = 'payment_pending' if is_trusted else 'pending'
+            # Trusted users: confirm immediately; guests: pending OTP
+            initial_status = 'confirmed' if is_trusted else 'pending_otp'
             is_initial_verified = True if is_trusted else False
             
             start_time_obj = datetime.strptime(time_str, '%H:%M:%S').time() if len(time_str) > 5 else datetime.strptime(time_str, '%H:%M').time()
@@ -95,17 +101,37 @@ class InitiateBookingView(View):
             
             # Response Handling
             if is_trusted:
-                 # Auto-Confirm (Bypassed but skips OTP) -> Redirect to Payment
-                 # utils.update_trust_score(phone, 'new_booking') # Trust update happens after payment success
-                 # Don't send SMS/Email yet.
-                 
-                 request.session['last_booking_group_id'] = str(group_id)
-                 request.session['pending_group_id'] = str(group_id) # Set pending too for PaymentProcessView
-                 
-                 # Clear session
-                 if 'selected_service_ids' in request.session: del request.session['selected_service_ids']
-                 
-                 return JsonResponse({'success': True, 'trusted': True, 'redirect': reverse('payment_process')})
+                # Provide auto-login if they bypassed OTP via setting or trust but were not logged in
+                if not request.user.is_authenticated and phone and len(phone) > 5:
+                    from django.contrib.auth import login
+                    from users.models import User
+                    try:
+                        user, created = User.objects.get_or_create(phone_number=phone)
+                        if created:
+                            user.username = phone
+                            user.save()
+                        login(request, user)
+                    except Exception as e:
+                        print(f"Auto-login failed after bypass: {e}")
+
+                # Immediately confirm and notify
+                bookings = Booking.objects.filter(booking_group_id=group_id)
+                for b in bookings:
+                    if b.customer_email:
+                        utils.send_booking_emails_async(b, request)
+
+                first_booking = bookings.first()
+                if first_booking:
+                    utils.send_confirmation_sms(first_booking.customer_phone, f"Confirmed! Date: {first_booking.date} Time: {first_booking.time}")
+
+                request.session['last_booking_group_id'] = str(group_id)
+
+                # Clear session
+                if 'selected_service_ids' in request.session: del request.session['selected_service_ids']
+                if 'selected_date' in request.session: del request.session['selected_date']
+                if 'selected_time' in request.session: del request.session['selected_time']
+
+                return JsonResponse({'success': True, 'trusted': True, 'redirect': reverse('booking_success')})
             else:
                  # Send Voice OTP
                  sent = utils.send_voice_otp_2factor(phone, plain_otp)
@@ -148,23 +174,28 @@ class VerifyBookingOTPView(View):
              return JsonResponse({'success': False, 'message': 'OTP Expired.'})
              
         if utils.verify_otp_hash(entered_otp, booking.otp):
-            # Success
-            # bookings.update(is_verified=True, status='confirmed') # Removed
-            
-            # OTP Verified -> Payment Pending
-            bookings.update(is_verified=True, status='payment_pending')
-            
-            # Trust & Notify happens AFTER payment.
-            
+            # Success: OTP verified -> mark confirmed
+            bookings.update(is_verified=True, status='confirmed')
+
+            # Send notifications
+            for b in bookings:
+                if b.customer_email:
+                    utils.send_booking_emails_async(b, request)
+
+            first_booking = bookings.first()
+            if first_booking:
+                utils.send_confirmation_sms(first_booking.customer_phone, f"Confirmed! Date: {first_booking.date} Time: {first_booking.time}")
+
             request.session['last_booking_group_id'] = group_id
-            request.session['pending_group_id'] = group_id # Keep/Ensure pending_group_id set for PaymentProcessView
-            
+            if 'pending_group_id' in request.session:
+                del request.session['pending_group_id']
+
             # Clear selection data
             k = ['selected_service_ids', 'selected_date', 'selected_time']
             for key in k:
                 if key in request.session: del request.session[key]
-                
-            return JsonResponse({'success': True, 'redirect': reverse('payment_process')})
+
+            return JsonResponse({'success': True, 'redirect': reverse('booking_success')})
         else:
             return JsonResponse({'success': False, 'message': 'Incorrect OTP.'})
 

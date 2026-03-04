@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -5,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barber Dashboard | Zion Salon</title>
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
     <!-- Tailwind CSS (CDN for standalone dashboard) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -18,7 +20,16 @@
     </style>
 </head>
 
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gray-50 text-gray-800 relative">
+
+    <!-- Page Loader -->
+    <div id="page-loader"
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-50 transition-opacity duration-300">
+        <div class="flex flex-col items-center">
+            <i class="fas fa-circle-notch fa-spin text-4xl text-amber-500 mb-4"></i>
+            <p class="text-gray-500 font-medium animate-pulse">Loading...</p>
+        </div>
+    </div>
 
     <div class="flex h-screen overflow-hidden">
 
@@ -161,6 +172,38 @@
                 }, 300); // Wait for fade out
             }
         }
+
+        // Loader Logic
+        document.addEventListener("DOMContentLoaded", () => {
+            const loader = document.getElementById('page-loader');
+
+            // Hide loader when page is fully loaded
+            window.addEventListener('load', () => {
+                loader.classList.add('opacity-0');
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                }, 300);
+            });
+
+            // Show loader entirely when navigating or submitting forms
+            document.querySelectorAll('a[href]').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const href = link.getAttribute('href');
+                    const target = link.getAttribute('target');
+                    if (href && !href.startsWith('#') && !href.startsWith('javascript') && target !== '_blank') {
+                        loader.classList.remove('hidden');
+                        loader.classList.remove('opacity-0');
+                    }
+                });
+            });
+
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', () => {
+                    loader.classList.remove('hidden');
+                    loader.classList.remove('opacity-0');
+                });
+            });
+        });
     </script>
 
 </body>

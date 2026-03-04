@@ -49,6 +49,10 @@
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                         Confirmed
                                     </span>
+                                {% elif booking.status == 'pending_otp' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        Pending OTP
+                                    </span>
                                 {% elif booking.status == 'cancelled' %}
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                         Cancelled
@@ -118,7 +122,7 @@
                                 Are you sure you want to cancel the appointment for <strong id="modal-service" class="text-gray-800"></strong> on <span id="modal-date"></span> at <span id="modal-time"></span>?
                             </p>
                             <p class="text-sm text-yellow-600 mt-3 font-medium bg-yellow-50 p-3 rounded-md border border-yellow-200">
-                                <i class="fas fa-info-circle mr-1"></i> The payment will be credited back to your account within 2–7 business days.
+                                <i class="fas fa-info-circle mr-1"></i> Once cancelled, this time slot becomes available for other customers to book.
                             </p>
                         </div>
                     </div>

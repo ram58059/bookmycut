@@ -39,9 +39,23 @@
                         <td style="padding: 8px 0; color: #888888; font-size: 14px;">Time</td>
                         <td style="padding: 8px 0; color: #4A3728; font-weight: 600; font-size: 16px;">{{ booking.time|time:"g:i A" }}</td>
                     </tr>
+                    {% if group_bookings %}
                     <tr>
-                        <td style="padding: 8px 0; color: #888888; font-size: 14px;">Total</td>
-                        <td style="padding: 8px 0; color: #D4AF37; font-weight: 700; font-size: 16px;">₹{{ booking.service.price }}</td>
+                        <td style="padding: 8px 0; color: #888888; font-size: 14px; vertical-align: top;">All Services</td>
+                        <td style="padding: 8px 0; color: #4A3728; font-size: 14px;">
+                            <ul style="margin: 0; padding-left: 18px;">
+                                {% for b in group_bookings %}
+                                <li>
+                                    {{ b.service.name }} — ₹{{ b.service.price }} ({{ b.time|time:"g:i A" }})
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td style="padding: 8px 0; color: #888888; font-size: 14px;">Total Price</td>
+                        <td style="padding: 8px 0; color: #D4AF37; font-weight: 700; font-size: 16px;">₹{{ total_price }}</td>
                     </tr>
                 </table>
             </div>

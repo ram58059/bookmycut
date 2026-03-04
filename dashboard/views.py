@@ -56,6 +56,9 @@ def overview(request):
 
     smart_insights = analytics.generate_smart_insights()
 
+    from .models import ShopSetting
+    shop_settings = ShopSetting.load()
+
     context = {
         'page_title': 'Overview',
         'kpis': kpis,
@@ -66,6 +69,7 @@ def overview(request):
         'trend_data': trend_data,
         'status_labels': status_labels,
         'status_data': status_data,
+        'otp_enabled': shop_settings.is_otp_enabled,
     }
     return render(request, 'dashboard/overview.html', context)
 
@@ -236,7 +240,7 @@ def manage_bookings(request):
                     # Check for existing bookings
                     active_bookings = Booking.objects.filter(
                         date=block_date,
-                        status__in=['confirmed', 'pending', 'payment_pending']
+                        status__in=['confirmed', 'pending_otp']
                     )
                     if active_bookings.exists():
                         messages.error(request, f"Cannot block {date_str}. There are {active_bookings.count()} active bookings. Please cancel them first.")
@@ -353,3 +357,14 @@ def delete_service(request, pk):
         'service': service,
     }
     return render(request, 'dashboard/service_confirm_delete.html', context)
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def toggle_otp(request):
+    if request.method == 'POST':
+        from .models import ShopSetting
+        settings = ShopSetting.load()
+        settings.is_otp_enabled = not settings.is_otp_enabled
+        settings.save()
+        messages.success(request, f"OTP Verification is now {'enabled' if settings.is_otp_enabled else 'disabled'}.")
+    # Redirect back to where they came from
+    return redirect(request.META.get('HTTP_REFERER', 'dashboard_overview'))

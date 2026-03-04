@@ -49,11 +49,9 @@ class CustomerTrust(models.Model):
 
 class Booking(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'Pending Verification'), # Held for 5 mins
-        ('payment_pending', 'Payment Pending'),
+        ('pending_otp', 'Pending OTP Verification'),
         ('confirmed', 'Confirmed'),
         ('completed', 'Completed'),
-        ('payment_failed', 'Payment Failed'),
         ('cancelled', 'Cancelled'),
         ('no_show', 'No Show'),
     ]
@@ -72,7 +70,7 @@ class Booking(models.Model):
     
     date = models.DateField()
     time = models.TimeField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending_otp')
     created_at = models.DateTimeField(auto_now_add=True)
     
     # Anti-Abuse & Verification
@@ -80,10 +78,6 @@ class Booking(models.Model):
     otp = models.CharField(max_length=128, blank=True, null=True) # Changed max_length to store hash
     otp_created_at = models.DateTimeField(blank=True, null=True)
     is_verified = models.BooleanField(default=False)
-    
-    # Payment Info
-    razorpay_order_id = models.CharField(max_length=100, null=True, blank=True)
-    razorpay_payment_id = models.CharField(max_length=100, null=True, blank=True)
     
     class Meta:
         constraints = [
