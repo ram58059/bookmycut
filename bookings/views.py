@@ -335,11 +335,10 @@ class BookingConfirmationView(View):
 
                 # Immediately confirm booking and send notifications
                 bookings = Booking.objects.filter(booking_group_id=group_id)
-                for b in bookings:
-                    if b.customer_email:
-                        utils.send_booking_emails_async(b, request)
                 first_booking = bookings.first()
                 if first_booking:
+                    if first_booking.customer_email:
+                        utils.send_booking_emails_async(first_booking, request)
                     utils.send_confirmation_sms(first_booking.customer_phone, f"Confirmed! Date: {first_booking.date} Time: {first_booking.time}")
 
                 # Store for success page
@@ -437,11 +436,10 @@ class OTPVerificationView(View):
                     print(f"Auto-login failed: {e}")
 
             # Send confirmation emails & SMS
-            for b in bookings:
-                if b.customer_email:
-                    utils.send_booking_confirmation_email(b)
             first_booking = bookings.first()
             if first_booking:
+                if first_booking.customer_email:
+                    utils.send_booking_emails_async(first_booking, request)
                 utils.send_confirmation_sms(first_booking.customer_phone, f"Confirmed! Date: {first_booking.date} Time: {first_booking.time}")
 
             # Store for success page and clear pending session
@@ -466,7 +464,12 @@ class BookingSuccessView(View):
             
         bookings = Booking.objects.filter(booking_group_id=group_id)
         booking = bookings.first()
-        return render(request, 'bookings/success.html', {'booking': booking, 'bookings': bookings})
+        google_calendar_url = utils.generate_google_calendar_url(booking)
+        return render(request, 'bookings/success.html', {
+            'booking': booking, 
+            'bookings': bookings,
+            'google_calendar_url': google_calendar_url
+        })
 
 class CancelBookingView(View):
     def get(self, request, booking_id):

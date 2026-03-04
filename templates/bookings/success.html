@@ -165,6 +165,11 @@
                 A confirmation has been sent to <span class="text-brown font-medium">{{ booking.customer_phone }}</span>
             </p>
 
+            <a href="{{ google_calendar_url }}" target="_blank"
+                class="mb-4 inline-flex items-center justify-center w-full px-6 py-3 border border-transparent text-base font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg">
+                <i class="fab fa-google mr-2"></i> Add to Google Calendar
+            </a>
+
             <a href="{% url 'home' %}"
                 class="inline-flex items-center justify-center w-full px-6 py-3 border border-transparent text-base font-bold rounded-full text-white bg-brown hover:bg-gold transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg">
                 Return to Home

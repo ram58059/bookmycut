@@ -116,12 +116,10 @@ class InitiateBookingView(View):
 
                 # Immediately confirm and notify
                 bookings = Booking.objects.filter(booking_group_id=group_id)
-                for b in bookings:
-                    if b.customer_email:
-                        utils.send_booking_emails_async(b, request)
-
                 first_booking = bookings.first()
                 if first_booking:
+                    if first_booking.customer_email:
+                        utils.send_booking_emails_async(first_booking, request)
                     utils.send_confirmation_sms(first_booking.customer_phone, f"Confirmed! Date: {first_booking.date} Time: {first_booking.time}")
 
                 request.session['last_booking_group_id'] = str(group_id)
@@ -178,12 +176,10 @@ class VerifyBookingOTPView(View):
             bookings.update(is_verified=True, status='confirmed')
 
             # Send notifications
-            for b in bookings:
-                if b.customer_email:
-                    utils.send_booking_emails_async(b, request)
-
             first_booking = bookings.first()
             if first_booking:
+                if first_booking.customer_email:
+                    utils.send_booking_emails_async(first_booking, request)
                 utils.send_confirmation_sms(first_booking.customer_phone, f"Confirmed! Date: {first_booking.date} Time: {first_booking.time}")
 
             request.session['last_booking_group_id'] = group_id

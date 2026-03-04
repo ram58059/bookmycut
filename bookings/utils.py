@@ -12,7 +12,14 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 import urllib.parse
 import threading
+import os
 from .models import Booking, CustomerTrust
+
+# For Google Calendar Sync
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
+SCOPES = ['https://www.googleapis.com/auth/calendar.events']
 
 # ============================
 # Security & Hashing Helpers
@@ -86,12 +93,14 @@ def send_booking_confirmation_email(booking, request=None):
     total_price = sum(b.service.price for b in group_bookings)
 
     # Render HTML content
+    google_calendar_url = generate_google_calendar_url(booking)
     html_content = render_to_string(
         'emails/booking_confirmation.html',
         {
             'booking': booking,
             'group_bookings': group_bookings,
             'total_price': total_price,
+            'google_calendar_url': google_calendar_url,
         },
     )
     text_content = strip_tags(html_content)
@@ -126,10 +135,10 @@ def send_booking_confirmation_email(booking, request=None):
         admin_subject = f"New Booking Alert: {booking.customer_phone}"
         
         # Build Absolute URI if request is provided, otherwise fallback to basic string
-        dashboard_url = "/dashboard/"
+        dashboard_url = "/admin/"
         if request:
             from django.urls import reverse
-            dashboard_url = request.build_absolute_uri(reverse('dashboard_overview'))
+            dashboard_url = request.build_absolute_uri('/admin/')
 
         # Render Admin HTML Profile
         admin_html_content = render_to_string(
@@ -158,12 +167,79 @@ def send_booking_confirmation_email(booking, request=None):
         admin_msg.attach('booking.ics', admin_ics, 'text/calendar')
         admin_msg.send()
         
+        # Async Google Calendar Sync!
+        sync_to_admin_google_calendar(booking, group_bookings)
+        
         return True
     except Exception as e:
         import traceback
         print(f"Error sending email: {e}")
         traceback.print_exc()
         return False
+
+def generate_google_calendar_url(booking):
+    """
+    Generates a one-click Add to Google Calendar URL for the customer.
+    """
+    start_dt = datetime.combine(booking.date, booking.time)
+    end_dt = start_dt + timedelta(minutes=60)
+    
+    # Format for Google Calendar URL (YYYYMMDDTHHMMSSZ) - Assuming local time behaves as UTC for simplicity if no tz
+    dt_format = "%Y%m%dT%H%M%S"
+    dates = f"{start_dt.strftime(dt_format)}/{end_dt.strftime(dt_format)}"
+    
+    params = {
+        'action': 'TEMPLATE',
+        'text': f"Appointment at ZionStyle: {booking.service.name}",
+        'dates': dates,
+        'details': f"Service: {booking.service.name}\nPrice: {booking.service.price}",
+        'location': "Zion Salon & Spa, Tirunelveli"
+    }
+    return "https://calendar.google.com/calendar/render?" + urllib.parse.urlencode(params)
+
+def sync_to_admin_google_calendar(booking, group_bookings):
+    """
+    Silently pushes the booking to the Admin's master Google Calendar via Service Account.
+    """
+    try:
+        creds_path = os.path.join(settings.BASE_DIR, 'google_calendar_credentials.json')
+        if not os.path.exists(creds_path):
+            print("Google Calendar credentials not found. Skipping auto-sync.")
+            return
+
+        creds = service_account.Credentials.from_service_account_file(creds_path, scopes=SCOPES)
+        service = build('calendar', 'v3', credentials=creds)
+
+        start_dt = datetime.combine(booking.date, booking.time)
+        end_dt = start_dt + timedelta(minutes=60 * len(group_bookings)) # Total duration
+
+        event = {
+            'summary': f"{booking.customer_phone} - ZionStyle Appt",
+            'location': 'Zion Salon & Spa, Tirunelveli',
+            'description': f"Customer: {booking.customer_phone}\nEmail: {booking.customer_email}\nServices: {', '.join([b.service.name for b in group_bookings])}",
+            'start': {
+                'dateTime': start_dt.isoformat(),
+                'timeZone': 'Asia/Kolkata',
+            },
+            'end': {
+                'dateTime': end_dt.isoformat(),
+                'timeZone': 'Asia/Kolkata',
+            },
+            'reminders': {
+                'useDefault': False,
+                'overrides': [
+                    {'method': 'popup', 'minutes': 10},
+                ],
+            },
+        }
+
+        # Use the admin's calendar ID or primary if using the service account's own calendar
+        calendar_id = os.getenv('ADMIN_GOOGLE_CALENDAR_ID', 'primary')
+        event = service.events().insert(calendarId=calendar_id, body=event).execute()
+        print(f"Successfully synced event to Admin Google Calendar: {event.get('htmlLink')}")
+        
+    except Exception as e:
+        print(f"Failed to sync to Google Calendar: {e}")
 
 def send_booking_emails_async(booking, request=None):
     """

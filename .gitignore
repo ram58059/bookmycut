@@ -26,3 +26,5 @@ env/
 
 # node
 node_modules/
+
+google_calendar_credentials.json

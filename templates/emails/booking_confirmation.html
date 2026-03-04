@@ -1,16 +1,22 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Booking Confirmed</title>
 </head>
-<body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f9f9f9; color: #333333;">
-    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; margin-bottom: 20px;">
-        
+
+<body
+    style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f9f9f9; color: #333333;">
+    <div
+        style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; margin-bottom: 20px;">
+
         <!-- Header -->
         <div style="background-color: #4A3728; padding: 30px; text-align: center;">
-            <h1 style="margin: 0; color: #D4AF37; font-size: 28px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase;">ZION<span style="font-weight: 300; color: #ffffff;">STYLE</span></h1>
+            <h1
+                style="margin: 0; color: #D4AF37; font-size: 28px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase;">
+                ZION<span style="font-weight: 300; color: #ffffff;">STYLE</span></h1>
             <p style="margin: 5px 0 0; color: #e2e8f0; font-size: 14px; letter-spacing: 1px;">PREMIUM SALON & SPA</p>
         </div>
 
@@ -25,7 +31,8 @@
             </p>
 
             <!-- Booking Details Box -->
-            <div style="background-color: #FFFDF5; border: 1px solid #F3E5AB; border-radius: 6px; padding: 20px; margin: 25px 0;">
+            <div
+                style="background-color: #FFFDF5; border: 1px solid #F3E5AB; border-radius: 6px; padding: 20px; margin: 25px 0;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
                         <td style="padding: 8px 0; color: #888888; font-size: 14px; width: 80px;">Service</td>
@@ -41,7 +48,8 @@
                     </tr>
                     {% if group_bookings %}
                     <tr>
-                        <td style="padding: 8px 0; color: #888888; font-size: 14px; vertical-align: top;">All Services</td>
+                        <td style="padding: 8px 0; color: #888888; font-size: 14px; vertical-align: top;">All Services
+                        </td>
                         <td style="padding: 8px 0; color: #4A3728; font-size: 14px;">
                             <ul style="margin: 0; padding-left: 18px;">
                                 {% for b in group_bookings %}
@@ -60,9 +68,14 @@
                 </table>
             </div>
 
-            <!-- Address / Map Button -->
+            <!-- Actions -->
             <div style="text-align: center; margin-top: 30px;">
-                <a href="https://maps.app.goo.gl/xwdnTFCNmfCiYs6CA" target="_blank" style="display: inline-block; background-color: #4A3728; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 50px; font-weight: 600; font-size: 14px; transition: background-color 0.3s;">
+                <a href="{{ google_calendar_url }}" target="_blank"
+                    style="display: inline-block; background-color: #4285F4; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 5px; font-weight: 600; font-size: 14px; margin-bottom: 15px; transition: background-color 0.3s;">
+                    Add to Google Calendar
+                </a><br>
+                <a href="https://maps.app.goo.gl/xwdnTFCNmfCiYs6CA" target="_blank"
+                    style="display: inline-block; background-color: #4A3728; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 50px; font-weight: 600; font-size: 14px; transition: background-color 0.3s;">
                     Get Directions
                 </a>
                 <p style="margin-top: 20px; color: #888888; font-size: 13px; line-height: 1.5;">
@@ -80,4 +93,5 @@
         </div>
     </div>
 </body>
+
 </html>
