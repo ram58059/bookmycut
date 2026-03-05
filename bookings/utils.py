@@ -86,6 +86,7 @@ def send_booking_confirmation_email(booking, request=None):
     """
     subject = 'Booking Confirmed - ZionStyle'
     from_email = settings.DEFAULT_FROM_EMAIL
+    admin_email = settings.ADMIN_RECV_EMAIL
     to = [booking.customer_email]
 
     # Calculate group total and list of services for this booking group
@@ -162,7 +163,7 @@ def send_booking_confirmation_email(booking, request=None):
             alarm_minutes=10  # Remind admin 10 minutes before
         )
         
-        admin_msg = EmailMultiAlternatives(admin_subject, admin_text_content, from_email, [from_email]) # sending to self/admin
+        admin_msg = EmailMultiAlternatives(admin_subject, admin_text_content, from_email, [admin_email]) # sending to self/admin
         admin_msg.attach_alternative(admin_html_content, "text/html")
         admin_msg.attach('booking.ics', admin_ics, 'text/calendar')
         admin_msg.send()
