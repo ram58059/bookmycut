@@ -11,8 +11,7 @@
             <p class="service-desc">Customer: {{ appointment.customer.username }}</p>
             <p class="service-desc">Date: {{ appointment.date }}</p>
             <p class="service-desc">Time: {{ appointment.time }}</p>
-            <p class="service-price" style="margin-top: 1rem; font-size: 1rem;">Status: {{
-                appointment.get_status_display }}</p>
+            <p class="service-price" style="margin-top: 1rem; font-size: 1rem;">Status: {{ appointment.get_status_display }}</p>
         </div>
         {% endfor %}
     </div>

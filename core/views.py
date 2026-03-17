@@ -3,8 +3,15 @@ from django.shortcuts import render
 def home(request):
     return render(request, 'core/home.html')
 
+from django.shortcuts import redirect
 
-
+def quick_book(request):
+    service_id = request.POST.get('service_id') or request.GET.get('service_id')
+    if service_id:
+        request.session['selected_service_ids'] = [str(service_id)]
+        request.session['selected_gender'] = 'Boy' # Default to Boy/Men for these services since they're for generic use
+        return redirect('date_time_selection')
+    return redirect('home')
 
 
 def hairstyle_gallery(request):

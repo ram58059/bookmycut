@@ -54,8 +54,8 @@ class ServiceListView(View):
 
         grouped_services = {}
         category_order = [
-            'Haircut Services', 'General', 'Facials', 'Hair Spa', 'Reflexology / Massage', 'Express Face Masks',
-            'Haircut Combos', 'Hair Colour', 'Streaks'
+            'All Services', 'General', 'Hair Services', 'Haircut Combos', 'Hair Colour', 'Hair Spa',
+            'Facials', 'Reflexology / Massage', 'Express Face Masks', 'Streaks'
         ]
         
         all_services = list(services)
