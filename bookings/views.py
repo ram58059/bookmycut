@@ -308,13 +308,6 @@ class BookingConfirmationView(View):
             initial_data['customer_email'] = getattr(request.user, 'email', '')
             
         form = GuestDetailsForm(initial=initial_data)
-        if request.user.is_authenticated:
-            # Make name readonly for logged in users
-            form.fields['customer_name'].widget.attrs['readonly'] = True
-            form.fields['customer_name'].widget.attrs['class'] += ' bg-gray-100 cursor-not-allowed'
-            # Optional: do the same for phone if requested, but user specifically asked for name
-            form.fields['customer_phone'].widget.attrs['readonly'] = True
-            form.fields['customer_phone'].widget.attrs['class'] += ' bg-gray-100 cursor-not-allowed'
         
         return render(request, 'bookings/confirmation.html', {
             'services': services,
@@ -327,11 +320,10 @@ class BookingConfirmationView(View):
     def post(self, request):
         form = GuestDetailsForm(request.POST)
         if form.is_valid():
-            # Rate Limiting & Abuse Check
-            if request.user.is_authenticated:
-                phone = request.user.phone_number
-            else:
-                phone = form.cleaned_data['customer_phone']
+            # Source all details from the form ALWAYS (independent of login info)
+            phone = form.cleaned_data['customer_phone']
+            name = form.cleaned_data['customer_name']
+            email = form.cleaned_data['customer_email']
             
             ip = utils.get_client_ip(request)
             
@@ -418,7 +410,9 @@ class BookingConfirmationView(View):
                         current_end_time_dt = current_start_time_dt + timedelta(minutes=service.duration_minutes)
                         
                         booking = Booking(
+                            customer_name=name,
                             customer_phone=phone,
+                            customer_email=email,
                             customer_gender=request.session.get('selected_gender', 'Male'),
                             service=service,
                             booking_group_id=group_id,
@@ -432,6 +426,9 @@ class BookingConfirmationView(View):
                             is_verified=is_initial_verified
                         )
                         booking.save()
+                        
+                        # Set next service start time
+                        current_start_time_dt = current_end_time_dt
                         
             except IntegrityError:
                 return render(request, 'bookings/error.html', {
@@ -542,9 +539,8 @@ class OTPVerificationView(View):
             # Success: mark all bookings in the group as confirmed
             bookings.update(is_verified=True, status='confirmed')
 
-            # Auto-Login (New Requirement)
-            # Auto-Login 
-            if booking.customer_phone and booking.customer_phone != 'None' and len(booking.customer_phone) > 5:
+            # Auto-Login (Only if not already logged in)
+            if not request.user.is_authenticated and booking.customer_phone and booking.customer_phone != 'None' and len(booking.customer_phone) > 5:
                 try:
                     user, created = User.objects.get_or_create(phone_number=booking.customer_phone)
                     if created:
