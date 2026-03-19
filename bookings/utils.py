@@ -84,7 +84,6 @@ def send_booking_confirmation_email(booking, request=None):
     Sends a booking confirmation email to the customer.
     (This is the synchronous core function called by the async wrapper)
     """
-    return True
     subject = 'Booking Confirmed - ZionStyle'
     from_email = settings.DEFAULT_FROM_EMAIL
     admin_email = settings.ADMIN_RECV_EMAIL
