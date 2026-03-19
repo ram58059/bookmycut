@@ -19,6 +19,7 @@ class PhoneLoginView(View):
         form = PhoneLoginForm(request.POST)
         if form.is_valid():
             phone = form.cleaned_data['phone_number']
+            first_name = form.cleaned_data['first_name']
             
             # Generate OTP
             plain_otp = utils.generate_otp()
@@ -32,6 +33,7 @@ class PhoneLoginView(View):
             
             # Store in session
             request.session['login_phone'] = phone
+            request.session['login_first_name'] = first_name
             request.session['login_otp_hash'] = hashed_otp
             request.session['login_otp_created_at'] = str(timezone.now())
             
@@ -72,7 +74,14 @@ class VerifyLoginOTPView(View):
                     # but we are using phone_number as effective ID.
                     # AbstractUser requires username.
                     user.username = phone
+                    user.first_name = request.session.get('login_first_name', '')
                     user.save()
+                else:
+                    # Update previously submitted names transparently resolving existing guests
+                    new_name = request.session.get('login_first_name')
+                    if new_name and user.first_name != new_name:
+                        user.first_name = new_name
+                        user.save()
                 
                 login(request, user)
                 

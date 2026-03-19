@@ -83,20 +83,12 @@ def get_service_performance():
         revenue=F('price') * F('completed_count')
     ).order_by('-booking_count')
 
-def get_peak_times():
-    # Heatmap data: Day of week + Hour
-    # 1 (Sunday) to 7 (Saturday)
-    return Booking.objects.annotate(
-        weekday=ExtractWeekDay('date'),
-        hour=ExtractHour('time')
-    ).values('weekday', 'hour').annotate(
-        count=Count('id')
-    ).order_by('weekday', 'hour')
 
 def get_customer_insights():
     # Repeat vs New (Simple heuristic based on phone number counts)
     customer_counts = Booking.objects.values('customer_phone').annotate(
-        visits=Count('id')
+        visits=Count('id'),
+        customer_name=models.Max('customer_name')
     )
     
     new_customers = 0
@@ -200,22 +192,7 @@ def get_utilization_metrics():
 def generate_smart_insights():
     insights = []
     
-    # 1. Peak Time Insight
-    peak_times = get_peak_times()
-    if peak_times.exists():
-        top = peak_times.first()
-        days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-        # ExtractWeekDay is 1-based (Sun=1)
-        day_name = days[top['weekday'] - 1] if 1 <= top['weekday'] <= 7 else 'Unknown'
-        booking_count = top['count']
-        if booking_count > 2:
-            insights.append({
-                'text': f"{day_name}s around {top['hour']}:00 are your busiest time.",
-                'type': 'success',
-                'icon': 'fa-clock'
-            })
-            
-    # 2. Revenue/Repeat Insight
+    # 1. Revenue/Repeat Insight
     cust_insights = get_customer_insights()
     if cust_insights['returning'] > cust_insights['new']:
          insights.append({

@@ -105,16 +105,23 @@ class DateTimeSelectionView(View):
         if not selected_service_ids:
             return redirect('service_list')
         
-        # Requirement: 1 hour per service
+        # Requirement: Total duration of selected services
+        unique_services = Service.objects.filter(id__in=set(selected_service_ids))
+        service_dict = {str(s.id): s for s in unique_services}
+        sequenced_services = [service_dict[str(sid)] for sid in selected_service_ids if str(sid) in service_dict]
+        
+        total_duration = sum(s.duration_minutes for s in sequenced_services)
+        if total_duration == 0:
+            total_duration = 30 # Fallback default
         num_services = len(selected_service_ids)
         
         selected_date_str = request.GET.get('date')
         slots = []
         selected_date = None
         
-        # Calculate max date (14 days from today)
+        # Calculate max date (7 days from today)
         now = timezone.localtime(timezone.now())
-        max_date = now.date() + timedelta(days=14)
+        max_date = now.date() + timedelta(days=7)
 
         if selected_date_str:
             try:
@@ -123,7 +130,7 @@ class DateTimeSelectionView(View):
                      # Prevent past dates
                      selected_date = None
                 elif selected_date > max_date:
-                    # Prevent dates beyond 14 days
+                    # Prevent dates beyond 7 days
                     selected_date = None
                 elif selected_date.weekday() == 6:
                     # Prevent Sundays (6 = Sunday)
@@ -170,30 +177,49 @@ class DateTimeSelectionView(View):
                 status__in=['confirmed', 'completed', 'pending_otp']
             )
             
-            booked_hours = set()
-            for booking in existing_bookings:
-                # Each booking now represents ONE service = ONE hour
-                booked_hours.add(booking.time.hour)
+            # Start and End bounds
+            start_dt = datetime.combine(selected_date, time(start_hour, 0))
+            end_dt = datetime.combine(selected_date, time(end_hour, 0))
+            lunch_start = datetime.combine(selected_date, time(14, 0))
+            lunch_end = datetime.combine(selected_date, time(15, 0))
+
+            # Find available 15-minute slots
+            current_dt = start_dt
             
-            # Find consecutive available slots
-            for h in range(start_hour, end_hour):
-                if h + num_services > end_hour:
+            # Round current_dt up to next 15-minute interval if it's today
+            if selected_date == now.date():
+                minutes = current_dt.minute
+                remainder = minutes % 15
+                if remainder != 0:
+                    current_dt += timedelta(minutes=(15 - remainder))
+            
+            while current_dt < end_dt:
+                requested_start = current_dt
+                requested_end = current_dt + timedelta(minutes=total_duration)
+                
+                # Check 1: Exceeds closing time
+                if requested_end > end_dt:
                     break
                 
-                # Check if all needed hours are free
+                # Check 2: Overlaps Barber Lunch (14:00 to 15:00)
+                # Overlap condition: max(start1, start2) < min(end1, end2)
+                if max(requested_start, lunch_start) < min(requested_end, lunch_end):
+                    current_dt += timedelta(minutes=15)
+                    continue
+
+                # Check 3: Overlaps existing bookings
                 is_valid = True
-                for i in range(num_services):
-                    if (h + i) in booked_hours:
+                for booking in existing_bookings:
+                    ex_start = datetime.combine(selected_date, booking.time)
+                    ex_end = datetime.combine(selected_date, booking.end_time) if booking.end_time else ex_start + timedelta(hours=1)
+                    if max(requested_start, ex_start) < min(requested_end, ex_end):
                         is_valid = False
                         break
                 
                 if is_valid:
-                    # Explicitly creating datetime.time object as requested
-                    t_obj = time(h, 0)
-                    slots.append(t_obj)
-                    # Debug print to verify type in console
-                    if len(slots) == 1:
-                        print(f"DEBUG: Slot type is {type(t_obj)}")
+                    slots.append(current_dt.time())
+                
+                current_dt += timedelta(minutes=15)
 
         return render(request, 'bookings/calendar.html', {
             'slots': slots,
@@ -201,6 +227,7 @@ class DateTimeSelectionView(View):
             'today': timezone.now().date(),
             'max_date': max_date,
             'num_services': num_services,
+            'total_duration': total_duration,
             'is_blocked': is_blocked if 'is_blocked' in locals() else False
         })
 
@@ -211,8 +238,55 @@ class DateTimeSelectionView(View):
         if not date_str or not time_str:
             return redirect('date_time_selection')
             
+        selected_service_ids = request.session.get('selected_service_ids')
+        if not selected_service_ids:
+            return redirect('service_list')
+        
+        unique_services = Service.objects.filter(id__in=set(selected_service_ids))
+        if not unique_services.exists():
+            return redirect('service_list')
+            
+        service_dict = {str(s.id): s for s in unique_services}
+        sequenced_services = [service_dict[str(sid)] for sid in selected_service_ids if str(sid) in service_dict]
+        
+        total_duration = sum(s.duration_minutes for s in sequenced_services)
+
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            selected_time = datetime.strptime(time_str, '%H:%M:%S').time()
+        except ValueError:
+            try:
+                # Fallback for %H:%M format (e.g., 09:30)
+                selected_time = datetime.strptime(time_str, '%H:%M').time()
+            except ValueError:
+                return redirect('date_time_selection')
+        
+        # Concurrency safety: Re-verify overlap exactly like GET
+        requested_start = datetime.combine(selected_date, selected_time)
+        requested_end = requested_start + timedelta(minutes=total_duration)
+        
+        lunch_start = datetime.combine(selected_date, time(14, 0))
+        lunch_end = datetime.combine(selected_date, time(15, 0))
+        
+        if max(requested_start, lunch_start) < min(requested_end, lunch_end):
+             # Overlaps lunch
+             return redirect('date_time_selection')
+             
+        existing_bookings = Booking.objects.filter(
+            date=selected_date,
+            status__in=['confirmed', 'completed', 'pending_otp']
+        )
+        
+        for booking in existing_bookings:
+            ex_start = datetime.combine(selected_date, booking.time)
+            ex_end = datetime.combine(selected_date, booking.end_time) if booking.end_time else ex_start + timedelta(hours=1)
+            if max(requested_start, ex_start) < min(requested_end, ex_end):
+                # Overlaps existing booking, race condition hit
+                return redirect('date_time_selection')
+        
+        # It's valid. Save in session.
         request.session['selected_date'] = date_str
-        request.session['selected_time'] = time_str
+        request.session['selected_time'] = selected_time.strftime('%H:%M:%S')
         return redirect('booking_confirmation')
 
 class BookingConfirmationView(View):
@@ -227,7 +301,20 @@ class BookingConfirmationView(View):
         services = Service.objects.filter(id__in=selected_service_ids)
         total_price = sum(s.price for s in services)
         
-        form = GuestDetailsForm()
+        initial_data = {}
+        if request.user.is_authenticated:
+            initial_data['customer_name'] = getattr(request.user, 'first_name', '')
+            initial_data['customer_phone'] = getattr(request.user, 'phone_number', '')
+            initial_data['customer_email'] = getattr(request.user, 'email', '')
+            
+        form = GuestDetailsForm(initial=initial_data)
+        if request.user.is_authenticated:
+            # Make name readonly for logged in users
+            form.fields['customer_name'].widget.attrs['readonly'] = True
+            form.fields['customer_name'].widget.attrs['class'] += ' bg-gray-100 cursor-not-allowed'
+            # Optional: do the same for phone if requested, but user specifically asked for name
+            form.fields['customer_phone'].widget.attrs['readonly'] = True
+            form.fields['customer_phone'].widget.attrs['class'] += ' bg-gray-100 cursor-not-allowed'
         
         return render(request, 'bookings/confirmation.html', {
             'services': services,
@@ -260,7 +347,9 @@ class BookingConfirmationView(View):
             if not (selected_service_ids and date_str and time_str):
                 return redirect('service_list')
             
-            services = Service.objects.filter(id__in=selected_service_ids)
+            unique_services = Service.objects.filter(id__in=set(selected_service_ids))
+            service_dict = {str(s.id): s for s in unique_services}
+            sequenced_services = [service_dict[str(sid)] for sid in selected_service_ids if str(sid) in service_dict]
             
             # Determine if trusted or logged in
             if request.user.is_authenticated:
@@ -290,22 +379,52 @@ class BookingConfirmationView(View):
             initial_status = 'confirmed' if is_trusted_user else 'pending_otp'
             is_initial_verified = True if is_trusted_user else False
             
-            start_time_obj = datetime.strptime(time_str, '%H:%M:%S').time() if len(time_str) > 5 else datetime.strptime(time_str, '%H:%M').time()
-            start_hour = start_time_obj.hour
-            
+            try:
+                booking_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+                booking_time_obj = datetime.strptime(time_str, '%H:%M:%S').time()
+            except ValueError:
+                return render(request, 'bookings/error.html', {'message': 'Invalid date or time format.'})
+
+            # Re-verify slot availability one last time before creating bookings
+            total_duration_for_all_services = sum(s.duration_minutes for s in sequenced_services)
+            requested_start_dt = datetime.combine(booking_date_obj, booking_time_obj)
+            requested_end_dt = requested_start_dt + timedelta(minutes=total_duration_for_all_services)
+
+            lunch_start = datetime.combine(booking_date_obj, time(14, 0))
+            lunch_end = datetime.combine(booking_date_obj, time(15, 0))
+
+            if max(requested_start_dt, lunch_start) < min(requested_end_dt, lunch_end):
+                return render(request, 'bookings/error.html', {'message': 'The selected time slot now overlaps with the barber\'s lunch break. Please choose another time.'})
+
+            existing_bookings_for_date = Booking.objects.filter(
+                date=booking_date_obj,
+                status__in=['confirmed', 'completed', 'pending_otp']
+            )
+
+            for existing_booking in existing_bookings_for_date:
+                ex_start = datetime.combine(booking_date_obj, existing_booking.time)
+                ex_end = datetime.combine(booking_date_obj, existing_booking.end_time) if existing_booking.end_time else ex_start + timedelta(hours=1) # Fallback if end_time is null
+                if max(requested_start_dt, ex_start) < min(requested_end_dt, ex_end):
+                    return render(request, 'bookings/error.html', {'message': 'The selected time slot was just booked by another user. Please try again.'})
+
             try:
                 with transaction.atomic():
-                    for idx, service_id in enumerate(selected_service_ids):
-                        service = services.get(id=service_id)
-                        booking_time = time(start_hour + idx, 0)
+            
+                    # Create bookings for each service sequentially
+                    current_start_time_dt = datetime.combine(booking_date_obj, booking_time_obj)
+                    
+                    for service in sequenced_services:
+                        # Compute end_time dynamically based on service duration
+                        current_end_time_dt = current_start_time_dt + timedelta(minutes=service.duration_minutes)
                         
                         booking = Booking(
                             customer_phone=phone,
                             customer_gender=request.session.get('selected_gender', 'Male'),
                             service=service,
                             booking_group_id=group_id,
-                            date=date_str,
-                            time=booking_time,
+                            date=booking_date_obj,
+                            time=current_start_time_dt.time(),
+                            end_time=current_end_time_dt.time(), # Store end time
                             status=initial_status,
                             ip_address=ip,
                             otp=hashed_otp if not is_trusted_user else None, # Store hash only if needed

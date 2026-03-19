@@ -22,14 +22,13 @@
                     <div class="relative">
                         <input type="date" name="date" id="date"
                             class="w-full p-4 pl-10 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold text-gray-700 font-medium shadow-sm transition-all cursor-pointer"
-                            value="{{ selected_date|date:'Y-m-d' }}" 
-                            min="{{ today|date:'Y-m-d' }}"
-                            max="{{ max_date|date:'Y-m-d' }}"
-                            onchange="validateDate(this)" required>
+                            value="{{ selected_date|date:'Y-m-d' }}" min="{{ today|date:'Y-m-d' }}"
+                            max="{{ max_date|date:'Y-m-d' }}" onchange="validateDate(this)" required>
                         <i
                             class="fas fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                     </div>
-                    <p class="text-xs text-gray-400 mt-2 text-center">Sessions are booked 14 days in advance. (Closed on Sundays)</p>
+                    <p class="text-xs text-gray-400 mt-2 text-center">Sessions are booked up to 7 days in advance.
+                        (Closed on Sundays)</p>
                 </form>
                 <script>
                     function validateDate(input) {
@@ -58,7 +57,7 @@
                 </h3>
 
                 {% if selected_date %}
-                <p class="text-sm text-gray-500 mb-6">Duration required: <span class="font-bold text-brown">{{ num_services }} hr(s)</span></p>
+                <p class="text-sm text-gray-500 mb-6">Duration required: <span class="font-bold text-brown">{{ total_duration }} mins</span></p>
 
                 {% if slots %}
                 <div class="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">

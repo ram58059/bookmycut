@@ -9,7 +9,7 @@ from django.db.models import Count, Q
 from django.db.models.functions import ExtractWeekDay
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 
 def is_barber_or_admin(user):
@@ -126,48 +126,6 @@ def service_performance(request):
     }
     return render(request, 'dashboard/service_performance.html', context)
 
-@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
-def peak_time(request):
-    heatmap_data = analytics.get_peak_times()
-    
-    # Process for Heatmap (7 days x 24 hours - though shop hours likely 10-22)
-    # We will pass raw list and process in JS or Python. 
-    # Let's map to a structured grid for easier template rendering if needed, 
-    # but Chart.js heatmap or custom grid is better.
-    # For simplicity, we'll use a custom HTML grid or a simple chart. 
-    # Let's use a 7x12 grid (10am to 10pm)
-    
-    # Initialize grid
-    hours = range(10, 22) # 10 AM to 9 PM (last slot)
-    weekdays = [1, 2, 3, 4, 5, 6, 7] # Sun to Sat
-    grid = {d: {h: 0 for h in hours} for d in weekdays}
-    
-    for entry in heatmap_data:
-        d = entry['weekday']
-        h = entry['hour']
-        if d in grid and h in grid[d]:
-            grid[d][h] = entry['count']
-            
-    # Flatten for template convenience if needed, or keep dict.
-    
-    bookings_by_day_qs = Booking.objects.annotate(weekday=ExtractWeekDay('date')).values('weekday').annotate(count=Count('id')).order_by('weekday')
-    bookings_by_day = [0]*7
-    for b in bookings_by_day_qs:
-        # Django WeekDay: 1=Sun, 7=Sat. Index 0=Sun.
-        if 1 <= b['weekday'] <= 7:
-            bookings_by_day[b['weekday']-1] = b['count']
-            
-    day_labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-    context = {
-        'page_title': 'Peak Time & Demand',
-        'grid': grid,
-        'hours': hours,
-        'weekdays': weekdays,
-        'day_labels': day_labels,
-        'bookings_by_day': bookings_by_day,
-    }
-    return render(request, 'dashboard/peak_time.html', context)
 
 @user_passes_test(is_barber_or_admin, login_url='dashboard_login')
 def customer_insights(request):
@@ -357,6 +315,125 @@ def delete_service(request, pk):
         'service': service,
     }
     return render(request, 'dashboard/service_confirm_delete.html', context)
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def orders_dashboard(request):
+    # 1. Date Selector Data (Next 7 days)
+    now_dt = timezone.localtime(timezone.now())
+    today = now_dt.date()
+    
+    selected_date_str = request.GET.get('date')
+    try:
+        if selected_date_str:
+            selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        else:
+            selected_date = today
+    except ValueError:
+        selected_date = today
+    
+    date_buttons = []
+    for i in range(7):
+        d = today + timedelta(days=i)
+        date_buttons.append({
+            'date': d,
+            'day_name': d.strftime('%a'),
+            'day_num': d.strftime('%d'),
+            'is_selected': d == selected_date
+        })
+    
+    # 2. Fetch Bookings for Selected Date
+    all_bookings = Booking.objects.filter(
+        date=selected_date,
+        status__in=['confirmed', 'completed', 'no_show']
+    ).select_related('service').order_by('time')
+    
+    # Identify Current/Next
+    now_time = now_dt.time()
+    
+    # 2b. Set up grouping by (phone, time) to handle multi-service bookings
+    ordered_groups = []
+    group_map = {}
+    
+    for b in all_bookings:
+        # Use a string key for the map to avoid tuple/time issues in some pyre versions
+        key = f"{b.customer_phone}_{b.time}"
+        
+        if key not in group_map:
+            # Calculate end time
+            duration = b.service.duration_minutes
+            start_datetime = datetime.combine(selected_date, b.time)
+            end_datetime = start_datetime + timedelta(minutes=duration)
+            display_end_time = b.end_time or end_datetime.time()
+            
+            # Status styling
+            status_class = 'upcoming'
+            is_ongoing = False
+            if selected_date == today:
+                if b.time <= now_time <= display_end_time and b.status == 'confirmed':
+                    is_ongoing = True
+                    status_class = 'ongoing'
+                elif now_time > display_end_time or b.status in ['completed', 'no_show']:
+                    status_class = 'past'
+            elif selected_date < today:
+                status_class = 'past'
+
+            new_group = {
+                'booking': b,
+                'services_list': [], # Renamed to avoid confusion with the dict key 'services' if any
+                'end_time': display_end_time,
+                'status_class': status_class,
+                'is_ongoing': is_ongoing
+            }
+            group_map[key] = new_group
+            ordered_groups.append(new_group)
+        
+        group = group_map[key]
+        item_list = group['services_list']
+        
+        # Add service to list
+        found_service = False
+        for s in item_list:
+            if s['name'] == b.service.name:
+                s['quantity'] += 1
+                found_service = True
+                break
+        if not found_service:
+            item_list.append({'name': b.service.name, 'quantity': 1})
+
+    bookings_data = ordered_groups
+
+    # 3. Next Booking Highlight (Find the first confirmed booking today after current time)
+    next_booking = None
+    if selected_date == today:
+        for g in bookings_data:
+            # g is a dict from our ordered_groups list
+            b = g.get('booking')
+            if b and getattr(b, 'status', '') == 'confirmed' and getattr(b, 'time', timezone.now().time()) > now_time:
+                appt_dt = timezone.make_aware(datetime.combine(getattr(b, 'date', today), getattr(b, 'time', now_time)))
+                diff = appt_dt - now_dt
+                minutes = int(diff.total_seconds() / 60)
+                
+                if minutes < 60:
+                    countdown_text = f"Starts in {minutes} min"
+                else:
+                    hours = minutes // 60
+                    mins = minutes % 60
+                    countdown_text = f"Starts in {hours} hr {mins} min"
+                    
+                next_booking = g
+                next_booking['countdown_text'] = countdown_text
+                next_booking['minutes_remaining'] = minutes
+                break
+
+    context = {
+        'page_title': 'Orders',
+        'date_buttons': date_buttons,
+        'selected_date': selected_date,
+        'bookings': bookings_data,
+        'next_booking': next_booking,
+        'today': today,
+    }
+    return render(request, 'dashboard/orders.html', context)
 
 @user_passes_test(is_barber_or_admin, login_url='dashboard_login')
 def toggle_otp(request):

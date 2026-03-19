@@ -40,8 +40,9 @@
                 <tbody class="divide-y divide-gray-100">
                     {% for customer in insights.top_customers %}
                     <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-6 py-4 font-medium text-gray-800">
-                            {{ customer.customer_phone }}
+                        <td class="px-6 py-4">
+                            <span class="font-medium text-gray-800">{{ customer.customer_phone }}</span>
+                            <span class="text-xs text-gray-400 font-normal ml-1">({{ customer.customer_name }})</span>
                         </td>
                         <td class="px-6 py-4 font-bold text-amber-600">
                             {{ customer.visits }}

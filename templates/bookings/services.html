@@ -28,17 +28,8 @@
         color: var(--primary-brown);
     }
 
-    /* Checkbox visual feedback */
-    input:checked~.check-indicator {
-        color: var(--primary-gold);
-    }
-
-    input:checked~.check-indicator i {
-        font-weight: 900;
-        transform: scale(1.1);
-    }
-
-    input:checked~.card-highlight {
+    /* Hidden check functionality removed, styling highlight handled via JS */
+    .card-highlight.active {
         border-color: var(--primary-gold);
         background-color: rgba(212, 175, 55, 0.05);
     }
@@ -51,21 +42,26 @@
     </div>
 
     <!-- Search & Filter Section -->
-    <div class="mb-10 sticky top-0 bg-soft-cream/95 backdrop-blur-md z-40 py-4 shadow-sm -mx-4 px-4 md:px-0 md:mx-0 transition-all border-b border-yellow-50">
+    <div
+        class="mb-10 sticky top-0 bg-soft-cream/95 backdrop-blur-md z-40 py-4 shadow-sm -mx-4 px-4 md:px-0 md:mx-0 transition-all border-b border-yellow-50">
         <div class="max-w-4xl mx-auto space-y-4">
             <!-- Search -->
             <div class="relative w-full">
                 <i class="fas fa-search absolute left-5 top-1/2 transform -translate-y-1/2 text-gold text-lg"></i>
-                <input type="text" id="serviceSearch" placeholder="Search for a service..." 
+                <input type="text" id="serviceSearch" placeholder="Search for a service..."
                     class="w-full pl-20 pr-6 py-4 rounded-2xl border border-yellow-100 bg-white focus:border-gold focus:ring-2 focus:ring-yellow-100 outline-none transition-all shadow-sm text-gray-700 placeholder-gray-400 text-lg">
             </div>
-            
+
             <!-- Category Filters -->
             <div class="flex space-x-3 overflow-x-auto pb-2 px-1 md:px-0 no-scrollbar items-center">
-                <button class="filter-btn bg-brown text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 whitespace-nowrap border border-transparent ring-2 ring-transparent focus:outline-none" data-category="all">All Services</button>
-                
+                <button
+                    class="filter-btn bg-brown text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 whitespace-nowrap border border-transparent ring-2 ring-transparent focus:outline-none"
+                    data-category="all">All Services</button>
+
                 {% for category in grouped_services %}
-                <button class="filter-btn bg-white text-gray-600 border border-yellow-100 px-6 py-2.5 rounded-full text-sm font-medium transition-all shadow-sm hover:shadow-md hover:border-gold hover:text-brown transform hover:-translate-y-0.5 whitespace-nowrap focus:outline-none" data-category="{{ category }}">{{ category }}</button>
+                <button
+                    class="filter-btn bg-white text-gray-600 border border-yellow-100 px-6 py-2.5 rounded-full text-sm font-medium transition-all shadow-sm hover:shadow-md hover:border-gold hover:text-brown transform hover:-translate-y-0.5 whitespace-nowrap focus:outline-none"
+                    data-category="{{ category }}">{{ category }}</button>
                 {% endfor %}
             </div>
         </div>
@@ -93,44 +89,72 @@
                 <h2 class="text-2xl font-bold text-brown mb-6 border-b border-yellow-100 pb-2">{{ category }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {% for service in services %}
-                    <label
-                        class="glass-card relative rounded-xl p-6 cursor-pointer transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 select-none group">
-                        <input type="checkbox" name="services" value="{{ service.id }}" class="peer sr-only"
-                            onchange="toggleCard(this)" {% if service.id in selected_service_ids %}checked{% endif %}>
-                        <div
-                            class="check-indicator absolute top-4 right-4 text-gray-300 transition-colors duration-300 z-10">
-                            <i class="far fa-check-circle text-2xl transform transition-transform"></i>
+                    <div class="glass-card relative rounded-xl p-4 sm:p-6 transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 select-none group"
+                        id="card-{{ service.id }}">
+
+                        <div class="card-highlight absolute inset-0 border-2 border-transparent rounded-xl transition-all duration-300 pointer-events-none"
+                            id="highlight-{{ service.id }}">
                         </div>
-                        <div
-                            class="card-highlight absolute inset-0 border-2 border-transparent rounded-xl transition-all duration-300 pointer-events-none">
-                        </div>
-                        <div class="flex items-start space-x-4 relative z-10">
-                            {% if service.image %}
-                            <img src="{{ service.image.url }}" alt="{{ service.name }}"
-                                class="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm">
-                            {% else %}
-                            <div
-                                class="w-16 h-16 rounded-full bg-soft-cream border border-yellow-100 flex items-center justify-center text-brown shadow-sm group-hover:border-gold transition-colors">
-                                <i class="fas fa-spa text-xl"></i>
-                            </div>
-                            {% endif %}
-                            <div class="flex-grow">
-                                <h3 class="s-title">{{ service.name }}</h3>
-                                <div class="s-meta">
-                                    <span class="s-dur"><i class="s-icon"></i>{{ service.duration_minutes }} min</span>
-                                    <span class="s-price">₹{{ service.price }}</span>
+
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between relative z-10 gap-5">
+                            <div class="flex items-start space-x-4 flex-grow">
+                                {% if service.image %}
+                                <img src="{{ service.image.url }}" alt="{{ service.name }}"
+                                    class="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0">
+                                {% else %}
+                                <div
+                                    class="w-16 h-16 rounded-full bg-soft-cream border border-yellow-100 flex items-center justify-center text-brown shadow-sm group-hover:border-gold transition-colors flex-shrink-0">
+                                    <i class="fas fa-spa text-xl"></i>
                                 </div>
-                                {% if service.description %}
-                                <p class="text-sm text-gray-400 mt-2 leading-relaxed">{{ service.description|truncatechars:60 }}</p>
                                 {% endif %}
+                                <div class="flex-grow">
+                                    <h3 class="s-title">{{ service.name }}</h3>
+                                    <div class="s-meta mt-1">
+                                        <span class="s-dur"><i class="s-icon"></i>{{ service.duration_minutes }}
+                                            min</span>
+                                        <span class="s-price">₹{{ service.price }}</span>
+                                    </div>
+                                    {% if service.description %}
+                                    <p class="text-xs text-gray-400 mt-2 leading-relaxed">{{
+                                        service.description|truncatechars:60 }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="w-full sm:w-auto text-center sm:text-right mt-4 sm:mt-0">
+                                <div
+                                    class="inline-block bg-white/95 rounded-full border border-gray-200 shadow-sm z-50 backdrop-blur-sm relative">
+                                    <div class="flex items-center justify-center">
+                                        <button type="button"
+                                            class="w-12 h-10 sm:h-12 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors rounded-l-full cursor-pointer touch-manipulation focus:outline-none"
+                                            onclick="changeQty('{{ service.id }}', -1)">
+                                            <i class="fas fa-minus text-sm sm:text-base pointer-events-none"></i>
+                                        </button>
+                                        <span
+                                            class="w-10 text-center text-lg sm:text-xl font-bold text-brown qty-display select-none"
+                                            id="qty-{{ service.id }}">0</span>
+                                        <button type="button"
+                                            class="w-12 h-10 sm:h-12 flex items-center justify-center text-gray-500 hover:bg-gold/10 hover:text-brown transition-colors rounded-r-full cursor-pointer touch-manipulation focus:outline-none"
+                                            onclick="changeQty('{{ service.id }}', 1)">
+                                            <i class="fas fa-plus text-sm sm:text-base pointer-events-none"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </label>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
             {% endfor %}
         </div>
+
+        <div id="hiddenInputsContainer">
+            {% for sid in selected_service_ids %}
+            <input type="hidden" name="services" value="{{ sid }}" class="service-input-{{ sid }}">
+            {% endfor %}
+        </div>
+
         <div
             class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-yellow-100 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50">
             <div class="max-w-7xl mx-auto flex justify-between items-center px-4">
@@ -146,12 +170,60 @@
     </form>
     {% endif %}
     <script>
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
         const countSpan = document.getElementById('selectedCount');
-        function updateCount() { countSpan.textContent = document.querySelectorAll('input[type="checkbox"]:checked').length; }
-        function toggleCard(checkbox) { updateCount(); }
-        checkboxes.forEach(cb => { cb.addEventListener('change', () => toggleCard(cb)); });
-        updateCount();
+        const hiddenContainer = document.getElementById('hiddenInputsContainer');
+
+        function updateCountAndHighlights() {
+            // Count total inputs
+            const inputs = hiddenContainer.querySelectorAll('input[name="services"]');
+            countSpan.textContent = inputs.length;
+
+            // Re-eval highlights and quantities
+            document.querySelectorAll('.qty-display').forEach(span => span.textContent = '0');
+            document.querySelectorAll('.card-highlight').forEach(highlight => highlight.classList.remove('active'));
+
+            inputs.forEach(input => {
+                const id = input.value;
+                const display = document.getElementById(`qty-${id}`);
+                const highlight = document.getElementById(`highlight-${id}`);
+                if (display) {
+                    display.textContent = parseInt(display.textContent) + 1;
+                }
+                if (highlight) {
+                    highlight.classList.add('active');
+                }
+            });
+        }
+
+        function changeQty(serviceId, delta) {
+            const currentQty = parseInt(document.getElementById(`qty-${serviceId}`).textContent || '0');
+            const newQty = Math.max(0, currentQty + delta);
+
+            if (newQty === currentQty) return; // Prevent < 0
+
+            if (delta > 0) {
+                // Add input
+                for (let i = 0; i < delta; i++) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'services';
+                    input.value = serviceId;
+                    input.className = `service-input-${serviceId}`;
+                    hiddenContainer.appendChild(input);
+                }
+            } else {
+                // Remove input (take absolutely last one matching ID)
+                const inputs = hiddenContainer.querySelectorAll(`.service-input-${serviceId}`);
+                for (let i = 0; i < Math.abs(delta) && i < inputs.length; i++) {
+                    hiddenContainer.removeChild(inputs[i]);
+                }
+            }
+
+            updateCountAndHighlights();
+        }
+
+        // Initialize display state on load based on Django's initial hidden inputs loop
+        updateCountAndHighlights();
 
         // Search and Filter Logic
         const searchInput = document.getElementById('serviceSearch');
@@ -165,13 +237,13 @@
                 // Update active state
                 filterBtns.forEach(b => {
                     b.classList.remove('bg-brown', 'text-white');
-                    b.classList.add('bg-white', 'text-gray-600', 'border', 'border-yellow-100');
+                    b.classList.add('bg-white', 'text-gray-600', 'border', 'border-yellow-100', 'hover:text-brown', 'hover:border-gold');
                 });
-                btn.classList.remove('bg-white', 'text-gray-600', 'border', 'border-yellow-100');
+                btn.classList.remove('bg-white', 'text-gray-600', 'border', 'border-yellow-100', 'hover:text-brown', 'hover:border-gold');
                 btn.classList.add('bg-brown', 'text-white');
 
                 const category = btn.getAttribute('data-category');
-                
+
                 serviceCategories.forEach(catDiv => {
                     if (category === 'all' || catDiv.getAttribute('data-category-name') === category) {
                         catDiv.classList.remove('hidden');
@@ -179,36 +251,36 @@
                         catDiv.classList.add('hidden');
                     }
                 });
-                
+
                 // Clear search when changing category filter for better UX
                 searchInput.value = '';
-                serviceCards.forEach(card => card.classList.remove('hidden')); 
+                serviceCards.forEach(card => card.classList.remove('hidden'));
             });
         });
 
         // Search Functionality
         searchInput.addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
-            
+
             // If searching, reset category filter to All internally (visually keep buttons or reset? Let's reset visual too)
             if (term.length > 0) {
-                 // specific UX choice: search searches EVERYTHING, so we show all categories that have matches
-                 filterBtns.forEach(b => {
+                // specific UX choice: search searches EVERYTHING, so we show all categories that have matches
+                filterBtns.forEach(b => {
                     b.classList.remove('bg-brown', 'text-white');
                     b.classList.add('bg-white', 'text-gray-600', 'border', 'border-yellow-100');
-                 });
-                 // simple approach: don't highlight any specific category button if mostly searching, or highlight 'All'
-                 const allBtn = document.querySelector('[data-category="all"]');
-                 if(allBtn) {
-                     allBtn.classList.remove('bg-white', 'text-gray-600', 'border', 'border-yellow-100');
-                     allBtn.classList.add('bg-brown', 'text-white');
-                 }
+                });
+                // simple approach: don't highlight any specific category button if mostly searching, or highlight 'All'
+                const allBtn = document.querySelector('[data-category="all"]');
+                if (allBtn) {
+                    allBtn.classList.remove('bg-white', 'text-gray-600', 'border', 'border-yellow-100');
+                    allBtn.classList.add('bg-brown', 'text-white');
+                }
             }
 
             serviceCategories.forEach(catDiv => {
                 let hasVisibleService = false;
                 const cards = catDiv.querySelectorAll('.glass-card');
-                
+
                 cards.forEach(card => {
                     const title = card.querySelector('.s-title').textContent.toLowerCase();
                     if (title.includes(term)) {

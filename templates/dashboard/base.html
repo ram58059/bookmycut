@@ -54,16 +54,16 @@
                     <i class="fas fa-tachometer-alt w-6"></i>
                     <span class="font-medium">Overview</span>
                 </a>
+                <a href="{% url 'dashboard_orders' %}"
+                    class="flex items-center p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors {% if request.resolver_match.url_name == 'dashboard_orders' %}bg-gray-800 text-white border-l-4 border-amber-500{% endif %}">
+                    <i class="fas fa-list-ul w-6"></i>
+                    <span class="font-medium">Orders</span>
+                </a>
 
                 <a href="{% url 'dashboard_services' %}"
                     class="flex items-center p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors {% if request.resolver_match.url_name == 'dashboard_services' %}bg-gray-800 text-white border-l-4 border-amber-500{% endif %}">
                     <i class="fas fa-cut w-6"></i>
                     <span class="font-medium">Services</span>
-                </a>
-                <a href="{% url 'dashboard_peak_time' %}"
-                    class="flex items-center p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors {% if request.resolver_match.url_name == 'dashboard_peak_time' %}bg-gray-800 text-white border-l-4 border-amber-500{% endif %}">
-                    <i class="fas fa-calendar-check w-6"></i>
-                    <span class="font-medium">Peak Times</span>
                 </a>
                 <a href="{% url 'dashboard_customers' %}"
                     class="flex items-center p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors {% if request.resolver_match.url_name == 'dashboard_customers' %}bg-gray-800 text-white border-l-4 border-amber-500{% endif %}">

@@ -18,13 +18,14 @@ class InitiateBookingView(View):
         try:
             try:
                 data = json.loads(request.body)
+                customer_name = data.get('customer_name')
                 phone = data.get('customer_phone')
                 email = data.get('customer_email')
             except json.JSONDecodeError:
                 return JsonResponse({'success': False, 'message': 'Invalid data'})
 
-            if not phone:
-                 return JsonResponse({'success': False, 'message': 'Phone number is required.'})
+            if not phone or not customer_name:
+                 return JsonResponse({'success': False, 'message': 'Name and phone number are required.'})
 
             # Basic Validation
             if len(phone) < 10:
@@ -45,7 +46,9 @@ class InitiateBookingView(View):
             if not (selected_service_ids and date_str and time_str):
                 return JsonResponse({'success': False, 'message': 'Session expired. Please start over.', 'redirect': reverse('service_list')})
                 
-            services = Service.objects.filter(id__in=selected_service_ids)
+            unique_services = Service.objects.filter(id__in=set(selected_service_ids))
+            service_dict = {str(s.id): s for s in unique_services}
+            sequenced_services = [service_dict[str(sid)] for sid in selected_service_ids if str(sid) in service_dict]
             
             # Check Trust Score
             is_trusted = False
@@ -69,24 +72,27 @@ class InitiateBookingView(View):
             is_initial_verified = True if is_trusted else False
             
             start_time_obj = datetime.strptime(time_str, '%H:%M:%S').time() if len(time_str) > 5 else datetime.strptime(time_str, '%H:%M').time()
-            start_hour = start_time_obj.hour
+            booking_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
             
             # Create Bookings
             try:
                 with transaction.atomic():
                     bookings_created = []
-                    for idx, service_id in enumerate(selected_service_ids):
-                        service = services.get(id=service_id)
-                        booking_time = time(start_hour + idx, 0)
+                    current_start_time_dt = datetime.combine(booking_date_obj, start_time_obj)
+                    
+                    for service in sequenced_services:
+                        current_end_time_dt = current_start_time_dt + timedelta(minutes=service.duration_minutes)
                         
                         booking = Booking(
+                            customer_name=customer_name,
                             customer_phone=phone,
                             customer_email=email,
                             customer_gender=selected_gender,
                             service=service,
                             booking_group_id=group_id,
-                            date=date_str,
-                            time=booking_time,
+                            date=booking_date_obj,
+                            time=current_start_time_dt.time(),
+                            end_time=current_end_time_dt.time(),
                             status=initial_status,
                             ip_address=ip,
                             otp=hashed_otp if not is_trusted else None,
@@ -95,6 +101,9 @@ class InitiateBookingView(View):
                         )
                         booking.save()
                         bookings_created.append(booking)
+                        
+                        # Next service starts when this one ends
+                        current_start_time_dt = current_end_time_dt
                         
             except IntegrityError:
                 return JsonResponse({'success': False, 'message': 'Time slot already booked.'})

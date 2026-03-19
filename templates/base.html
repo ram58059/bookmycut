@@ -160,12 +160,17 @@
                                 <div class="px-4 py-3 border-b border-yellow-50">
                                     <p class="text-xs text-gray-500">Signed in as</p>
                                     <p class="text-sm font-bold text-brown truncate">
-                                        {% if user.phone_number and user.phone_number != 'None' %}
+                                        {% if user.first_name %}
+                                        {{ user.first_name }}
+                                        {% elif user.phone_number and user.phone_number != 'None' %}
                                         {{ user.phone_number }}
                                         {% else %}
                                         {{ user.username }}
                                         {% endif %}
                                     </p>
+                                    {% if user.first_name and user.phone_number %}
+                                    <p class="text-xs text-gray-500 mt-1 truncate">{{ user.phone_number }}</p>
+                                    {% endif %}
                                 </div>
                                 <a href="{% url 'my_orders' %}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">

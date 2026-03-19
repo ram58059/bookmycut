@@ -57,6 +57,17 @@
                 <form method="post" class="space-y-6" id="booking-form">
                     {% csrf_token %}
 
+                    <!-- Name Field -->
+                    <div>
+                        <label for="{{ form.customer_name.id_for_label }}"
+                            class="block text-sm font-medium text-gray-700 mb-2">Full Name <span
+                                class="text-red-500">*</span></label>
+                        {{ form.customer_name }}
+                        {% if form.customer_name.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.customer_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
                     <!-- Phone Field -->
                     <div>
                         <label for="{{ form.customer_phone.id_for_label }}"
@@ -262,6 +273,7 @@
                         'X-CSRFToken': '{{ csrf_token }}'
                     },
                     body: JSON.stringify({
+                        customer_name: document.getElementById('id_customer_name').value,
                         customer_phone: phoneInput.value,
                         customer_email: emailInput.value
                     })

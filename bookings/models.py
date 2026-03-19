@@ -57,7 +57,7 @@ class Booking(models.Model):
     ]
 
     # Guest information
-    # Guest information
+    customer_name = models.CharField(max_length=100, default='Guest')
     customer_phone = models.CharField(max_length=15)
     customer_email = models.EmailField(blank=True, null=True)
     customer_gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], default='Male')
@@ -70,6 +70,7 @@ class Booking(models.Model):
     
     date = models.DateField()
     time = models.TimeField()
+    end_time = models.TimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending_otp')
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -81,7 +82,11 @@ class Booking(models.Model):
     
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['service', 'date', 'time'], name='unique_service_slot')
+            models.UniqueConstraint(
+                fields=['service', 'date', 'time'],
+                condition=models.Q(status__in=['confirmed', 'completed', 'pending_otp']),
+                name='unique_active_service_slot'
+            )
         ]
 
     def is_otp_expired(self):

@@ -1,0 +1,187 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header %}Operations{% endblock %}
+{% block subheader %}Manage your daily bookings and customer interactions.{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+
+    <!-- 1. Next Booking Highlight -->
+    {% if next_booking %}
+    <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div class="flex-grow">
+                <div class="flex items-center gap-2 mb-2">
+                    <span
+                        class="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full uppercase tracking-wider animate-pulse">Next
+                        Up</span>
+                    <span id="countdown-banner" class="text-amber-800 font-bold text-lg"
+                        data-minutes="{{ next_booking.minutes_remaining }}">
+                        {{ next_booking.countdown_text }}
+                    </span>
+                </div>
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-1">{{ next_booking.booking.customer_name }}</h2>
+                <p class="text-gray-600 flex items-center gap-2 text-lg">
+                    <i class="fas fa-cut text-amber-500"></i>
+                    {% for s in next_booking.services_list %}
+                    {{ s.name }}{% if s.quantity > 1 %} ({{ s.quantity }}){% endif %}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                    <span class="mx-2 text-gray-300">•</span>
+                    <i class="far fa-clock text-amber-500"></i> {{ next_booking.booking.time|time:"H:i" }}
+                </p>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="tel:{{ next_booking.booking.customer_phone }}"
+                    class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-gray-900 border-2 border-gray-200 px-6 py-4 rounded-xl font-bold hover:bg-gray-50 transition-all shadow-sm">
+                    <i class="fas fa-phone-alt text-green-500"></i> {{ next_booking.booking.customer_phone }}
+                </a>
+                <a href="tel:{{ next_booking.booking.customer_phone }}"
+                    class="flex items-center justify-center w-14 h-14 bg-green-500 text-white rounded-xl shadow-lg shadow-green-200 hover:bg-green-600 transition-all active:scale-95">
+                    <i class="fas fa-phone-alt"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-gray-100 border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
+        <i class="fas fa-calendar-check text-gray-300 text-4xl mb-4"></i>
+        <p class="text-gray-500 font-medium">No upcoming bookings for today</p>
+    </div>
+    {% endif %}
+
+    <!-- 2. Date Selector -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 overflow-x-auto whitespace-nowrap">
+        <div class="flex md:grid md:grid-cols-7 gap-2 min-w-max md:min-w-full">
+            {% for btn in date_buttons %}
+            <a href="?date={{ btn.date|date:'Y-m-d' }}" class="flex flex-col items-center justify-center py-3 px-6 rounded-xl transition-all
+               {% if btn.is_selected %}
+                    bg-gray-900 text-white shadow-lg shadow-gray-200 scale-105 z-10
+               {% else %}
+                    bg-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-900
+               {% endif %}">
+                <span class="text-[10px] uppercase font-bold tracking-widest opacity-60 mb-1">{{ btn.day_name }}</span>
+                <span class="text-lg font-bold">{{ btn.day_num }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 3. Bookings List -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between px-2">
+            <h3 class="text-lg font-bold text-gray-900">
+                {% if selected_date == today %}Today's Schedule{% else %}Schedule for {{ selected_date|date:"l, d M" }}{% endif %}
+            </h3>
+            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ bookings|length }}
+                Bookings</span>
+        </div>
+
+        {% for item in bookings %}
+        <div class="group relative bg-white rounded-2xl border border-gray-100 p-5 shadow-sm transition-all hover:shadow-md
+                    {% if item.is_ongoing %} ring-2 ring-amber-500 bg-amber-50/30 {% endif %}
+                    {% if item.status_class == 'past' %} opacity-60 {% endif %}">
+
+            <div class="flex flex-col md:flex-row md:items-center gap-6">
+                <!-- Time Range -->
+                <div class="md:w-32 flex-shrink-0">
+                    <p class="text-xl font-black text-gray-900">{{ item.booking.time|time:"H:i" }}</p>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ item.end_time|time:"H:i" }}
+                    </p>
+                </div>
+
+                <!-- Customer Info -->
+                <div class="flex-grow">
+                    <div class="flex items-center gap-2 mb-1">
+                        <h4 class="text-xl font-bold text-gray-900">{{ item.booking.customer_name }}</h4>
+                        {% if item.is_ongoing %}
+                        <span
+                            class="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-tighter">Ongoing</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-gray-500 font-medium flex items-center gap-2">
+                        <i class="fas fa-sparkles text-amber-400 text-xs"></i>
+                        {% for s in item.services_list %}
+                        {{ s.name }}{% if s.quantity > 1 %} ({{ s.quantity }}){% endif %}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </p>
+                </div>
+
+                <!-- Action Button -->
+                <div class="flex items-center gap-3">
+                    <a href="tel:{{ item.booking.customer_phone }}"
+                        class="flex items-center gap-2 px-4 py-3 rounded-xl bg-gray-50 text-gray-700 font-bold border border-gray-100 hover:bg-gray-100 hover:border-gray-200 transition-all">
+                        <i class="fas fa-phone-alt text-green-500"></i>
+                        {{ item.booking.customer_phone }}
+                    </a>
+                </div>
+            </div>
+
+            <!-- Absolute Status Indicator -->
+            <div class="absolute top-5 right-5 flex gap-2">
+                <span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest
+                    {% if item.booking.status == 'completed' %} bg-green-100 text-green-700
+                    {% elif item.booking.status == 'cancelled' %} bg-red-100 text-red-700
+                    {% elif item.booking.status == 'no_show' %} bg-gray-200 text-gray-600
+                    {% else %} bg-blue-100 text-blue-700 {% endif %}">
+                    {{ item.booking.status }}
+                </span>
+            </div>
+        </div>
+        {% empty %}
+        <div class="py-20 text-center bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100">
+            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-calendar-xmark text-gray-300 text-3xl"></i>
+            </div>
+            <p class="text-gray-500 font-bold">No bookings for this day</p>
+            <p class="text-gray-400 text-sm mt-1 mb-6">Enjoy your free time!</p>
+            <a href="?date={{ today|date:'Y-m-d' }}" class="text-amber-600 font-bold hover:underline">Back to Today</a>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<script>
+    // Countdown Timer Logic
+    function updateCountdowns() {
+        const banner = document.getElementById('countdown-banner');
+        if (banner) {
+            let minutes = parseInt(banner.getAttribute('data-minutes'));
+            if (isNaN(minutes)) return;
+
+            // We'll decrement local state if we don't refresh the page
+            // But usually simple refresh on interval or just display is fine
+            // Purely client-side logic for the visual "tick"
+        }
+    }
+
+    // Refresh page every 5 minutes to get fresh data
+    setTimeout(() => {
+        window.location.reload();
+    }, 5 * 60 * 1000);
+
+    // Simple countdown display logic if we wanted real-time ticking
+    // but instructed "Simple JS interval is sufficient" for countdown updates.
+    setInterval(() => {
+        const banners = document.querySelectorAll('[data-minutes]');
+        banners.forEach(banner => {
+            let rawMins = parseInt(banner.getAttribute('data-minutes'));
+            if (rawMins > 0) {
+                rawMins -= 1;
+                banner.setAttribute('data-minutes', rawMins);
+
+                if (rawMins < 60) {
+                    banner.innerText = `Starts in ${rawMins} min`;
+                } else {
+                    const h = Math.floor(rawMins / 60);
+                    const m = rawMins % 60;
+                    banner.innerText = `Starts in ${h} hr ${m} min`;
+                }
+            } else if (rawMins <= 0) {
+                banner.innerText = "Starting now";
+                banner.classList.add('text-green-600');
+            }
+        });
+    }, 60000); // Every minute
+</script>
+{% endblock %}
