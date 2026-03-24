@@ -96,6 +96,24 @@ class ServiceListView(View):
                 'error': 'Please select at least one service.'
             })
         
+        # Implement service merging logic (e.g., Haircut + Beard Trim -> Haircut trim)
+        haircut_id = '214'
+        beard_trim_id = '216'
+        haircut_trim_combo_id = '228'
+        
+        haircut_count = service_ids.count(haircut_id)
+        beard_trim_count = service_ids.count(beard_trim_id)
+        
+        pairs = min(haircut_count, beard_trim_count)
+        
+        if pairs > 0:
+            # Create a new list to avoid side effects during iteration if needed, 
+            # though here we just modify the local list before session storage.
+            for _ in range(pairs):
+                service_ids.remove(haircut_id)
+                service_ids.remove(beard_trim_id)
+                service_ids.append(haircut_trim_combo_id)
+
         request.session['selected_service_ids'] = service_ids
         return redirect('date_time_selection')
 
@@ -151,7 +169,7 @@ class DateTimeSelectionView(View):
         if selected_date and not is_blocked:
             # Slot generation logic
             start_hour = 10
-            end_hour = 22
+            end_hour = 21
             
             # If today, ensuring time slot is after current time
             if selected_date == now.date():
@@ -181,17 +199,17 @@ class DateTimeSelectionView(View):
             start_dt = datetime.combine(selected_date, time(start_hour, 0))
             end_dt = datetime.combine(selected_date, time(end_hour, 0))
             lunch_start = datetime.combine(selected_date, time(14, 0))
-            lunch_end = datetime.combine(selected_date, time(15, 0))
+            lunch_end = datetime.combine(selected_date, time(16, 0))
 
-            # Find available 15-minute slots
+            # Find available 30-minute slots
             current_dt = start_dt
             
-            # Round current_dt up to next 15-minute interval if it's today
+            # Round current_dt up to next 30-minute interval if it's today
             if selected_date == now.date():
                 minutes = current_dt.minute
-                remainder = minutes % 15
+                remainder = minutes % 30
                 if remainder != 0:
-                    current_dt += timedelta(minutes=(15 - remainder))
+                    current_dt += timedelta(minutes=(30 - remainder))
             
             while current_dt < end_dt:
                 requested_start = current_dt
@@ -201,10 +219,10 @@ class DateTimeSelectionView(View):
                 if requested_end > end_dt:
                     break
                 
-                # Check 2: Overlaps Barber Lunch (14:00 to 15:00)
+                # Check 2: Overlaps Barber Lunch (14:00 to 16:00)
                 # Overlap condition: max(start1, start2) < min(end1, end2)
                 if max(requested_start, lunch_start) < min(requested_end, lunch_end):
-                    current_dt += timedelta(minutes=15)
+                    current_dt += timedelta(minutes=30)
                     continue
 
                 # Check 3: Overlaps existing bookings
@@ -219,7 +237,7 @@ class DateTimeSelectionView(View):
                 if is_valid:
                     slots.append(current_dt.time())
                 
-                current_dt += timedelta(minutes=15)
+                current_dt += timedelta(minutes=30)
 
         return render(request, 'bookings/calendar.html', {
             'slots': slots,
@@ -266,7 +284,7 @@ class DateTimeSelectionView(View):
         requested_end = requested_start + timedelta(minutes=total_duration)
         
         lunch_start = datetime.combine(selected_date, time(14, 0))
-        lunch_end = datetime.combine(selected_date, time(15, 0))
+        lunch_end = datetime.combine(selected_date, time(16, 0))
         
         if max(requested_start, lunch_start) < min(requested_end, lunch_end):
              # Overlaps lunch
@@ -298,7 +316,10 @@ class BookingConfirmationView(View):
         if not (selected_service_ids and date_str and time_str):
             return redirect('service_list')
             
-        services = Service.objects.filter(id__in=selected_service_ids)
+        # Fix: Filter returns unique objects, but we need to preserve duplicates from session
+        unique_services = Service.objects.filter(id__in=set(selected_service_ids))
+        service_dict = {str(s.id): s for s in unique_services}
+        services = [service_dict[str(sid)] for sid in selected_service_ids if str(sid) in service_dict]
         total_price = sum(s.price for s in services)
         
         initial_data = {}
@@ -383,7 +404,7 @@ class BookingConfirmationView(View):
             requested_end_dt = requested_start_dt + timedelta(minutes=total_duration_for_all_services)
 
             lunch_start = datetime.combine(booking_date_obj, time(14, 0))
-            lunch_end = datetime.combine(booking_date_obj, time(15, 0))
+            lunch_end = datetime.combine(booking_date_obj, time(16, 0))
 
             if max(requested_start_dt, lunch_start) < min(requested_end_dt, lunch_end):
                 return render(request, 'bookings/error.html', {'message': 'The selected time slot now overlaps with the barber\'s lunch break. Please choose another time.'})
@@ -485,7 +506,10 @@ class BookingConfirmationView(View):
         
         # If invalid, re-render confirmation
         selected_service_ids = request.session.get('selected_service_ids')
-        services = Service.objects.filter(id__in=selected_service_ids)
+        # Fix: Filter returns unique objects, but we need to preserve duplicates from session
+        unique_services = Service.objects.filter(id__in=set(selected_service_ids))
+        service_dict = {str(s.id): s for s in unique_services}
+        services = [service_dict[str(sid)] for sid in selected_service_ids if str(sid) in service_dict]
         total_price = sum(s.price for s in services)
         
         return render(request, 'bookings/confirmation.html', {
