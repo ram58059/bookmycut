@@ -99,3 +99,79 @@ class LogoutView(View):
     def get(self, request):
         logout(request)
         return redirect('home')
+
+class AJAXLoginInitiateView(View):
+    def post(self, request):
+        import json
+        from dashboard.models import ShopSetting
+        from django.http import JsonResponse
+        
+        data = json.loads(request.body)
+        phone = data.get('phone_number')
+        first_name = data.get('first_name', '')
+        
+        if not phone or len(phone) < 10:
+            return JsonResponse({'success': False, 'message': 'Valid phone number is required.'})
+
+        shop_settings = ShopSetting.load()
+        
+        if shop_settings.is_otp_enabled:
+            # Send OTP
+            plain_otp = utils.generate_otp()
+            hashed_otp = utils.hash_otp(plain_otp)
+            
+            sms_sent = utils.send_voice_otp_2factor(phone, plain_otp)
+            if not sms_sent:
+                 print(f"DEBUG: Failed to send Voice OTP for Login. OTP: {plain_otp}")
+            
+            # Store in session
+            request.session['login_phone'] = phone
+            request.session['login_first_name'] = first_name
+            request.session['login_otp_hash'] = hashed_otp
+            request.session['login_otp_created_at'] = str(timezone.now())
+            
+            return JsonResponse({'success': True, 'require_otp': True})
+        else:
+            # Login Directly
+            user, created = User.objects.get_or_create(phone_number=phone)
+            if created:
+                user.username = phone
+            if first_name:
+                user.first_name = first_name
+            user.save()
+            
+            login(request, user)
+            return JsonResponse({'success': True, 'require_otp': False})
+
+class AJAXLoginVerifyView(View):
+    def post(self, request):
+        import json
+        from django.http import JsonResponse
+        
+        data = json.loads(request.body)
+        entered_otp = data.get('otp')
+        phone = request.session.get('login_phone')
+        otp_hash = request.session.get('login_otp_hash')
+        
+        if not phone or not otp_hash:
+            return JsonResponse({'success': False, 'message': 'Session expired. Please try again.'})
+            
+        if utils.verify_otp_hash(entered_otp, otp_hash):
+            user, created = User.objects.get_or_create(phone_number=phone)
+            if created:
+                user.username = phone
+            
+            first_name = request.session.get('login_first_name')
+            if first_name:
+                user.first_name = first_name
+            user.save()
+            
+            login(request, user)
+            
+            # Cleanup
+            if 'login_phone' in request.session: del request.session['login_phone']
+            if 'login_otp_hash' in request.session: del request.session['login_otp_hash']
+            
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'message': 'Invalid OTP.'})

@@ -4,7 +4,7 @@ import requests
 import hashlib
 import json
 from django.utils import timezone
-from django.utils import timezone
+from django.utils.timezone import make_aware, get_current_timezone
 from datetime import timedelta, datetime
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -107,7 +107,9 @@ def send_booking_confirmation_email(booking, request=None):
     text_content = strip_tags(html_content)
     
     # Generate Customer ICS
-    start_dt = datetime.combine(booking.date, booking.time)
+    # Ensure start_dt is aware of the current timezone (Asia/Kolkata)
+    tz = get_current_timezone()
+    start_dt = make_aware(datetime.combine(booking.date, booking.time), tz)
     end_dt = start_dt + timedelta(minutes=60) # Assuming 1 hour per service
     
     # Convert to UTC or use local time with TZID is complex without libraries. 
@@ -182,7 +184,8 @@ def generate_google_calendar_url(booking):
     """
     Generates a one-click Add to Google Calendar URL for the customer.
     """
-    start_dt = datetime.combine(booking.date, booking.time)
+    tz = get_current_timezone()
+    start_dt = make_aware(datetime.combine(booking.date, booking.time), tz)
     end_dt = start_dt + timedelta(minutes=60)
     
     # Format for Google Calendar URL (YYYYMMDDTHHMMSSZ) - Assuming local time behaves as UTC for simplicity if no tz
@@ -194,7 +197,8 @@ def generate_google_calendar_url(booking):
         'text': f"Appointment at ZionStyle: {booking.service.name}",
         'dates': dates,
         'details': f"Service: {booking.service.name}\nPrice: {booking.service.price}",
-        'location': "Zion Salon & Spa, Tirunelveli"
+        'location': "Zion Salon & Spa, Tirunelveli",
+        'ctz': 'Asia/Kolkata' # Ensure timezone is explicit
     }
     return "https://calendar.google.com/calendar/render?" + urllib.parse.urlencode(params)
 
@@ -211,7 +215,8 @@ def sync_to_admin_google_calendar(booking, group_bookings):
         creds = service_account.Credentials.from_service_account_file(creds_path, scopes=SCOPES)
         service = build('calendar', 'v3', credentials=creds)
 
-        start_dt = datetime.combine(booking.date, booking.time)
+        tz = get_current_timezone()
+        start_dt = make_aware(datetime.combine(booking.date, booking.time), tz)
         end_dt = start_dt + timedelta(minutes=60 * len(group_bookings)) # Total duration
 
         event = {
@@ -268,8 +273,8 @@ METHOD:REQUEST
 BEGIN:VEVENT
 UID:{uid}
 DTSTAMP:{now_str}
-DTSTART:{start_str}
-DTEND:{end_str}
+DTSTART;TZID=Asia/Kolkata:{start_str}
+DTEND;TZID=Asia/Kolkata:{end_str}
 SUMMARY:{summary}
 DESCRIPTION:{description}
 LOCATION:{location}

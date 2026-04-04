@@ -223,11 +223,13 @@
     let resendTimer = null;
     let timeLeft = 30;
     let hasConfirmedBookingIntent = false;
+    let isUserLoggedIn = {% if user.is_authenticated %}true{% else %} false{% endif %};
 
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('booking-form');
         const emailInput = document.getElementById('id_customer_email');
         const phoneInput = document.getElementById('id_customer_phone');
+        const nameInput = document.getElementById('id_customer_name');
         const emailError = document.getElementById('email-error');
 
         // Real-time Email Validation
@@ -237,20 +239,30 @@
 
         // Real-time Phone Validation (Basic)
         phoneInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
             if (this.value.length >= 10) {
                 this.classList.remove('input-error');
             }
         });
 
         form.addEventListener('submit', async function (e) {
-            // First, show the confirmation popup before doing anything else
-            if (!hasConfirmedBookingIntent) {
-                e.preventDefault();
-                openConfirmBookingModal();
+            e.preventDefault();
+
+            // First: Ensure Login
+            if (!isUserLoggedIn) {
+                openLoginModal(function (name, phone) {
+                    document.getElementById('id_customer_name').value = name;
+                    document.getElementById('id_customer_phone').value = phone;
+                    form.dispatchEvent(new Event('submit'));
+                });
                 return;
             }
 
-            e.preventDefault();
+            // Second, show the confirmation popup before doing anything else
+            if (!hasConfirmedBookingIntent) {
+                openConfirmBookingModal();
+                return;
+            }
 
             // Validate Inputs
             const isEmailValid = validateEmailField();
@@ -273,7 +285,7 @@
                         'X-CSRFToken': '{{ csrf_token }}'
                     },
                     body: JSON.stringify({
-                        customer_name: document.getElementById('id_customer_name').value,
+                        customer_name: nameInput.value,
                         customer_phone: phoneInput.value,
                         customer_email: emailInput.value
                     })
@@ -284,12 +296,11 @@
                 if (data.success) {
                     if (data.redirect) {
                         window.location.href = data.redirect;
-                        // Intentionally NOT hiding the loader to keep transition smooth
                         return;
                     } else {
-                        // Show OTP Modal
+                        // Show OTP Modal (Should not happen if logged in, but fallback)
                         groupId = data.group_id;
-                        loaderOverlay.classList.add('hidden'); // Hide loader since we are showing OTP modal
+                        loaderOverlay.classList.add('hidden');
                         showModal();
                         startResendTimer();
                     }
@@ -316,12 +327,9 @@
     function proceedAfterConfirm() {
         hasConfirmedBookingIntent = true;
         closeConfirmBookingModal();
+        // Manually trigger form submit to run the listener from start
         const form = document.getElementById('booking-form');
-        if (form.requestSubmit) {
-            form.requestSubmit();
-        } else {
-            form.submit();
-        }
+        form.dispatchEvent(new Event('submit'));
     }
 
     function validateEmailField() {

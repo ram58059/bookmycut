@@ -23,7 +23,9 @@
                 </div>
                 <div>
                     <label for="{{ form.phone_number.id_for_label }}" class="sr-only">Phone Number</label>
-                    {{ form.phone_number }}
+                    <div id="phone-field-wrapper">
+                        {{ form.phone_number }}
+                    </div>
                 </div>
             </div>
 
@@ -38,7 +40,10 @@
             </div>
             {% endif %}
 
-            <div>
+            <div class="space-y-4">
+                <p class="text-xs text-blue-600 text-center font-medium">
+                    📞 We're calling you with a 4-digit OTP.
+                </p>
                 <button type="submit"
                     class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-full text-white bg-brown hover:bg-gold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brown transition duration-300 ease-in-out uppercase tracking-wider shadow-md hover:shadow-lg">
                     Send OTP
@@ -47,4 +52,16 @@
         </form>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const phoneInput = document.querySelector('input[name="phone_number"]');
+        if (phoneInput) {
+            phoneInput.setAttribute('maxlength', '10');
+            phoneInput.setAttribute('placeholder', 'Enter 10-digit mobile number');
+            phoneInput.addEventListener('input', function (e) {
+                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+            });
+        }
+    });
+</script>
 {% endblock %}

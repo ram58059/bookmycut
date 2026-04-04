@@ -57,7 +57,7 @@ class Booking(models.Model):
     ]
 
     # Guest information
-    customer_name = models.CharField(max_length=100, default='Guest')
+    customer_name = models.CharField(max_length=100)
     customer_phone = models.CharField(max_length=15)
     customer_email = models.EmailField(blank=True, null=True)
     customer_gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], default='Male')

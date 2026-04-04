@@ -159,7 +159,7 @@
             <div class="max-w-7xl mx-auto flex justify-between items-center px-4">
                 <div class="text-gray-600 font-medium"><span id="selectedCount"
                         class="text-gold font-bold text-xl">0</span> services selected</div>
-                <button type="submit"
+                <button type="submit" id="continue-btn"
                     class="bg-brown hover:bg-gold text-white px-8 py-3 rounded-full font-bold shadow-lg transform transition hover:-translate-y-1 hover:shadow-xl flex items-center">
                     Continue <i class="fas fa-arrow-right ml-2"></i>
                 </button>
@@ -167,10 +167,24 @@
         </div>
         <div class="h-28"></div>
     </form>
+
+    {% include 'includes/login_modal.html' %}
+
     {% endif %}
     <script>
         const countSpan = document.getElementById('selectedCount');
         const hiddenContainer = document.getElementById('hiddenInputsContainer');
+        const serviceForm = document.querySelector('form[action="{% url "service_list" %}"]');
+
+        serviceForm.addEventListener('submit', function (e) {
+            if (!isUserLoggedIn) {
+                e.preventDefault();
+                openLoginModal(function (name, phone) {
+                    // Success callback: now submit the form
+                    serviceForm.submit();
+                });
+            }
+        });
 
         function updateCountAndHighlights() {
             // Count total inputs

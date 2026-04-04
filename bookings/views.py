@@ -370,16 +370,7 @@ class BookingConfirmationView(View):
             else:
                 is_trusted_user = False
                 
-                # Trust Score Check for Guests
-                trust_profile = CustomerTrust.objects.filter(phone_number=phone).first()
-                if trust_profile and trust_profile.trust_level != 'low':
-                    is_trusted_user = True
-                
-                # Check Global Shop Setting for OTP Bypass
-                from dashboard.models import ShopSetting
-                settings = ShopSetting.load()
-                if not settings.is_otp_enabled:
-                    is_trusted_user = True
+                is_trusted_user = True
 
             # Create Bookings Transactionally
             group_id = uuid.uuid4()
