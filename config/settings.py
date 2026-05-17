@@ -31,7 +31,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = 'django-insecure-ywuh!2o&ud4^+iqz4#x$vlbmew^-^w3*m=5c!(p1$lbokhvxcy'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -162,10 +162,11 @@ CLOUDINARY_STORAGE = {
 
 
 
+# Tell Django to copy static assets into a path called `staticfiles` (this is specific to Render)
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 # This production code might break development mode, so we check whether we're in DEBUG mode
 if not DEBUG:
-    # Tell Django to copy static assets into a path called `staticfiles` (this is specific to Render)
-    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
     # Enable the WhiteNoise storage backend, which compresses static files to reduce disk use
     # and renames the files with unique names for each version to support long-term caching
