@@ -4,6 +4,7 @@ from .models import Service, Booking
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'price', 'duration_minutes')
+    exclude = ('image',)
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):

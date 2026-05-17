@@ -11,6 +11,28 @@ class Service(models.Model):
     category = models.CharField(max_length=100, default='General')
     gender = models.CharField(max_length=10, choices=[('Boy', 'Boy'), ('Girl', 'Girl')], default='Boy')
 
+    def save(self, *args, **kwargs):
+        if not self.image:
+            category_image_map = {
+                'Haircut Combos': 'services/haircut_combos.png',
+                'Hair Services': 'services/hair_services.png',
+                'Hair Colour': 'services/hair_colour.png',
+                'Facials': 'services/facials.png',
+                'Express Face Masks': 'services/express_face_masks.png',
+                'Hair Spa': 'services/hair_spa.png',
+                'Reflexology / Massage': 'services/massage.png',
+                'General': 'services/general.png',
+            }
+            name_lower = self.name.lower()
+            if 'beard' in name_lower or 'shave' in name_lower:
+                self.image = 'services/general.png'
+            elif 'haircut' in name_lower and self.category == 'General':
+                self.image = 'services/hair_services.png'
+            else:
+                self.image = category_image_map.get(self.category, 'services/general.png')
+                
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
@@ -79,6 +101,7 @@ class Booking(models.Model):
     otp = models.CharField(max_length=128, blank=True, null=True) # Changed max_length to store hash
     otp_created_at = models.DateTimeField(blank=True, null=True)
     is_verified = models.BooleanField(default=False)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         constraints = [
@@ -105,7 +128,8 @@ class Booking(models.Model):
              # If settings are naive (though Django usually aware)
              appt_dt = datetime.combine(self.date, self.time)
         
-        return appt_dt > timezone.now()
+        # Prevent cancellation within 2 hours of appointment time
+        return appt_dt > (timezone.now() + timedelta(hours=2))
 
     def __str__(self):
         return f"Booking {self.id} - {self.customer_phone} ({self.service.name} @ {self.time})"

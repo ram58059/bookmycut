@@ -7,7 +7,7 @@ __pycache__/
 # Django
 db.sqlite3
 *.log
-# media/
+media/
 
 # Virtual environment
 venv/
@@ -28,3 +28,6 @@ env/
 node_modules/
 
 google_calendar_credentials.json
+
+# Scripts
+sync_db.sh

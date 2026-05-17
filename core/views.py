@@ -17,6 +17,7 @@ def quick_book(request):
 def hairstyle_gallery(request):
     import os
     from django.conf import settings
+    import cloudinary.utils
 
     directory = os.path.join(settings.BASE_DIR, 'static/img/hairstyles')
     images = []
@@ -30,15 +31,12 @@ def hairstyle_gallery(request):
         all_files = []
 
     for i, filename in enumerate(all_files):
+        public_id = f"hairstyles/{filename.replace('.jpg', '')}"
+        url, _ = cloudinary.utils.cloudinary_url(public_id, format="jpg", secure=True)
         images.append({
             'id': i + 1,
-            'url': f'img/hairstyles/{filename}',
+            'url': url,
         })
-
-    return render(request, 'core/hairstyles.html', {'images': images})
-
-
-
 
     return render(request, 'core/hairstyles.html', {'images': images})
 

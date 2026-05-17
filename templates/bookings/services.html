@@ -33,6 +33,46 @@
         border-color: var(--primary-gold);
         background-color: rgba(212, 175, 55, 0.05);
     }
+    
+    /* Modal styles */
+    #serviceModalOverlay {
+        backdrop-filter: blur(8px);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    
+    #serviceModalOverlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    #serviceModalContent {
+        transform: scale(0.9) translateY(20px);
+        opacity: 0;
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+    }
+    
+    #serviceModalOverlay.active #serviceModalContent {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+
+    .service-card-interactive {
+        cursor: pointer;
+    }
+    
+    .view-details-btn {
+        opacity: 0;
+        transform: translateY(10px);
+        transition: all 0.3s ease;
+    }
+    
+    /* Show "View Details" on hover for desktop, always visible on touch devices if needed, but hover handles most */
+    .glass-card:hover .view-details-btn {
+        opacity: 1;
+        transform: translateY(0);
+    }
 </style>
 
 <div class="max-w-7xl mx-auto px-4 py-8">
@@ -89,8 +129,14 @@
                 <h2 class="text-2xl font-bold text-brown mb-6 border-b border-yellow-100 pb-2">{{ category }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {% for service in services %}
-                    <div class="glass-card relative rounded-xl p-4 sm:p-6 transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 select-none group"
-                        id="card-{{ service.id }}">
+                    <div class="glass-card relative rounded-xl p-4 sm:p-6 transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 select-none group service-card-interactive"
+                        id="card-{{ service.id }}"
+                        data-name="{{ service.name|escapejs }}"
+                        data-price="{{ service.price }}"
+                        data-duration="{{ service.duration_minutes }}"
+                        data-desc="{{ service.description|default:''|escapejs }}"
+                        data-img="{% if service.image %}{{ service.image.url }}{% endif %}"
+                        onclick="openServiceModal(this)">
 
                         <div class="card-highlight absolute inset-0 border-2 border-transparent rounded-xl transition-all duration-300 pointer-events-none"
                             id="highlight-{{ service.id }}">
@@ -114,13 +160,13 @@
                                             min</span>
                                         <span class="s-price">₹{{ service.price }}</span>
                                     </div>
-                                    {% if service.description %}
-                                    <p class="text-xs text-gray-400 mt-2 leading-relaxed">{{ service.description|truncatechars:60 }}</p>
-                                    {% endif %}
+                                    <div class="view-details-btn mt-3 flex items-center text-xs font-bold text-gold">
+                                        <span>View Details</span> <i class="fas fa-arrow-right ml-1 text-[10px]"></i>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="w-full sm:w-auto text-center sm:text-right mt-4 sm:mt-0">
+                            <div class="w-full sm:w-auto text-center sm:text-right mt-4 sm:mt-0" onclick="event.stopPropagation()">
                                 <div
                                     class="inline-block bg-white/95 rounded-full border border-gray-200 shadow-sm z-50 backdrop-blur-sm relative">
                                     <div class="flex items-center justify-center">
@@ -167,6 +213,66 @@
         </div>
         <div class="h-28"></div>
     </form>
+
+    <!-- Service Details Modal -->
+    <div id="serviceModalOverlay" class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 sm:p-6">
+        <div id="serviceModalContent" class="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative flex flex-col max-h-[90vh]">
+            <!-- Close button -->
+            <button onclick="closeServiceModal()" class="absolute top-4 right-4 w-10 h-10 bg-black/20 hover:bg-black/40 text-white rounded-full flex items-center justify-center transition-colors z-10 backdrop-blur-md">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <!-- Header Image -->
+            <div class="w-full h-56 sm:h-64 bg-gray-100 relative">
+                <img id="modalImage" src="" alt="Service Image" class="w-full h-full object-cover hidden">
+                <div id="modalImageFallback" class="w-full h-full bg-soft-cream flex items-center justify-center text-brown border-b border-yellow-100">
+                    <i class="fas fa-spa text-5xl opacity-50"></i>
+                </div>
+                <!-- Gradient overlay for text readability if needed -->
+                <div class="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
+            </div>
+            
+            <!-- Content -->
+            <div class="p-6 sm:p-8 overflow-y-auto flex-grow custom-scrollbar">
+                <h2 id="modalName" class="text-2xl sm:text-3xl font-bold text-brown mb-2 leading-tight"></h2>
+                
+                <div class="flex items-center space-x-6 mb-6 pb-6 border-b border-gray-100">
+                    <div class="flex items-center text-brown">
+                        <div class="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center mr-3 text-gold">
+                            <i class="fas fa-rupee-sign"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wider font-bold">Price</p>
+                            <p id="modalPrice" class="font-bold text-lg"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center text-brown">
+                        <div class="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center mr-3 text-gold">
+                            <i class="far fa-clock"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wider font-bold">Duration</p>
+                            <p id="modalDuration" class="font-bold text-lg"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">About this service</h3>
+                    <div id="modalDesc" class="text-gray-600 text-sm sm:text-base leading-relaxed space-y-3">
+                        <!-- Description injected here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+                <button onclick="closeServiceModal()" class="px-6 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 font-bold hover:bg-gray-50 hover:text-brown transition-colors shadow-sm">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
 
     {% include 'includes/login_modal.html' %}
 
@@ -237,6 +343,60 @@
 
         // Initialize display state on load based on Django's initial hidden inputs loop
         updateCountAndHighlights();
+
+        // Modal Logic
+        const modalOverlay = document.getElementById('serviceModalOverlay');
+        const modalName = document.getElementById('modalName');
+        const modalPrice = document.getElementById('modalPrice');
+        const modalDuration = document.getElementById('modalDuration');
+        const modalDesc = document.getElementById('modalDesc');
+        const modalImage = document.getElementById('modalImage');
+        const modalFallback = document.getElementById('modalImageFallback');
+
+        function openServiceModal(cardElement) {
+            const name = cardElement.getAttribute('data-name');
+            const price = cardElement.getAttribute('data-price');
+            const duration = cardElement.getAttribute('data-duration');
+            let desc = cardElement.getAttribute('data-desc');
+            const img = cardElement.getAttribute('data-img');
+
+            modalName.textContent = name;
+            modalPrice.textContent = `₹${price}`;
+            modalDuration.textContent = `${duration} min`;
+            
+            if (desc) {
+                // simple formatting: replace newlines with br to preserve paragraphs
+                desc = desc.replace(/\n/g, '<br>');
+                modalDesc.innerHTML = `<p>${desc}</p>`;
+            } else {
+                modalDesc.innerHTML = `<p class="italic text-gray-400">No description available for this service.</p>`;
+            }
+
+            if (img && img.trim() !== '') {
+                modalImage.src = img;
+                modalImage.classList.remove('hidden');
+                modalFallback.classList.add('hidden');
+            } else {
+                modalImage.src = '';
+                modalImage.classList.add('hidden');
+                modalFallback.classList.remove('hidden');
+            }
+
+            modalOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeServiceModal() {
+            modalOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close on outside click
+        modalOverlay.addEventListener('click', function(e) {
+            if (e.target === modalOverlay) {
+                closeServiceModal();
+            }
+        });
 
         // Search and Filter Logic
         const searchInput = document.getElementById('serviceSearch');

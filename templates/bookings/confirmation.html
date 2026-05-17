@@ -90,6 +90,7 @@
                     </div>
 
                     <!-- Notice Block -->
+                    {% if is_otp_enabled %}
                     <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-6 flex items-start">
                         <i class="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
                         <div>
@@ -97,6 +98,20 @@
                             <p class="text-sm text-blue-700 mt-1">
                                 You will receive a 4-digit OTP via voice call to verify your booking.
                                 Booking confirmation details will also be sent to your email.
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Policy Block -->
+                    <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4 mt-4 flex items-start">
+                        <i class="fas fa-shield-alt text-yellow-600 mt-1 mr-3"></i>
+                        <div>
+                            <p class="text-sm text-yellow-800 font-medium">Booking Policy</p>
+                            <p class="text-sm text-yellow-700 mt-1">
+                                Bookings cannot be cancelled within 2 hours of the appointment time. You can cancel appointments only once per day.
+                                <br><br>
+                                <strong>Note:</strong> Any delay in your arrival may affect the time allocated and the quality of the service provided.
                             </p>
                         </div>
                     </div>

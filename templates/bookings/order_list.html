@@ -69,12 +69,18 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {% if booking.is_cancellable %}
-                                    <button onclick="openCancelModal('{{ booking.id }}', '{{ booking.service.name }}', '{{ booking.date }}', '{{ booking.time|time:'h:i A' }}')" 
-                                            class="text-red-500 hover:text-red-700 font-medium hover:underline transition">
-                                        Cancel
-                                    </button>
+                                    {% if has_cancelled_today %}
+                                        <button type="button" onclick="alert('You have already cancelled one appointment today. Please try again tomorrow.')" class="text-gray-400 cursor-not-allowed font-medium transition" title="Daily cancellation limit reached">
+                                            Cancel
+                                        </button>
+                                    {% else %}
+                                        <button onclick="openCancelModal('{{ booking.id }}', '{{ booking.service.name }}', '{{ booking.date }}', '{{ booking.time|time:'h:i A' }}')" 
+                                                class="text-red-500 hover:text-red-700 font-medium hover:underline transition">
+                                            Cancel
+                                        </button>
+                                    {% endif %}
                                 {% else %}
-                                    <span class="text-gray-300 cursor-not-allowed">--</span>
+                                    <span class="text-gray-300 cursor-not-allowed" title="Cannot cancel within 2 hours of appointment">--</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -122,7 +128,7 @@
                                 Are you sure you want to cancel the appointment for <strong id="modal-service" class="text-gray-800"></strong> on <span id="modal-date"></span> at <span id="modal-time"></span>?
                             </p>
                             <p class="text-sm text-yellow-600 mt-3 font-medium bg-yellow-50 p-3 rounded-md border border-yellow-200">
-                                <i class="fas fa-info-circle mr-1"></i> Once cancelled, this time slot becomes available for other customers to book.
+                                <i class="fas fa-info-circle mr-1"></i> You can cancel appointments only once per day. Are you sure you want to continue?
                             </p>
                         </div>
                     </div>

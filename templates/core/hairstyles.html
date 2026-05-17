@@ -27,12 +27,12 @@
 
             {% for image in images %}
             <div class="group relative cursor-zoom-in transition-all duration-300 hover:-translate-y-1"
-                onclick="openLightbox('{% static image.url %}')">
+                onclick="openLightbox('{{ image.url }}')">
 
                 <!-- Square Aspect Ratio Container -->
                 <div
                     class="aspect-square w-full relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 bg-white">
-                    <img src="{% static image.url %}" alt="Style {{ image.id }}"
+                    <img src="{{ image.url }}" alt="Style {{ image.id }}"
                         class="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110"
                         loading="lazy">
 

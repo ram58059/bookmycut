@@ -18,6 +18,7 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import login
 from users.models import User
+from dashboard.models import ShopSetting
 
 # New Wizard Views
 class GenderSelectionView(View):
@@ -172,9 +173,6 @@ class DateTimeSelectionView(View):
             end_hour = 21
             
             # If today, ensuring time slot is after current time
-            if selected_date == now.date():
-                # E.g. if now is 15:30, next slot is 16:00.
-                start_hour = max(start_hour, now.hour + 1)
 
             # Cleanup Stale Bookings (Requirement: block only if pending OTP < 5 mins)
             cutoff_time = timezone.now() - timedelta(minutes=5)
@@ -205,11 +203,6 @@ class DateTimeSelectionView(View):
             current_dt = start_dt
             
             # Round current_dt up to next 30-minute interval if it's today
-            if selected_date == now.date():
-                minutes = current_dt.minute
-                remainder = minutes % 30
-                if remainder != 0:
-                    current_dt += timedelta(minutes=(30 - remainder))
             
             while current_dt < end_dt:
                 requested_start = current_dt
@@ -225,6 +218,16 @@ class DateTimeSelectionView(View):
                     current_dt += timedelta(minutes=30)
                     continue
 
+                # NEW Time check logic
+                is_restricted = False
+                if selected_date == now.date():
+                    aware_req_start = timezone.make_aware(requested_start)
+                    if aware_req_start < now:
+                        current_dt += timedelta(minutes=30)
+                        continue
+                    elif aware_req_start <= now + timedelta(minutes=30):
+                        is_restricted = True
+
                 # Check 3: Overlaps existing bookings
                 is_valid = True
                 for booking in existing_bookings:
@@ -235,7 +238,7 @@ class DateTimeSelectionView(View):
                         break
                 
                 if is_valid:
-                    slots.append(current_dt.time())
+                    slots.append({'time': current_dt.time(), 'is_restricted': is_restricted})
                 
                 current_dt += timedelta(minutes=30)
 
@@ -282,6 +285,14 @@ class DateTimeSelectionView(View):
         # Concurrency safety: Re-verify overlap exactly like GET
         requested_start = datetime.combine(selected_date, selected_time)
         requested_end = requested_start + timedelta(minutes=total_duration)
+        
+        # Validate 30-minute advance booking
+        now = timezone.localtime(timezone.now())
+        if selected_date == now.date():
+            aware_req_start = timezone.make_aware(requested_start)
+            if aware_req_start <= now + timedelta(minutes=30):
+                messages.error(request, 'Appointments must be booked at least 30 minutes in advance.')
+                return redirect('date_time_selection')
         
         lunch_start = datetime.combine(selected_date, time(14, 0))
         lunch_end = datetime.combine(selected_date, time(16, 0))
@@ -330,12 +341,16 @@ class BookingConfirmationView(View):
             
         form = GuestDetailsForm(initial=initial_data)
         
+        shop_setting = ShopSetting.objects.first()
+        is_otp_enabled = shop_setting.is_otp_enabled if shop_setting else True
+        
         return render(request, 'bookings/confirmation.html', {
             'services': services,
             'total_price': total_price,
             'date': date_str,
             'time': time_str,
             'form': form,
+            'is_otp_enabled': is_otp_enabled,
         })
 
     def post(self, request):
@@ -617,6 +632,21 @@ class CancelBookingView(View):
         if booking.status in ['cancelled', 'completed']:
             return render(request, 'bookings/error.html', {'message': 'Booking already processed.'})
             
+        # Check 2-hour window
+        if not booking.is_cancellable:
+            return render(request, 'bookings/error.html', {'message': 'Appointments cannot be cancelled within 2 hours of the scheduled time.'})
+            
+        # Check daily cancellation limit
+        today = timezone.now().date()
+        has_cancelled_today = Booking.objects.filter(
+            customer_phone=booking.customer_phone,
+            status='cancelled',
+            cancelled_at__date=today
+        ).exists()
+        
+        if has_cancelled_today:
+             return render(request, 'bookings/error.html', {'message': 'You have already cancelled one appointment today. Please try again tomorrow.'})
+            
         # Check for late cancellation (e.g., < 24 hours)
         appointment_datetime = datetime.combine(booking.date, booking.time)
         now = timezone.now() # Use timezone aware now
@@ -632,7 +662,7 @@ class CancelBookingView(View):
         is_late = (appointment_datetime - now) < timedelta(hours=24)
         
         # Cancel ALL
-        bookings.update(status='cancelled')
+        bookings.update(status='cancelled', cancelled_at=timezone.now())
         
         # Update Trust (counts as 1 cancellation event for the group)
         if is_late:
@@ -662,4 +692,15 @@ class OrderListView(LoginRequiredMixin, View):
     
     def get(self, request):
         bookings = Booking.objects.filter(customer_phone=request.user.phone_number).order_by('-date', '-time')
-        return render(request, 'bookings/order_list.html', {'bookings': bookings})
+        
+        today = timezone.now().date()
+        has_cancelled_today = Booking.objects.filter(
+            customer_phone=request.user.phone_number,
+            status='cancelled',
+            cancelled_at__date=today
+        ).exists()
+        
+        return render(request, 'bookings/order_list.html', {
+            'bookings': bookings,
+            'has_cancelled_today': has_cancelled_today
+        })

@@ -31,7 +31,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = 'django-insecure-ywuh!2o&ud4^+iqz4#x$vlbmew^-^w3*m=5c!(p1$lbokhvxcy'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'users',
     'bookings',
     'dashboard',
+    'cloudinary_storage',
+    'cloudinary',
 ]
 
 MIDDLEWARE = [
@@ -143,6 +145,21 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'dlvlelasc'),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '633129426838236'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'YHKNrr1AVMwDTJwHZ1QgoIYiGJ8'),
+}
+
 
 
 # This production code might break development mode, so we check whether we're in DEBUG mode
@@ -152,7 +169,7 @@ if not DEBUG:
 
     # Enable the WhiteNoise storage backend, which compresses static files to reduce disk use
     # and renames the files with unique names for each version to support long-term caching
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    STORAGES["staticfiles"]["BACKEND"] = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
