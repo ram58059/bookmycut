@@ -31,3 +31,5 @@ google_calendar_credentials.json
 
 # Scripts
 sync_db.sh
+
+services.json

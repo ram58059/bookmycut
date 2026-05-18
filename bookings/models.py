@@ -13,23 +13,21 @@ class Service(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.image:
-            category_image_map = {
-                'Haircut Combos': 'services/haircut_combos.png',
-                'Hair Services': 'services/hair_services.png',
-                'Hair Colour': 'services/hair_colour.png',
-                'Facials': 'services/facials.png',
-                'Express Face Masks': 'services/express_face_masks.png',
-                'Hair Spa': 'services/hair_spa.png',
-                'Reflexology / Massage': 'services/massage.png',
-                'General': 'services/general.png',
-            }
             name_lower = self.name.lower()
+            target_category = self.category
+            
             if 'beard' in name_lower or 'shave' in name_lower:
-                self.image = 'services/general.png'
+                target_category = 'General'
             elif 'haircut' in name_lower and self.category == 'General':
-                self.image = 'services/hair_services.png'
+                target_category = 'Hair Services'
+                
+            existing_service = Service.objects.filter(category=target_category).exclude(image='').first()
+            if existing_service:
+                self.image = existing_service.image.name
             else:
-                self.image = category_image_map.get(self.category, 'services/general.png')
+                fallback = Service.objects.exclude(image='').first()
+                if fallback:
+                    self.image = fallback.image.name
                 
         super().save(*args, **kwargs)
 
