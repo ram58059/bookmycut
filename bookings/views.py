@@ -140,24 +140,20 @@ class DateTimeSelectionView(View):
         
         # Calculate max date (7 days from today)
         now = timezone.localtime(timezone.now())
-        max_date = now.date() + timedelta(days=7)
+        now_date = now.date()
+        max_date = now_date + timedelta(days=7)
+        
+        min_allowed_date = now_date + timedelta(days=1) if now_date.weekday() == 6 else now_date
 
-        if selected_date_str:
+        if not selected_date_str:
+            selected_date = min_allowed_date
+        else:
             try:
                 selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
-                if selected_date < now.date():
-                     # Prevent past dates
-                     selected_date = None
-                elif selected_date > max_date:
-                    # Prevent dates beyond 7 days
-                    selected_date = None
-                elif selected_date.weekday() == 6:
-                    # Prevent Sundays (6 = Sunday)
-                    selected_date = None
+                if selected_date < min_allowed_date or selected_date > max_date or selected_date.weekday() == 6:
+                    selected_date = min_allowed_date
             except ValueError:
-                pass
-            except ValueError:
-                pass
+                selected_date = min_allowed_date
         
         # Check if day is blocked
         is_blocked = False
@@ -220,7 +216,7 @@ class DateTimeSelectionView(View):
 
                 # NEW Time check logic
                 is_restricted = False
-                if selected_date == now.date():
+                if selected_date == now_date:
                     aware_req_start = timezone.make_aware(requested_start)
                     if aware_req_start < now:
                         current_dt += timedelta(minutes=30)
@@ -245,7 +241,8 @@ class DateTimeSelectionView(View):
         return render(request, 'bookings/calendar.html', {
             'slots': slots,
             'selected_date': selected_date,
-            'today': timezone.now().date(),
+            'today': now_date,
+            'min_allowed_date': min_allowed_date,
             'max_date': max_date,
             'num_services': num_services,
             'total_duration': total_duration,

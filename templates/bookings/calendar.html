@@ -22,7 +22,7 @@
                     <div class="relative">
                         <input type="date" name="date" id="date"
                             class="w-full p-4 pl-10 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold text-gray-700 font-medium shadow-sm transition-all cursor-pointer"
-                            value="{{ selected_date|date:'Y-m-d' }}" min="{{ today|date:'Y-m-d' }}"
+                            value="{{ selected_date|date:'Y-m-d' }}" min="{{ min_allowed_date|date:'Y-m-d' }}"
                             max="{{ max_date|date:'Y-m-d' }}" onchange="validateDate(this)" required>
                         <i
                             class="fas fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
