@@ -27,7 +27,7 @@
                     {{ s.name }}{% if s.quantity > 1 %} ({{ s.quantity }}){% endif %}{% if not forloop.last %}, {% endif %}
                     {% endfor %}
                     <span class="mx-2 text-gray-300">•</span>
-                    <i class="far fa-clock text-amber-500"></i> {{ next_booking.booking.time|time:"H:i" }}
+                    <i class="far fa-clock text-amber-500"></i> {{ next_booking.booking.time|time:"h:i A" }}
                 </p>
             </div>
             <div class="flex items-center gap-4">
@@ -84,8 +84,8 @@
             <div class="flex flex-col md:flex-row md:items-center gap-6">
                 <!-- Time Range -->
                 <div class="md:w-32 flex-shrink-0">
-                    <p class="text-xl font-black text-gray-900">{{ item.booking.time|time:"H:i" }}</p>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ item.end_time|time:"H:i" }}
+                    <p class="text-xl font-black text-gray-900">{{ item.booking.time|time:"h:i A" }}</p>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ item.end_time|time:"h:i A" }}
                     </p>
                 </div>
 

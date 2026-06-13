@@ -70,16 +70,6 @@
                     <i class="fas fa-users w-6"></i>
                     <span class="font-medium">Customers</span>
                 </a>
-                <a href="{% url 'dashboard_cancellation' %}"
-                    class="flex items-center p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors {% if request.resolver_match.url_name == 'dashboard_cancellation' %}bg-gray-800 text-white border-l-4 border-amber-500{% endif %}">
-                    <i class="fas fa-user-times w-6"></i>
-                    <span class="font-medium">Cancellations</span>
-                </a>
-                <a href="{% url 'dashboard_utilization' %}"
-                    class="flex items-center p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors {% if request.resolver_match.url_name == 'dashboard_utilization' %}bg-gray-800 text-white border-l-4 border-amber-500{% endif %}">
-                    <i class="fas fa-stopwatch w-6"></i>
-                    <span class="font-medium">Utilization</span>
-                </a>
                 <a href="{% url 'dashboard_manage_bookings' %}"
                     class="flex items-center p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors {% if request.resolver_match.url_name == 'dashboard_manage_bookings' %}bg-gray-800 text-white border-l-4 border-amber-500{% endif %}">
                     <i class="fas fa-book-open w-6"></i>

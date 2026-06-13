@@ -276,7 +276,36 @@
 
     {% include 'includes/login_modal.html' %}
 
+    {% if price_increased_services %}
+    <div id="priceIncreaseOverlay" class="fixed inset-0 bg-black/60 z-[110] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div class="bg-amber-50 border-b border-amber-100 px-6 py-4 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900">Price Update</h3>
+            </div>
+            <div class="px-6 py-5">
+                <p class="text-gray-700 text-sm leading-relaxed mb-4">
+                    We'd like to inform you that the price for the following service{% if price_increased_services|length > 1 %}s have{% else %} has{% endif %} been increased to improve the quality of the service:
+                </p>
+                <ul class="space-y-2 mb-6">
+                    {% for service in price_increased_services %}
+                    <li class="flex justify-between items-center text-sm bg-gray-50 rounded-lg px-4 py-3">
+                        <span class="font-medium text-gray-900">{{ service.name }}</span>
+                        <span class="font-bold text-brown">₹{{ service.price }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <button type="button" onclick="closePriceIncreaseNotice()"
+                    class="w-full bg-brown hover:bg-gold text-white font-bold py-3 rounded-xl transition-colors">
+                    I Understand
+                </button>
+            </div>
+        </div>
+    </div>
     {% endif %}
+
     <script>
         const countSpan = document.getElementById('selectedCount');
         const hiddenContainer = document.getElementById('hiddenInputsContainer');
@@ -343,6 +372,24 @@
 
         // Initialize display state on load based on Django's initial hidden inputs loop
         updateCountAndHighlights();
+
+        // Price increase notice
+        const priceIncreaseOverlay = document.getElementById('priceIncreaseOverlay');
+        {% if price_increased_services %}
+        const priceNoticeKey = 'priceNotice_{% for s in price_increased_services %}{{ s.id }}_{{ s.price_increased_at|date:"U" }}{% if not forloop.last %}-{% endif %}{% endfor %}';
+        if (priceIncreaseOverlay && !sessionStorage.getItem(priceNoticeKey)) {
+            document.body.style.overflow = 'hidden';
+        } else if (priceIncreaseOverlay) {
+            priceIncreaseOverlay.remove();
+        }
+        function closePriceIncreaseNotice() {
+            sessionStorage.setItem(priceNoticeKey, '1');
+            if (priceIncreaseOverlay) {
+                priceIncreaseOverlay.remove();
+                document.body.style.overflow = '';
+            }
+        }
+        {% endif %}
 
         // Modal Logic
         const modalOverlay = document.getElementById('serviceModalOverlay');
@@ -476,5 +523,6 @@
             });
         });
     </script>
+    {% endif %}
 </div>
 {% endblock %}

@@ -9,6 +9,7 @@
         <form method="POST" class="flex gap-4 items-end">
             {% csrf_token %}
             <input type="hidden" name="action" value="block_day">
+            <input type="hidden" name="slot_date" value="{{ slot_date|date:'Y-m-d' }}">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Select Date</label>
                 <input type="date" name="date" required min="{{ today|date:'Y-m-d' }}"
@@ -23,8 +24,170 @@
         </p>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Block Slot Section -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-bold mb-2">Block a Time Slot</h2>
+        <p class="text-sm text-gray-500 mb-4">
+            Block individual 30-minute slots on a specific day. A slot can only be blocked when it is free.
+        </p>
 
+        <form method="GET" class="flex flex-wrap gap-4 items-end mb-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Select Date</label>
+                <input type="date" name="slot_date" value="{{ slot_date|date:'Y-m-d' }}" required min="{{ today|date:'Y-m-d' }}"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-md hover:bg-gray-800">
+                View Slots
+            </button>
+        </form>
+
+        {% if day_slots %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {% for slot in day_slots %}
+            <div class="rounded-xl border p-3 text-center
+                {% if slot.status == 'free' %}border-green-200 bg-green-50
+                {% elif slot.status == 'blocked' %}border-red-200 bg-red-50
+                {% elif slot.status == 'booked' %}border-amber-200 bg-amber-50
+                {% else %}border-gray-200 bg-gray-50 opacity-60{% endif %}">
+                <p class="text-sm font-bold text-gray-900">{{ slot.time|time:"g:i A" }}</p>
+                <p class="text-[10px] uppercase tracking-wider mt-1 font-semibold
+                    {% if slot.status == 'free' %}text-green-700
+                    {% elif slot.status == 'blocked' %}text-red-700
+                    {% elif slot.status == 'booked' %}text-amber-700
+                    {% else %}text-gray-500{% endif %}">
+                    {% if slot.status == 'free' %}Free
+                    {% elif slot.status == 'blocked' %}Blocked
+                    {% elif slot.status == 'booked' %}Booked
+                    {% else %}Past{% endif %}
+                </p>
+
+                {% if slot.can_block %}
+                <form method="POST" class="mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="block_slot">
+                    <input type="hidden" name="slot_date" value="{{ slot_date|date:'Y-m-d' }}">
+                    <input type="hidden" name="date" value="{{ slot_date|date:'Y-m-d' }}">
+                    <input type="hidden" name="time" value="{{ slot.time|time:'H:i' }}">
+                    <button type="submit" class="w-full text-xs font-bold text-white bg-red-600 hover:bg-red-700 px-2 py-1.5 rounded-md">
+                        Block
+                    </button>
+                </form>
+                {% elif slot.can_unblock %}
+                <form method="POST" class="mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="unblock_slot">
+                    <input type="hidden" name="slot_date" value="{{ slot_date|date:'Y-m-d' }}">
+                    <input type="hidden" name="date" value="{{ slot_date|date:'Y-m-d' }}">
+                    <input type="hidden" name="time" value="{{ slot.time|time:'H:i' }}">
+                    <button type="submit" class="w-full text-xs font-bold text-white bg-green-600 hover:bg-green-700 px-2 py-1.5 rounded-md">
+                        Unblock
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-500 text-sm">No slots available for this date. The day may be fully blocked.</p>
+        {% endif %}
+    </div>
+
+    <!-- Past Bookings - No Visit -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-bold mb-1">Past Bookings — Mark No Visit</h2>
+        <p class="text-sm text-gray-500 mb-4">
+            Mark confirmed bookings as no visit within 7 days of the appointment. Shown below: past 7 days only.
+            {% if past_confirmed_page.paginator.count %}
+            <span class="block mt-1">Showing {{ past_confirmed_page.start_index }}-{{ past_confirmed_page.end_index }} of {{ past_confirmed_page.paginator.count }}</span>
+            {% endif %}
+        </p>
+
+        {% if past_confirmed_page.object_list %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date/Time</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for booking in past_confirmed_page %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ booking.date|date:"d M Y" }} <br> {{ booking.time|time:"g:i A" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <span class="text-gray-900 font-medium">{{ booking.customer_phone }}</span>
+                            <span class="text-gray-500 text-xs ml-1">({{ booking.customer_name }})</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ booking.service.name }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">₹{{ booking.service.price }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <form method="POST"
+                                onsubmit="return confirm('Mark this booking as no visit? It will be removed from sales totals.');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="mark_no_show">
+                                <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                                <input type="hidden" name="slot_date" value="{{ slot_date|date:'Y-m-d' }}">
+                                <input type="hidden" name="no_visit_page" value="{{ past_confirmed_page.number }}">
+                                <button type="submit"
+                                    class="text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 px-3 py-1.5 rounded-md text-xs font-bold">
+                                    No Visit
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if past_confirmed_page.paginator.num_pages > 1 %}
+        <div class="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p class="text-sm text-gray-500">
+                Page {{ past_confirmed_page.number }} of {{ past_confirmed_page.paginator.num_pages }}
+            </p>
+            <div class="flex flex-wrap gap-2">
+                {% if past_confirmed_page.has_previous %}
+                <a href="?slot_date={{ slot_date|date:'Y-m-d' }}&no_visit_page={{ past_confirmed_page.previous_page_number }}"
+                    class="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Previous
+                </a>
+                {% endif %}
+
+                {% for page_num in past_confirmed_page.paginator.page_range %}
+                    {% if page_num == past_confirmed_page.number %}
+                    <span class="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium">{{ page_num }}</span>
+                    {% elif page_num == 1 or page_num == past_confirmed_page.paginator.num_pages or page_num >= past_confirmed_page.number|add:"-2" and page_num <= past_confirmed_page.number|add:"2" %}
+                    <a href="?slot_date={{ slot_date|date:'Y-m-d' }}&no_visit_page={{ page_num }}"
+                        class="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        {{ page_num }}
+                    </a>
+                    {% elif page_num == past_confirmed_page.number|add:"-3" or page_num == past_confirmed_page.number|add:"3" %}
+                    <span class="px-2 py-2 text-gray-400">...</span>
+                    {% endif %}
+                {% endfor %}
+
+                {% if past_confirmed_page.has_next %}
+                <a href="?slot_date={{ slot_date|date:'Y-m-d' }}&no_visit_page={{ past_confirmed_page.next_page_number }}"
+                    class="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Next
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <p class="text-gray-500">No confirmed bookings from the past 7 days need action.</p>
+        {% endif %}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Future Bookings List -->
         <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
             <h2 class="text-xl font-bold mb-4">Future Bookings</h2>
@@ -34,49 +197,45 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Date/Time</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Customer</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Service</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Action</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date/Time</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         {% for booking in future_bookings %}
                         <tr>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ booking.date }} <br> {{ booking.time }}
+                                {{ booking.date }} <br> {{ booking.time|time:"g:i A" }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 <span class="text-gray-900 font-medium">{{ booking.customer_phone }}</span>
                                 <span class="text-gray-500 text-xs ml-1">({{ booking.customer_name }})</span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ booking.service.name }}
-                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ booking.service.name }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span
-                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                    {% if booking.status == 'confirmed' %}bg-green-100 text-green-800{% elif booking.status == 'cancelled' %}bg-red-100 text-red-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
-                                    {{ booking.status }}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    {% if booking.status == 'confirmed' %}bg-green-100 text-green-800
+                                    {% elif booking.status == 'cancelled' %}bg-red-100 text-red-800
+                                    {% elif booking.status == 'no_show' %}bg-orange-100 text-orange-800
+                                    {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                    {% if booking.status == 'no_show' %}No Visit{% else %}{{ booking.status }}{% endif %}
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                {% if booking.status != 'cancelled' %}
+                                {% if booking.status == 'confirmed' or booking.status == 'pending_otp' %}
                                 <form method="POST"
                                     onsubmit="return confirm('Are you sure you want to cancel this booking? This is irreversible.');">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="cancel_booking_admin">
                                     <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                                    <input type="hidden" name="slot_date" value="{{ slot_date|date:'Y-m-d' }}">
                                     <button type="submit" class="text-red-600 hover:text-red-900">Cancel</button>
                                 </form>
                                 {% else %}
-                                <span class="text-gray-400">Cancelled</span>
+                                <span class="text-gray-400">—</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -89,27 +248,54 @@
             {% endif %}
         </div>
 
-        <!-- Blocked Days List -->
-        <div class="bg-white p-6 rounded-lg shadow-md h-fit">
-            <h2 class="text-xl font-bold mb-4">Blocked Days</h2>
-            {% if blocked_days %}
-            <ul class="divide-y divide-gray-200">
-                {% for blocked in blocked_days %}
-                <li class="py-4 flex justify-between items-center">
-                    <span class="text-sm font-medium text-gray-900">{{ blocked.date }}</span>
-                    <form method="POST">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="unblock_day">
-                        <input type="hidden" name="date" value="{{ blocked.date|date:'Y-m-d' }}">
-                        <button type="submit"
-                            class="text-green-600 hover:text-green-900 text-sm font-medium">Unblock</button>
-                    </form>
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p class="text-gray-500">No days are currently blocked.</p>
-            {% endif %}
+        <!-- Blocked Days & Slots -->
+        <div class="space-y-6">
+            <div class="bg-white p-6 rounded-lg shadow-md h-fit">
+                <h2 class="text-xl font-bold mb-4">Blocked Days</h2>
+                {% if blocked_days %}
+                <ul class="divide-y divide-gray-200">
+                    {% for blocked in blocked_days %}
+                    <li class="py-4 flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-900">{{ blocked.date }}</span>
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="unblock_day">
+                            <input type="hidden" name="date" value="{{ blocked.date|date:'Y-m-d' }}">
+                            <input type="hidden" name="slot_date" value="{{ slot_date|date:'Y-m-d' }}">
+                            <button type="submit" class="text-green-600 hover:text-green-900 text-sm font-medium">Unblock</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-gray-500">No days are currently blocked.</p>
+                {% endif %}
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md h-fit">
+                <h2 class="text-xl font-bold mb-4">Blocked Slots</h2>
+                {% if blocked_slots %}
+                <ul class="divide-y divide-gray-200">
+                    {% for blocked in blocked_slots %}
+                    <li class="py-4 flex justify-between items-center gap-3">
+                        <span class="text-sm font-medium text-gray-900">
+                            {{ blocked.date|date:"d M Y" }} · {{ blocked.time|time:"g:i A" }}
+                        </span>
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="unblock_slot">
+                            <input type="hidden" name="date" value="{{ blocked.date|date:'Y-m-d' }}">
+                            <input type="hidden" name="time" value="{{ blocked.time|time:'H:i' }}">
+                            <input type="hidden" name="slot_date" value="{{ slot_date|date:'Y-m-d' }}">
+                            <button type="submit" class="text-green-600 hover:text-green-900 text-sm font-medium whitespace-nowrap">Unblock</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-gray-500">No individual slots are currently blocked.</p>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>

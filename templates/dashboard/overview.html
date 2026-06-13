@@ -1,239 +1,308 @@
 {% extends 'dashboard/base.html' %}
 
-{% block header %}Overview{% endblock %}
-{% block subheader %}Here's what's happening in your shop today.{% endblock %}
+{% block header %}Business Overview{% endblock %}
+{% block subheader %}Track sales, bookings, and shop performance at a glance{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <div></div>
-    <!-- OTP Settings Toggle -->
-    <div class="bg-white p-3 px-5 rounded-lg border shadow-sm flex items-center space-x-3">
-        <span class="font-medium text-gray-700">OTP Verification Required</span>
-        <form action="{% url 'toggle_otp' %}" method="POST" class="inline m-0">
-            {% csrf_token %}
-            <button type="submit"
-                class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 {% if otp_enabled %}bg-green-500{% else %}bg-gray-200{% endif %}">
-                <span class="sr-only">Toggle OTP</span>
-                <span
-                    class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform {% if otp_enabled %}translate-x-6{% else %}translate-x-1{% endif %}"></span>
-            </button>
-        </form>
-    </div>
-</div>
+<div class="space-y-8">
 
-<!-- Smart Insights Grid -->
-{% if smart_insights %}
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    {% for insight in smart_insights %}
-    <div
-        class="bg-white rounded-xl shadow-sm p-4 border-l-4 flex items-start space-x-3
-        {% if insight.type == 'warning' %}border-red-500{% elif insight.type == 'success' %}border-green-500{% elif insight.type == 'info' %}border-blue-500{% else %}border-amber-500{% endif %}">
-        <div class="flex-shrink-0 mt-1">
-            <i
-                class="fas {{ insight.icon }} {% if insight.type == 'warning' %}text-red-500{% elif insight.type == 'success' %}text-green-500{% elif insight.type == 'info' %}text-blue-500{% else %}text-amber-500{% endif %}"></i>
+    <!-- OTP Toggle -->
+    <div class="flex justify-end">
+        <div class="bg-white p-3 px-5 rounded-xl border border-gray-100 shadow-sm flex items-center space-x-3">
+            <span class="font-medium text-gray-700">OTP Verification Required</span>
+            <form action="{% url 'toggle_otp' %}" method="POST" class="inline m-0">
+                {% csrf_token %}
+                <button type="submit"
+                    class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 {% if otp_enabled %}bg-green-500{% else %}bg-gray-200{% endif %}">
+                    <span class="sr-only">Toggle OTP</span>
+                    <span
+                        class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform {% if otp_enabled %}translate-x-6{% else %}translate-x-1{% endif %}"></span>
+                </button>
+            </form>
         </div>
-        <div>
+    </div>
+
+    <!-- Smart Insights -->
+    {% if smart_insights %}
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {% for insight in smart_insights %}
+        <div
+            class="bg-white rounded-xl shadow-sm p-4 border-l-4 flex items-start space-x-3
+            {% if insight.type == 'warning' %}border-red-500{% elif insight.type == 'success' %}border-green-500{% elif insight.type == 'info' %}border-blue-500{% else %}border-amber-500{% endif %}">
+            <div class="flex-shrink-0 mt-1">
+                <i
+                    class="fas {{ insight.icon }} {% if insight.type == 'warning' %}text-red-500{% elif insight.type == 'success' %}text-green-500{% elif insight.type == 'info' %}text-blue-500{% else %}text-amber-500{% endif %}"></i>
+            </div>
             <p class="text-sm font-medium text-gray-800">{{ insight.text }}</p>
         </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-</div>
-{% endif %}
+    {% endif %}
 
-<!-- KPI Cards -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <!-- Total Bookings -->
-    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <div class="flex justify-between items-start">
-            <div>
-                <p class="text-sm font-medium text-gray-500">Total Bookings</p>
-                <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ kpis.total_bookings }}</h3>
-            </div>
-            <div class="p-2 bg-blue-50 rounded-lg">
-                <i class="fas fa-calendar-check text-blue-500"></i>
+    <!-- Primary KPIs -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg shadow-amber-200">
+            <p class="text-amber-100 text-sm font-medium">Sales This Month</p>
+            <h3 class="text-3xl font-black mt-2">₹{{ business.month_revenue|floatformat:0 }}</h3>
+            <div class="mt-4 flex items-center justify-between text-sm">
+                <span class="text-amber-100">{{ business.month_bookings }} bookings</span>
+                {% if business.month_revenue_change > 0 %}
+                <span class="bg-white/20 px-2 py-0.5 rounded-full font-semibold">+{{ business.month_revenue_change }}% vs last month</span>
+                {% elif business.month_revenue_change < 0 %}
+                <span class="bg-white/20 px-2 py-0.5 rounded-full font-semibold">{{ business.month_revenue_change }}% vs last month</span>
+                {% else %}
+                <span class="text-amber-100">vs ₹{{ business.last_month_revenue|floatformat:0 }} last month</span>
+                {% endif %}
             </div>
         </div>
-        <div class="mt-4 flex items-center text-sm">
-            <span class="text-gray-400">Lifetime</span>
-        </div>
-    </div>
 
-    <!-- Revenue -->
-    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <div class="flex justify-between items-start">
-            <div>
-                <p class="text-sm font-medium text-gray-500">Total Revenue</p>
-                <h3 class="text-2xl font-bold text-gray-800 mt-1">₹{{ kpis.revenue|floatformat:2 }}</h3>
-            </div>
-            <div class="p-2 bg-green-50 rounded-lg">
-                <i class="fas fa-rupee-sign text-green-500"></i>
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Total Sales So Far</p>
+                    <h3 class="text-3xl font-black text-gray-900 mt-2">₹{{ business.lifetime_revenue|floatformat:0 }}</h3>
+                    <p class="text-sm text-gray-500 mt-3">{{ business.lifetime_bookings }} total bookings</p>
+                </div>
+                <div class="p-3 bg-green-50 rounded-xl">
+                    <i class="fas fa-chart-line text-green-600 text-xl"></i>
+                </div>
             </div>
         </div>
-        <div class="mt-4 flex items-center text-sm">
-            <span class="text-gray-500">Recent (30d): ₹{{ kpis.recent_revenue|floatformat:2 }}</span>
-        </div>
-    </div>
 
-    <!-- Customers -->
-    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <div class="flex justify-between items-start">
-            <div>
-                <p class="text-sm font-medium text-gray-500">Total Customers</p>
-                <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ kpis.total_customers }}</h3>
-            </div>
-            <div class="p-2 bg-purple-50 rounded-lg">
-                <i class="fas fa-users text-purple-500"></i>
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Year to Date</p>
+                    <h3 class="text-3xl font-black text-gray-900 mt-2">₹{{ business.year_revenue|floatformat:0 }}</h3>
+                    <p class="text-sm text-gray-500 mt-3">{{ business.year_bookings }} bookings in {{ business.today|date:"Y" }}</p>
+                </div>
+                <div class="p-3 bg-blue-50 rounded-xl">
+                    <i class="fas fa-calendar-alt text-blue-600 text-xl"></i>
+                </div>
             </div>
         </div>
-        <div class="mt-4 flex items-center text-sm">
-            <span class="text-gray-400">Unique phone numbers</span>
-        </div>
-    </div>
 
-    <!-- Cancellation Rate -->
-    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <div class="flex justify-between items-start">
-            <div>
-                <p class="text-sm font-medium text-gray-500">Cancellation Rate</p>
-                <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ kpis.cancellation_rate }}%</h3>
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Avg. Ticket Size</p>
+                    <h3 class="text-3xl font-black text-gray-900 mt-2">₹{{ business.avg_ticket|floatformat:0 }}</h3>
+                    <p class="text-sm text-gray-500 mt-3">Per confirmed/completed booking</p>
+                </div>
+                <div class="p-3 bg-purple-50 rounded-xl">
+                    <i class="fas fa-receipt text-purple-600 text-xl"></i>
+                </div>
             </div>
-            <div class="p-2 bg-red-50 rounded-lg">
-                <i class="fas fa-ban text-red-500"></i>
-            </div>
-        </div>
-        <div class="mt-4 flex items-center text-sm">
-            <span class="text-gray-500">{{ kpis.cancelled }} cancelled bookings</span>
         </div>
     </div>
-</div>
 
-<!-- Charts Section -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-    <!-- Revenue Trend Chart -->
+    <!-- Today & Week -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+            <p class="text-xs uppercase tracking-wider font-bold text-gray-400">Today</p>
+            <p class="text-2xl font-black text-gray-900 mt-2">₹{{ business.today_revenue|floatformat:0 }}</p>
+            <p class="text-sm text-gray-500 mt-1">{{ business.today_bookings }} booking{{ business.today_bookings|pluralize }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+            <p class="text-xs uppercase tracking-wider font-bold text-gray-400">This Week</p>
+            <p class="text-2xl font-black text-gray-900 mt-2">₹{{ business.week_revenue|floatformat:0 }}</p>
+            <p class="text-sm text-gray-500 mt-1">{{ business.week_bookings }} booking{{ business.week_bookings|pluralize }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+            <p class="text-xs uppercase tracking-wider font-bold text-gray-400">Upcoming</p>
+            <p class="text-2xl font-black text-blue-600 mt-2">{{ business.confirmed_upcoming }}</p>
+            <p class="text-sm text-gray-500 mt-1">Confirmed bookings ahead</p>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+            <p class="text-xs uppercase tracking-wider font-bold text-gray-400">Customers</p>
+            <p class="text-2xl font-black text-gray-900 mt-2">{{ business.total_customers }}</p>
+            <p class="text-sm text-gray-500 mt-1">{{ business.new_customers_this_month }} new this month</p>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">Monthly Sales</h3>
+                    <p class="text-sm text-gray-500">Last 6 months revenue</p>
+                </div>
+            </div>
+            <div class="h-80">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">Daily Sales</h3>
+                    <p class="text-sm text-gray-500">Last 30 days revenue</p>
+                </div>
+            </div>
+            <div class="h-80">
+                <canvas id="dailyChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Top Services -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 border-b border-gray-100">
+                <h3 class="text-lg font-bold text-gray-800">Top Earning Services</h3>
+                <p class="text-sm text-gray-500 mt-1">Best performers by total revenue</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                            <th class="px-6 py-3 font-semibold">Service</th>
+                            <th class="px-6 py-3 font-semibold">Bookings</th>
+                            <th class="px-6 py-3 font-semibold">Price</th>
+                            <th class="px-6 py-3 font-semibold">Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for service in top_services %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-medium text-gray-900">{{ service.name }}</td>
+                            <td class="px-6 py-4 text-gray-600">{{ service.booking_count }}</td>
+                            <td class="px-6 py-4 text-gray-600">₹{{ service.price }}</td>
+                            <td class="px-6 py-4 font-bold text-green-600">₹{{ service.revenue|floatformat:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-10 text-center text-gray-500">No service data yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Booking Status -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800 mb-1">Booking Status</h3>
+            <p class="text-sm text-gray-500 mb-4">Overall booking breakdown</p>
+            <div class="h-56 flex justify-center">
+                <canvas id="statusChart"></canvas>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-3 text-center">
+                <div>
+                    <p class="text-xl font-bold text-gray-900">{{ business.completed_count }}</p>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Completed</p>
+                </div>
+                <div>
+                    <p class="text-xl font-bold text-red-600">{{ business.cancellation_rate }}%</p>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Cancel Rate</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Busiest Days -->
     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">Revenue Trend (Last 30 Days)</h3>
-        <div class="h-80">
-            <canvas id="revenueChart"></canvas>
+        <h3 class="text-lg font-bold text-gray-800 mb-1">Busiest Days of the Week</h3>
+        <p class="text-sm text-gray-500 mb-4">Which days bring the most revenue</p>
+        <div class="h-72">
+            <canvas id="weekdayChart"></canvas>
         </div>
-    </div>
-
-    <!-- Booking Status Chart -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">Booking Status Distribution</h3>
-        <div class="h-64 flex justify-center">
-            <canvas id="statusChart"></canvas>
-        </div>
-    </div>
-</div>
-
-<!-- Recent Bookings Table -->
-<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-    <div class="p-6 border-b border-gray-100">
-        <h3 class="text-lg font-bold text-gray-800">Recent Bookings</h3>
-    </div>
-    <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead>
-                <tr class="bg-gray-50 text-gray-500 text-sm uppercase tracking-wider">
-                    <th class="px-6 py-4 font-medium">Customer</th>
-                    <th class="px-6 py-4 font-medium">Service</th>
-                    <th class="px-6 py-4 font-medium">Date & Time</th>
-                    <th class="px-6 py-4 font-medium">Status</th>
-                    <th class="px-6 py-4 font-medium">Amount</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                {% for booking in recent_bookings %}
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4">
-                        <span class="font-medium text-gray-800">{{ booking.customer_phone }}</span>
-                        <span class="text-xs text-gray-400 font-normal ml-1">({{ booking.customer_name }})</span>
-                    </td>
-                    <td class="px-6 py-4 text-gray-600">
-                        {{ booking.service.name }}
-                    </td>
-                    <td class="px-6 py-4 text-gray-600">
-                        {{ booking.date }} at {{ booking.time }}
-                    </td>
-                    <td class="px-6 py-4">
-                        <span class="px-3 py-1 rounded-full text-xs font-medium 
-                            {% if booking.status == 'completed' %}bg-green-100 text-green-700
-                            {% elif booking.status == 'confirmed' %}bg-blue-100 text-blue-700
-                            {% elif booking.status == 'cancelled' %}bg-red-100 text-red-700
-                            {% else %}bg-yellow-100 text-yellow-700{% endif %}">
-                            {{ booking.status|title }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 font-medium text-gray-800">
-                        ₹{{ booking.service.price }}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
-                        No bookings found yet.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
 </div>
 
 <script>
-    // Revenue Line Chart
-    const ctxRevenue = document.getElementById('revenueChart').getContext('2d');
-    new Chart(ctxRevenue, {
-        type: 'line',
+    const chartDefaults = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+    };
+
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'bar',
         data: {
-            labels: {{ trend_labels| safe }},
-        datasets: [{
-            label: 'Revenue',
-            data: {{ trend_data| safe }},
-        borderColor: '#f59e0b', // Amber-500
-        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4
+            labels: {{ monthly_labels|safe }},
+            datasets: [{
+                label: 'Revenue (₹)',
+                data: {{ monthly_revenue|safe }},
+                backgroundColor: 'rgba(245, 158, 11, 0.85)',
+                borderColor: 'rgb(245, 158, 11)',
+                borderWidth: 1,
+                borderRadius: 8,
             }]
         },
         options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false }
-        },
-        scales: {
-            y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
-            x: { grid: { display: false } }
+            ...chartDefaults,
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+                x: { grid: { display: false } }
+            }
         }
-    }
     });
 
-    // Status Pie Chart
-    const ctxStatus = document.getElementById('statusChart').getContext('2d');
-    new Chart(ctxStatus, {
-        type: 'doughnut',
+    new Chart(document.getElementById('dailyChart'), {
+        type: 'line',
         data: {
-            labels: {{ status_labels| safe }},
-        datasets: [{
-            data: {{ status_data| safe }},
-        backgroundColor: [
-            '#10b981', // Green (Completed)
-            '#ef4444', // Red (Cancelled)
-            '#f59e0b', // Amber (Pending)
-            '#3b82f6'  // Blue (Confirmed)
-        ],
-        borderWidth: 0
+            labels: {{ daily_labels|safe }},
+            datasets: [{
+                label: 'Revenue (₹)',
+                data: {{ daily_revenue|safe }},
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 0,
+                pointHoverRadius: 4,
             }]
         },
         options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { position: 'bottom' }
+            ...chartDefaults,
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } }
+            }
         }
-    }
+    });
+
+    new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ status_labels|safe }},
+            datasets: [{
+                data: {{ status_data|safe }},
+                backgroundColor: ['#10b981', '#3b82f6', '#ef4444', '#f59e0b', '#6b7280'],
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }
+        }
+    });
+
+    new Chart(document.getElementById('weekdayChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ busiest_day_labels|safe }},
+            datasets: [{
+                label: 'Revenue (₹)',
+                data: {{ busiest_day_revenue|safe }},
+                backgroundColor: 'rgba(59, 130, 246, 0.75)',
+                borderColor: 'rgb(59, 130, 246)',
+                borderWidth: 1,
+                borderRadius: 8,
+            }]
+        },
+        options: {
+            ...chartDefaults,
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+                x: { grid: { display: false } }
+            }
+        }
     });
 </script>
 {% endblock %}

@@ -10,6 +10,7 @@ from datetime import datetime, time, timedelta
 from .models import Service, Booking, CustomerTrust
 from .forms import GuestDetailsForm
 from . import utils
+from . import slots as slot_utils
 import uuid
 import json
 from django.conf import settings
@@ -74,10 +75,13 @@ class ServiceListView(View):
                 grouped_services[service.category] = []
             grouped_services[service.category].append(service)
 
+        price_increased_services = [s for s in all_services if s.price_increased_at]
+
         return render(request, 'bookings/services.html', {
             'grouped_services': grouped_services,
             'selected_gender': selected_gender,
-            'selected_service_ids': selected_service_ids
+            'selected_service_ids': selected_service_ids,
+            'price_increased_services': price_increased_services,
         })
 
     def post(self, request):
@@ -90,11 +94,14 @@ class ServiceListView(View):
                 if service.category not in grouped_services:
                     grouped_services[service.category] = []
                 grouped_services[service.category].append(service)
+
+            price_increased_services = list(services.filter(price_increased_at__isnull=False))
                 
             return render(request, 'bookings/services.html', {
                 'grouped_services': grouped_services, 
                 'selected_gender': selected_gender,
-                'error': 'Please select at least one service.'
+                'error': 'Please select at least one service.',
+                'price_increased_services': price_increased_services,
             })
         
         # Implement service merging logic (e.g., Haircut + Beard Trim -> Haircut trim)
@@ -164,79 +171,41 @@ class DateTimeSelectionView(View):
                 slots = [] # No slots if blocked
         
         if selected_date and not is_blocked:
-            # Slot generation logic
-            start_hour = 10
-            end_hour = 21
-            
-            # If today, ensuring time slot is after current time
+            start_hour = slot_utils.SHOP_OPEN_HOUR
+            end_hour = slot_utils.SHOP_CLOSE_HOUR
 
-            # Cleanup Stale Bookings (Requirement: block only if pending OTP < 5 mins)
-            cutoff_time = timezone.now() - timedelta(minutes=5)
-            
-            # Delete stale pending bookings to free up slots immediately
-            Booking.objects.filter(
-                status='pending_otp',
-                otp_created_at__lt=cutoff_time
-            ).delete()
+            existing_bookings = list(slot_utils.get_active_bookings(selected_date))
 
-            # Fetch existing bookings
-            # Logic: Confirmed/Completed block slots.
-            # Pending blocks slots (we just deleted stale ones, so all remaining pending are valid blocks)
-            
-            existing_bookings = Booking.objects.filter(
-                date=selected_date
-            ).filter(
-                status__in=['confirmed', 'completed', 'pending_otp']
-            )
-            
-            # Start and End bounds
             start_dt = datetime.combine(selected_date, time(start_hour, 0))
             end_dt = datetime.combine(selected_date, time(end_hour, 0))
-            lunch_start = datetime.combine(selected_date, time(14, 0))
-            lunch_end = datetime.combine(selected_date, time(16, 0))
 
-            # Find available 30-minute slots
             current_dt = start_dt
-            
-            # Round current_dt up to next 30-minute interval if it's today
             
             while current_dt < end_dt:
                 requested_start = current_dt
                 requested_end = current_dt + timedelta(minutes=total_duration)
                 
-                # Check 1: Exceeds closing time
                 if requested_end > end_dt:
                     break
-                
-                # Check 2: Overlaps Barber Lunch (14:00 to 16:00)
-                # Overlap condition: max(start1, start2) < min(end1, end2)
-                if max(requested_start, lunch_start) < min(requested_end, lunch_end):
-                    current_dt += timedelta(minutes=30)
-                    continue
 
-                # NEW Time check logic
                 is_restricted = False
                 if selected_date == now_date:
                     aware_req_start = timezone.make_aware(requested_start)
                     if aware_req_start < now:
-                        current_dt += timedelta(minutes=30)
+                        current_dt += timedelta(minutes=slot_utils.SLOT_INTERVAL_MINUTES)
                         continue
                     elif aware_req_start <= now + timedelta(minutes=30):
                         is_restricted = True
 
-                # Check 3: Overlaps existing bookings
-                is_valid = True
-                for booking in existing_bookings:
-                    ex_start = datetime.combine(selected_date, booking.time)
-                    ex_end = datetime.combine(selected_date, booking.end_time) if booking.end_time else ex_start + timedelta(hours=1)
-                    if max(requested_start, ex_start) < min(requested_end, ex_end):
-                        is_valid = False
-                        break
-                
-                if is_valid:
+                if slot_utils.is_interval_free(
+                    selected_date,
+                    requested_start,
+                    requested_end,
+                    bookings=existing_bookings,
+                ):
                     slots.append({'time': current_dt.time(), 'is_restricted': is_restricted})
                 
-                current_dt += timedelta(minutes=30)
+                current_dt += timedelta(minutes=slot_utils.SLOT_INTERVAL_MINUTES)
 
         return render(request, 'bookings/calendar.html', {
             'slots': slots,
@@ -282,33 +251,17 @@ class DateTimeSelectionView(View):
         # Concurrency safety: Re-verify overlap exactly like GET
         requested_start = datetime.combine(selected_date, selected_time)
         requested_end = requested_start + timedelta(minutes=total_duration)
-        
-        # Validate 30-minute advance booking
         now = timezone.localtime(timezone.now())
+        
         if selected_date == now.date():
             aware_req_start = timezone.make_aware(requested_start)
             if aware_req_start <= now + timedelta(minutes=30):
                 messages.error(request, 'Appointments must be booked at least 30 minutes in advance.')
                 return redirect('date_time_selection')
-        
-        lunch_start = datetime.combine(selected_date, time(14, 0))
-        lunch_end = datetime.combine(selected_date, time(16, 0))
-        
-        if max(requested_start, lunch_start) < min(requested_end, lunch_end):
-             # Overlaps lunch
-             return redirect('date_time_selection')
-             
-        existing_bookings = Booking.objects.filter(
-            date=selected_date,
-            status__in=['confirmed', 'completed', 'pending_otp']
-        )
-        
-        for booking in existing_bookings:
-            ex_start = datetime.combine(selected_date, booking.time)
-            ex_end = datetime.combine(selected_date, booking.end_time) if booking.end_time else ex_start + timedelta(hours=1)
-            if max(requested_start, ex_start) < min(requested_end, ex_end):
-                # Overlaps existing booking, race condition hit
-                return redirect('date_time_selection')
+
+        if not slot_utils.is_interval_free(selected_date, requested_start, requested_end):
+            messages.error(request, 'The selected time slot is no longer available. Please choose another time.')
+            return redirect('date_time_selection')
         
         # It's valid. Save in session.
         request.session['selected_date'] = date_str
@@ -406,22 +359,8 @@ class BookingConfirmationView(View):
             requested_start_dt = datetime.combine(booking_date_obj, booking_time_obj)
             requested_end_dt = requested_start_dt + timedelta(minutes=total_duration_for_all_services)
 
-            lunch_start = datetime.combine(booking_date_obj, time(14, 0))
-            lunch_end = datetime.combine(booking_date_obj, time(16, 0))
-
-            if max(requested_start_dt, lunch_start) < min(requested_end_dt, lunch_end):
-                return render(request, 'bookings/error.html', {'message': 'The selected time slot now overlaps with the barber\'s lunch break. Please choose another time.'})
-
-            existing_bookings_for_date = Booking.objects.filter(
-                date=booking_date_obj,
-                status__in=['confirmed', 'completed', 'pending_otp']
-            )
-
-            for existing_booking in existing_bookings_for_date:
-                ex_start = datetime.combine(booking_date_obj, existing_booking.time)
-                ex_end = datetime.combine(booking_date_obj, existing_booking.end_time) if existing_booking.end_time else ex_start + timedelta(hours=1) # Fallback if end_time is null
-                if max(requested_start_dt, ex_start) < min(requested_end_dt, ex_end):
-                    return render(request, 'bookings/error.html', {'message': 'The selected time slot was just booked by another user. Please try again.'})
+            if not slot_utils.is_interval_free(booking_date_obj, requested_start_dt, requested_end_dt):
+                return render(request, 'bookings/error.html', {'message': 'The selected time slot is no longer available. Please choose another time.'})
 
             try:
                 with transaction.atomic():

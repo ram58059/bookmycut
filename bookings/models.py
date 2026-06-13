@@ -10,8 +10,19 @@ class Service(models.Model):
     description = models.TextField(blank=True)
     category = models.CharField(max_length=100, default='General')
     gender = models.CharField(max_length=10, choices=[('Boy', 'Boy'), ('Girl', 'Girl')], default='Boy')
+    price_increased_at = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
+        if self.pk:
+            try:
+                old = Service.objects.get(pk=self.pk)
+                if self.price > old.price:
+                    self.price_increased_at = timezone.now()
+                elif self.price <= old.price:
+                    self.price_increased_at = None
+            except Service.DoesNotExist:
+                pass
+
         if not self.image:
             name_lower = self.name.lower()
             target_category = self.category
@@ -139,3 +150,18 @@ class BlockedDay(models.Model):
 
     def __str__(self):
         return f"Blocked: {self.date}"
+
+class BlockedSlot(models.Model):
+    date = models.DateField()
+    time = models.TimeField()
+    reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['date', 'time'], name='unique_blocked_slot'),
+        ]
+        ordering = ['date', 'time']
+
+    def __str__(self):
+        return f"Blocked: {self.date} @ {self.time}"

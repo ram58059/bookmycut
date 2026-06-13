@@ -1,92 +1,192 @@
 {% extends 'dashboard/base.html' %}
 
-{% block header %}Customer Insights{% endblock %}
-{% block subheader %}Know your guests and their loyalty{% endblock %}
+{% block header %}Customers{% endblock %}
+{% block subheader %}Browse all guests, filter by name or phone, and review visit patterns{% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-    <!-- Loyalty Chart -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 lg:col-span-1">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">Customer Types</h3>
-        <div class="h-64 flex justify-center">
-            <canvas id="loyaltyChart"></canvas>
+<div class="space-y-6">
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+            <p class="text-sm text-gray-500 font-medium">Total Customers</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{ total_customers }}</p>
         </div>
-        <div class="mt-6 flex justify-center gap-8 text-center">
-            <div>
-                <p class="text-2xl font-bold text-gray-800">{{ insights.new }}</p>
-                <p class="text-sm text-gray-500">New</p>
-            </div>
-            <div>
-                <p class="text-2xl font-bold text-gray-800">{{ insights.returning }}</p>
-                <p class="text-sm text-gray-500">Returning</p>
-            </div>
+        <div class="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+            <p class="text-sm text-gray-500 font-medium">Returning Customers</p>
+            <p class="text-3xl font-bold text-amber-600 mt-1">{{ summary.returning }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+            <p class="text-sm text-gray-500 font-medium">First-Time Customers</p>
+            <p class="text-3xl font-bold text-blue-600 mt-1">{{ summary.new }}</p>
         </div>
     </div>
 
-    <!-- Top Customers Table -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden lg:col-span-2">
-        <div class="p-6 border-b border-gray-100">
-            <h3 class="text-lg font-bold text-gray-800">Most Frequent Guests</h3>
+    <!-- Customer List -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+                <h3 class="text-lg font-bold text-gray-800">All Customers</h3>
+                <p class="text-sm text-gray-500 mt-1">
+                    Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ total_customers }}
+                </p>
+            </div>
+
+            <form method="get" class="flex flex-col sm:flex-row gap-3">
+                <input type="hidden" name="sort" value="{{ current_sort }}">
+                <input type="hidden" name="direction" value="{{ current_direction }}">
+                <input type="text" name="q" value="{{ query }}" placeholder="Search by name or phone..."
+                    class="w-full sm:w-72 px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <div class="flex gap-2">
+                    <button type="submit"
+                        class="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-search mr-1"></i> Search
+                    </button>
+                    {% if query %}
+                    <a href="?sort={{ current_sort }}&direction={{ current_direction }}"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                        Clear
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
         </div>
+
         <div class="overflow-x-auto">
             <table class="w-full text-left">
                 <thead>
-                    <tr class="bg-gray-50 text-gray-500 text-sm uppercase tracking-wider">
-                        <th class="px-6 py-4 font-medium">Phone Number</th>
-                        <th class="px-6 py-4 font-medium">Total Visits</th>
-                        <th class="px-6 py-4 font-medium">Status</th>
+                    <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                        <th class="px-6 py-4 font-semibold">
+                            <a href="?q={{ query|urlencode }}&sort=name&direction={% if current_sort == 'name' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                                class="inline-flex items-center gap-1 hover:text-gray-800">
+                                Customer
+                                {% if current_sort == 'name' %}
+                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="px-6 py-4 font-semibold">
+                            <a href="?q={{ query|urlencode }}&sort=phone&direction={% if current_sort == 'phone' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                                class="inline-flex items-center gap-1 hover:text-gray-800">
+                                Phone
+                                {% if current_sort == 'phone' %}
+                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="px-6 py-4 font-semibold">
+                            <a href="?q={{ query|urlencode }}&sort=visits&direction={% if current_sort == 'visits' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                                class="inline-flex items-center gap-1 hover:text-gray-800">
+                                Visits
+                                {% if current_sort == 'visits' %}
+                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="px-6 py-4 font-semibold">Visit Frequency</th>
+                        <th class="px-6 py-4 font-semibold">
+                            <a href="?q={{ query|urlencode }}&sort=last_visit&direction={% if current_sort == 'last_visit' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                                class="inline-flex items-center gap-1 hover:text-gray-800">
+                                Last Visit
+                                {% if current_sort == 'last_visit' %}
+                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="px-6 py-4 font-semibold">
+                            <a href="?q={{ query|urlencode }}&sort=spent&direction={% if current_sort == 'spent' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                                class="inline-flex items-center gap-1 hover:text-gray-800">
+                                Total Spent
+                                {% if current_sort == 'spent' %}
+                                <i class="fas fa-sort-{% if current_direction == 'asc' %}up{% else %}down{% endif %}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="px-6 py-4 font-semibold">Status</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    {% for customer in insights.top_customers %}
+                    {% for customer in customers %}
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4">
-                            <span class="font-medium text-gray-800">{{ customer.customer_phone }}</span>
-                            <span class="text-xs text-gray-400 font-normal ml-1">({{ customer.customer_name }})</span>
+                            <p class="font-semibold text-gray-900">{{ customer.customer_name|default:"Unknown" }}</p>
+                            <p class="text-xs text-gray-400 mt-0.5">
+                                First visit {{ customer.first_visit|date:"d M Y" }}
+                            </p>
                         </td>
-                        <td class="px-6 py-4 font-bold text-amber-600">
-                            {{ customer.visits }}
+                        <td class="px-6 py-4 text-gray-700 font-medium">{{ customer.customer_phone }}</td>
+                        <td class="px-6 py-4">
+                            <p class="font-bold text-gray-900">{{ customer.total_visits }}</p>
+                            <p class="text-xs text-gray-500 mt-0.5">
+                                {{ customer.completed_visits }} completed
+                                {% if customer.cancelled_visits %} · {{ customer.cancelled_visits }} cancelled{% endif %}
+                            </p>
                         </td>
                         <td class="px-6 py-4">
-                            {% if customer.visits >= 5 %}
-                            <span
-                                class="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold">VIP</span>
-                            {% elif customer.visits >= 2 %}
-                            <span
-                                class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">Regular</span>
+                            <p class="text-sm font-medium text-gray-800">{{ customer.visit_frequency }}</p>
+                        </td>
+                        <td class="px-6 py-4 text-gray-700">{{ customer.last_visit|date:"d M Y" }}</td>
+                        <td class="px-6 py-4 font-bold text-green-600">₹{{ customer.total_spent|floatformat:0 }}</td>
+                        <td class="px-6 py-4">
+                            {% if customer.loyalty_label == 'VIP' %}
+                            <span class="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold">VIP</span>
+                            {% elif customer.loyalty_label == 'Regular' %}
+                            <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">Regular</span>
                             {% else %}
-                            <span
-                                class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">New</span>
+                            <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">New</span>
                             {% endif %}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="3" class="px-6 py-12 text-center text-gray-500">No customer data yet.</td>
+                        <td colspan="7" class="px-6 py-16 text-center text-gray-500">
+                            {% if query %}
+                            No customers found matching "{{ query }}".
+                            {% else %}
+                            No customer data yet.
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p class="text-sm text-gray-500">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </p>
+            <div class="flex flex-wrap gap-2">
+                {% if page_obj.has_previous %}
+                <a href="?q={{ query|urlencode }}&sort={{ current_sort }}&direction={{ current_direction }}&page={{ page_obj.previous_page_number }}"
+                    class="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Previous
+                </a>
+                {% endif %}
+
+                {% for page_num in page_obj.paginator.page_range %}
+                    {% if page_num == page_obj.number %}
+                    <span class="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium">{{ page_num }}</span>
+                    {% elif page_num == 1 or page_num == page_obj.paginator.num_pages or page_num >= page_obj.number|add:"-2" and page_num <= page_obj.number|add:"2" %}
+                    <a href="?q={{ query|urlencode }}&sort={{ current_sort }}&direction={{ current_direction }}&page={{ page_num }}"
+                        class="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        {{ page_num }}
+                    </a>
+                    {% elif page_num == page_obj.number|add:"-3" or page_num == page_obj.number|add:"3" %}
+                    <span class="px-2 py-2 text-gray-400">...</span>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <a href="?q={{ query|urlencode }}&sort={{ current_sort }}&direction={{ current_direction }}&page={{ page_obj.next_page_number }}"
+                    class="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Next
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
-
-<script>
-    new Chart(document.getElementById('loyaltyChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['New Customers', 'Returning Customers'],
-            datasets: [{
-                data: [{{ insights.new }}, {{ insights.returning }}],
-        backgroundColor: ['#3b82f6', '#f59e0b'], // Blue, Amber
-        borderWidth: 0
-    }]
-        },
-        options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } }
-    }
-    });
-</script>
 {% endblock %}
