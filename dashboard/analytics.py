@@ -1,15 +1,28 @@
 from django.db import models
-from django.db.models import Sum, Count, Avg, F, Q
-from django.db.models.functions import TruncDay, TruncHour, TruncMonth, ExtractWeekDay, ExtractHour
+from django.db.models import Sum, Count, Q
+from django.db.models.functions import TruncDay, TruncMonth, ExtractWeekDay
 from django.utils import timezone
 from datetime import timedelta, date
 from bookings.models import Booking, Service
 
+# Bookings that count toward revenue/sales. Excludes no_show, cancelled, and pending.
 REVENUE_STATUSES = ['completed', 'confirmed']
 
 
 def _revenue_bookings():
     return Booking.objects.filter(status__in=REVENUE_STATUSES)
+
+
+def get_upcoming_bookings():
+    now = timezone.localtime(timezone.now())
+    today = now.date()
+    now_time = now.time()
+    return (
+        Booking.objects.filter(status__in=['confirmed', 'pending_otp'])
+        .filter(Q(date__gt=today) | Q(date=today, time__gt=now_time))
+        .select_related('service')
+        .order_by('date', 'time')
+    )
 
 
 def _period_bounds(start_date, end_date):
@@ -82,6 +95,10 @@ def get_business_overview():
         .count()
     )
 
+    month_bookings_qs = Booking.objects.filter(date__gte=month_start, date__lte=today)
+    month_cancelled_count = month_bookings_qs.filter(status='cancelled').count()
+    month_no_show_count = month_bookings_qs.filter(status='no_show').count()
+
     return {
         'today': today,
         'today_revenue': today_stats['revenue'],
@@ -104,6 +121,8 @@ def get_business_overview():
         'cancelled_count': cancelled_count,
         'completed_count': completed_count,
         'new_customers_this_month': new_customers_this_month,
+        'month_cancelled_count': month_cancelled_count,
+        'month_no_show_count': month_no_show_count,
     }
 
 
@@ -204,95 +223,8 @@ def get_busiest_days():
     return stats
 
 
-def get_top_services(limit=5):
-    return (
-        Service.objects.annotate(
-            booking_count=Count(
-                'bookings',
-                filter=Q(bookings__status__in=REVENUE_STATUSES),
-            ),
-        )
-        .annotate(revenue=F('price') * F('booking_count'))
-        .filter(booking_count__gt=0)
-        .order_by('-revenue')[:limit]
-    )
-
-def get_kpis():
-    # Calculate date ranges
-    today = timezone.now().date()
-    yesterday = today - timedelta(days=1)
-    date_7_days_ago = today - timedelta(days=7)
-    date_30_days_ago = today - timedelta(days=30)
-    
-    # Base QuerySets
-    total_qs = Booking.objects.all()
-    completed_qs = total_qs.filter(status='completed')
-    
-    # Aggregates
-    aggs = total_qs.aggregate(
-        total_bookings=Count('id'),
-        completed_count=Count('id', filter=Q(status='completed')),
-        cancelled_count=Count('id', filter=Q(status='cancelled')),
-        pending_count=Count('id', filter=Q(status='pending_otp')),
-        total_revenue=Sum('service__price', filter=Q(status='completed')),
-        avg_value=Avg('service__price', filter=Q(status='completed')),
-    )
-    
-    # Recent (Last 30 days)
-    recent_qs = total_qs.filter(date__gte=date_30_days_ago)
-    recent_aggs = recent_qs.aggregate(
-         recent_revenue=Sum('service__price', filter=Q(status='completed')),
-         recent_bookings=Count('id')
-    )
-    
-    # Customer stats
-    total_customers = total_qs.values('customer_phone').distinct().count() or 1
-    
-    # Calculate Rates
-    total = aggs['total_bookings'] or 1
-    cancelled = aggs['cancelled_count'] or 0
-    cancellation_rate = (cancelled / total) * 100
-    
-    return {
-        'total_bookings': aggs['total_bookings'] or 0,
-        'completed': aggs['completed_count'] or 0,
-        'cancelled': aggs['cancelled_count'] or 0,
-        'pending': aggs['pending_count'] or 0,
-        'revenue': aggs['total_revenue'] or 0,
-        'avg_booking_value': aggs['avg_value'] or 0,
-        'total_customers': total_customers,
-        'cancellation_rate': round(cancellation_rate, 1),
-        'recent_revenue': recent_aggs['recent_revenue'] or 0,
-    }
-
-def get_revenue_trend(days=30):
-    start_date = timezone.now().date() - timedelta(days=days)
-    trend = Booking.objects.filter(
-        status__in=['completed', 'confirmed'],
-        date__gte=start_date
-    ).annotate(
-        day=TruncDay('date')
-    ).values('day').annotate(
-        daily_revenue=Sum('service__price'),
-        daily_count=Count('id')
-    ).order_by('day')
-    
-    # Fill missing days logic would go here if strict chart continuity is needed
-    return list(trend)
-
-def get_booking_status_distribution():
-    dist = Booking.objects.values('status').annotate(count=Count('id'))
-    return list(dist)
-
 def get_service_performance():
-    # Performance of top services
-    # Revenue = price * completed bookings (since price is on Service model)
-    return Service.objects.annotate(
-        booking_count=Count('bookings'),
-        completed_count=Count('bookings', filter=Q(bookings__status__in=['completed', 'confirmed']))
-    ).annotate(
-        revenue=F('price') * F('completed_count')
-    ).order_by('-booking_count')
+    return Service.objects.all()
 
 
 def get_customer_insights():
@@ -320,15 +252,17 @@ def get_customer_insights():
     }
 
 
-def get_visit_frequency_label(total_visits, first_visit, last_visit):
-    if not total_visits or total_visits <= 1 or not first_visit or not last_visit:
+def get_visit_frequency_label(completed_visits, first_completed, last_completed):
+    if not completed_visits:
+        return 'No visits yet'
+    if completed_visits <= 1 or not first_completed or not last_completed:
         return 'First visit only'
 
-    days_span = (last_visit - first_visit).days
+    days_span = (last_completed - first_completed).days
     if days_span == 0:
-        return f'{total_visits} visits on the same day'
+        return f'{completed_visits} visits on the same day'
 
-    avg_days = days_span / (total_visits - 1)
+    avg_days = days_span / (completed_visits - 1)
     if avg_days < 7:
         return f'Every ~{max(1, round(avg_days))} days'
     if avg_days < 30:
@@ -338,12 +272,47 @@ def get_visit_frequency_label(total_visits, first_visit, last_visit):
     return f'About every {months} month{"s" if months > 1 else ""}'
 
 
-def get_customer_loyalty_label(total_visits):
-    if total_visits >= 5:
+def get_customer_loyalty_label(completed_visits):
+    if completed_visits >= 5:
         return 'VIP'
-    if total_visits >= 2:
+    if completed_visits >= 2:
         return 'Regular'
     return 'New'
+
+
+def _booking_status_filters(now=None):
+    """Classify bookings for customer analytics.
+
+    A past booking counts as a visit unless it was cancelled or marked no visit.
+    Future active bookings count as upcoming. The barber does not mark bookings completed.
+    """
+    now = now or timezone.localtime(timezone.now())
+    today = now.date()
+    now_time = now.time()
+    future_filter = Q(date__gt=today) | Q(date=today, time__gt=now_time)
+    past_filter = Q(date__lt=today) | Q(date=today, time__lte=now_time)
+    active_filter = ~Q(status__in=['cancelled', 'no_show'])
+    upcoming_filter = active_filter & future_filter
+    visit_filter = active_filter & past_filter
+    return upcoming_filter, visit_filter
+
+
+def _build_booking_summary(customer):
+    total = customer.get('total_visits') or 0
+    visits = customer.get('completed_visits') or 0
+    cancelled = customer.get('cancelled_visits') or 0
+    no_show = customer.get('no_show_visits') or 0
+    upcoming = customer.get('upcoming_bookings') or 0
+
+    parts = [f'{visits} visit{"s" if visits != 1 else ""}']
+    if cancelled:
+        parts.append(f'{cancelled} cancelled')
+    if no_show:
+        parts.append(f'{no_show} no visit')
+    if upcoming:
+        parts.append(f'{upcoming} upcoming')
+
+    return f'{total} bookings · ' + ' · '.join(parts)
 
 
 def get_customers(query=None, sort='last_visit', direction='desc'):
@@ -354,25 +323,29 @@ def get_customers(query=None, sort='last_visit', direction='desc'):
             Q(customer_name__icontains=query)
         )
 
+    upcoming_filter, visit_filter = _booking_status_filters()
+
     customers = bookings.values('customer_phone').annotate(
         customer_name=models.Max('customer_name'),
         total_visits=Count('id'),
-        completed_visits=Count('id', filter=Q(status='completed')),
+        completed_visits=Count('id', filter=visit_filter),
         cancelled_visits=Count('id', filter=Q(status='cancelled')),
         no_show_visits=Count('id', filter=Q(status='no_show')),
-        total_spent=Sum('service__price', filter=Q(status='completed')),
-        first_visit=models.Min('date'),
-        last_visit=models.Max('date'),
+        upcoming_bookings=Count('id', filter=upcoming_filter),
+        total_spent=Sum('service__price', filter=visit_filter),
+        first_booking=models.Min('date'),
+        first_completed=models.Min('date', filter=visit_filter),
+        last_visit=models.Max('date', filter=visit_filter),
     )
 
     valid_sort_fields = {
         'name': 'customer_name',
         'phone': 'customer_phone',
-        'visits': 'total_visits',
+        'visits': 'completed_visits',
         'completed': 'completed_visits',
         'spent': 'total_spent',
         'last_visit': 'last_visit',
-        'first_visit': 'first_visit',
+        'first_visit': 'first_booking',
     }
 
     if sort not in valid_sort_fields:
@@ -386,97 +359,19 @@ def get_customers(query=None, sort='last_visit', direction='desc'):
 
 
 def enrich_customer_row(customer):
-    total_visits = customer.get('total_visits') or 0
-    cancelled_visits = customer.get('cancelled_visits') or 0
-    no_show_visits = customer.get('no_show_visits') or 0
-    active_visits = max(total_visits - cancelled_visits - no_show_visits, 0)
+    completed_visits = customer.get('completed_visits') or 0
+    last_visit = customer.get('last_visit')
 
     return {
         **customer,
         'total_spent': customer.get('total_spent') or 0,
-        'active_visits': active_visits,
-        'loyalty_label': get_customer_loyalty_label(active_visits),
+        'booking_summary': _build_booking_summary(customer),
+        'last_visit_display': last_visit.strftime('%d %b %Y') if last_visit else 'No previous visits',
+        'loyalty_label': get_customer_loyalty_label(completed_visits),
         'visit_frequency': get_visit_frequency_label(
-            active_visits,
-            customer.get('first_visit'),
-            customer.get('last_visit'),
+            completed_visits,
+            customer.get('first_completed'),
+            last_visit,
         ),
     }
 
-def get_cancellation_analytics():
-    # Cancellation Rate
-    total = Booking.objects.count() or 1
-    cancelled = Booking.objects.filter(status='cancelled').count()
-    rate = (cancelled / total) * 100
-    
-    # By Service
-    service_cancellations = Service.objects.filter(bookings__status='cancelled').annotate(
-        cancelled_count=Count('bookings')
-    ).order_by('-cancelled_count')[:5]
-    
-    # By Time of Day (Hourly)
-    hourly_cancellations = Booking.objects.filter(status='cancelled').annotate(
-        hour=ExtractHour('time')
-    ).values('hour').annotate(
-        count=Count('id')
-    ).order_by('hour')
-    
-    # No-shows (Currently we track 'cancelled', assuming no-show is a subset or same status)
-    # If no-show was a separate status, we'd filter for that. 
-    # For now, let's assume 'cancelled' covers both or just cancellations.
-    
-    return {
-        'rate': round(rate, 1),
-        'total_cancelled': cancelled,
-        'service_breakdown': service_cancellations,
-        'hourly_breakdown': list(hourly_cancellations)
-    }
-
-def generate_smart_insights():
-    insights = []
-    business = get_business_overview()
-
-    if business['month_revenue_change'] > 10:
-        insights.append({
-            'text': f"Strong month! Sales are up {business['month_revenue_change']}% compared to last month.",
-            'type': 'success',
-            'icon': 'fa-arrow-trend-up',
-        })
-    elif business['month_revenue_change'] < -10:
-        insights.append({
-            'text': f"Sales are down {abs(business['month_revenue_change'])}% vs last month. Consider promotions on slower days.",
-            'type': 'warning',
-            'icon': 'fa-arrow-trend-down',
-        })
-
-    if business['confirmed_upcoming'] > 0:
-        insights.append({
-            'text': f"You have {business['confirmed_upcoming']} upcoming confirmed booking{'s' if business['confirmed_upcoming'] != 1 else ''} on the schedule.",
-            'type': 'info',
-            'icon': 'fa-calendar-check',
-        })
-
-    cust_insights = get_customer_insights()
-    if cust_insights['returning'] > cust_insights['new']:
-         insights.append({
-            'text': f"Strong loyalty: {cust_insights['returning']} returning customers vs {cust_insights['new']} first-time guests.",
-            'type': 'info',
-            'icon': 'fa-heart'
-        })
-    
-    cancellation = get_cancellation_analytics()
-    if cancellation['rate'] > 20:
-        insights.append({
-            'text': f"Cancellation rate is {cancellation['rate']}%. Reminders before appointments can help reduce no-shows.",
-            'type': 'warning',
-            'icon': 'fa-exclamation-triangle'
-        })
-        
-    if not insights:
-        insights.append({
-            'text': "Tip: Send reminders 2 hours before appointments to reduce no-shows.",
-            'type': 'tip',
-            'icon': 'fa-lightbulb'
-        })
-    
-    return insights

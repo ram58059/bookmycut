@@ -18,26 +18,22 @@
     <div class="container">
         <h2 class="section-title">Our Services</h2>
         <div class="services-grid">
-            <!-- Service 1 -->
-            <a href="{% url 'quick_book' %}?service_id=214" class="service-card block no-underline">
-                <h3 class="service-name">Haircut</h3>
-                <p class="service-price">₹250.00</p>
-                <p class="service-desc">Professional and tailored haircut to get you looking your absolute best.</p>
+            {% for card in service_cards %}
+            {% if card.linked_service_id %}
+            <a href="{% url 'quick_book' %}?service_id={{ card.linked_service_id }}" class="service-card block no-underline">
+            {% else %}
+            <a href="{% url 'gender_selection' %}" class="service-card block no-underline">
+            {% endif %}
+                <h3 class="service-name">{{ card.title }}</h3>
+                <p class="service-price">₹{{ card.price }}</p>
+                <p class="service-desc">{{ card.description }}</p>
             </a>
-            <!-- Service 2 -->
-            <a href="{% url 'quick_book' %}?service_id=207" class="service-card block no-underline">
-                <h3 class="service-name">Haircut + Trim/Shave + De-Tan</h3>
-                <p class="service-price">₹599.00</p>
-                <p class="service-desc">Complete grooming combo including haircut, beard styling, and revitalizing
-                    de-tan.</p>
+            {% empty %}
+            <a href="{% url 'gender_selection' %}" class="service-card block no-underline">
+                <h3 class="service-name">Book an Appointment</h3>
+                <p class="service-desc">Browse our full service menu and schedule your visit.</p>
             </a>
-            <!-- Service 3 -->
-            <a href="{% url 'quick_book' %}?service_id=183" class="service-card block no-underline">
-                <h3 class="service-name">Clean-up (Fruit Facial) + De-Tan</h3>
-                <p class="service-price">₹899.00</p>
-                <p class="service-desc">Deep cleansing fruit facial combined with tan removal for glowing, refreshed
-                    skin.</p>
-            </a>
+            {% endfor %}
         </div>
     </div>
 </section>

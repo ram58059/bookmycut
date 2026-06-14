@@ -41,16 +41,18 @@ def dashboard_login(request):
 
 @user_passes_test(is_barber_or_admin, login_url='dashboard_login')
 def overview(request):
+    if request.method == 'POST' and request.POST.get('action') == 'cancel_booking_admin':
+        booking = get_object_or_404(Booking, id=request.POST.get('booking_id'))
+        booking.status = 'cancelled'
+        booking.save()
+        messages.success(request, f"Booking for {booking.customer_phone} cancelled.")
+        return redirect('dashboard_overview')
+
     business = analytics.get_business_overview()
     monthly_trend = analytics.get_monthly_revenue_trend(months=6)
     daily_trend = analytics.get_daily_revenue_trend(days=30)
     busiest_days = analytics.get_busiest_days()
-    top_services = analytics.get_top_services(limit=5)
-    smart_insights = analytics.generate_smart_insights()
-
-    status_distribution = analytics.get_booking_status_distribution()
-    status_labels = [item['status'].replace('_', ' ').title() for item in status_distribution]
-    status_data = [item['count'] for item in status_distribution]
+    upcoming_bookings = analytics.get_upcoming_bookings()
 
     from .models import ShopSetting
     shop_settings = ShopSetting.load()
@@ -58,62 +60,77 @@ def overview(request):
     context = {
         'page_title': 'Overview',
         'business': business,
-        'smart_insights': smart_insights,
-        'top_services': top_services,
+        'upcoming_bookings': upcoming_bookings,
         'busiest_days': busiest_days,
         'monthly_labels': json.dumps([item['label'] for item in monthly_trend]),
         'monthly_revenue': json.dumps([float(item['revenue']) for item in monthly_trend]),
-        'monthly_bookings': json.dumps([item['bookings'] for item in monthly_trend]),
         'daily_labels': json.dumps([item['label'] for item in daily_trend]),
         'daily_revenue': json.dumps([float(item['revenue']) for item in daily_trend]),
-        'daily_bookings': json.dumps([item['bookings'] for item in daily_trend]),
         'busiest_day_labels': json.dumps([item['day'] for item in busiest_days]),
         'busiest_day_revenue': json.dumps([float(item['revenue']) for item in busiest_days]),
-        'status_labels': json.dumps(status_labels),
-        'status_data': json.dumps(status_data),
         'otp_enabled': shop_settings.is_otp_enabled,
+        'business_phone': shop_settings.business_phone,
     }
     return render(request, 'dashboard/overview.html', context)
 
 @user_passes_test(is_barber_or_admin, login_url='dashboard_login')
 def service_performance(request):
+    from core.models import HomepageServiceCard
+    from decimal import Decimal, InvalidOperation
+
+    if request.method == 'POST' and request.POST.get('action') == 'update_homepage_cards':
+        errors = []
+        for card in HomepageServiceCard.objects.all():
+            card.title = request.POST.get(f'card_{card.id}_title', card.title).strip()
+            card.description = request.POST.get(f'card_{card.id}_description', card.description).strip()
+            price_str = request.POST.get(f'card_{card.id}_price', str(card.price)).strip()
+            try:
+                card.price = Decimal(price_str)
+            except InvalidOperation:
+                errors.append(f'Invalid price for "{card.title}".')
+                continue
+            service_id = request.POST.get(f'card_{card.id}_service', '').strip()
+            card.linked_service_id = int(service_id) if service_id else None
+            card.save()
+        if errors:
+            for err in errors:
+                messages.error(request, err)
+        else:
+            messages.success(request, 'Homepage service cards updated.')
+        return redirect('dashboard_services')
+
     services = analytics.get_service_performance()
-    
-    # Handle Search
+
     query = request.GET.get('q')
     if query:
         services = services.filter(
-            Q(name__icontains=query) | 
+            Q(name__icontains=query) |
             Q(category__icontains=query)
         )
-    
-    # Sorting Logic
-    sort_by = request.GET.get('sort', 'booking_count') # Default sort
-    direction = request.GET.get('direction', 'desc')
-    
-    # Validate sort field to prevent injection/errors
+
+    sort_by = request.GET.get('sort', 'name')
+    direction = request.GET.get('direction', 'asc')
+
     valid_sort_fields = {
-        'name': 'name', 
-        'category': 'category', 
-        'price': 'price', 
-        'bookings': 'booking_count', 
-        'revenue': 'revenue'
+        'name': 'name',
+        'category': 'category',
+        'price': 'price',
     }
-    
+
     if sort_by not in valid_sort_fields:
-        sort_by = 'bookings' # Fallback
-        
-    db_sort_field = valid_sort_fields.get(sort_by)
-    
+        sort_by = 'name'
+
+    db_sort_field = valid_sort_fields[sort_by]
     if direction == 'desc':
         db_sort_field = f'-{db_sort_field}'
-        
-    # Apply sorting
+
     services = services.order_by(db_sort_field)
-    
+
     context = {
         'page_title': 'Services',
         'services': services,
+        'homepage_cards': HomepageServiceCard.objects.all(),
+        'all_services': Service.objects.order_by('name'),
         'current_sort': sort_by,
         'current_direction': direction,
         'query': query,
@@ -124,6 +141,38 @@ def service_performance(request):
 @user_passes_test(is_barber_or_admin, login_url='dashboard_login')
 def customer_insights(request):
     from django.core.paginator import Paginator
+    from bookings.models import CustomerTrust
+
+    if request.method == 'POST' and request.POST.get('action') == 'delete_customer':
+        phone = request.POST.get('customer_phone', '').strip()
+        query = request.POST.get('q', '').strip()
+        sort = request.POST.get('sort', 'last_visit')
+        direction = request.POST.get('direction', 'desc')
+        page_number = request.POST.get('page', 1)
+
+        if phone:
+            deleted_count, _ = Booking.objects.filter(customer_phone=phone).delete()
+            CustomerTrust.objects.filter(phone_number=phone).delete()
+            if deleted_count:
+                messages.success(request, f'Customer {phone} and their booking history were deleted.')
+            else:
+                messages.warning(request, f'No records found for {phone}.')
+        else:
+            messages.error(request, 'Customer phone is required.')
+
+        redirect_url = reverse('dashboard_customers')
+        params = []
+        if query:
+            params.append(f'q={query}')
+        if sort:
+            params.append(f'sort={sort}')
+        if direction:
+            params.append(f'direction={direction}')
+        if page_number and str(page_number) != '1':
+            params.append(f'page={page_number}')
+        if params:
+            redirect_url = f'{redirect_url}?{"&".join(params)}'
+        return redirect(redirect_url)
 
     query = request.GET.get('q', '').strip()
     sort = request.GET.get('sort', 'last_visit')
@@ -288,10 +337,6 @@ def manage_bookings(request):
     now_dt = timezone.localtime(timezone.now())
     no_visit_cutoff = today - timedelta(days=7)
 
-    future_bookings = Booking.objects.filter(
-        date__gte=today
-    ).order_by('date', 'time').select_related('service')
-
     past_confirmed_qs = Booking.objects.filter(
         status='confirmed',
         date__gte=no_visit_cutoff,
@@ -318,7 +363,6 @@ def manage_bookings(request):
     
     context = {
         'page_title': 'Manage Bookings',
-        'future_bookings': future_bookings,
         'past_confirmed_page': past_confirmed_page,
         'blocked_days': blocked_days,
         'blocked_slots': blocked_slots,
@@ -507,6 +551,21 @@ def orders_dashboard(request):
         'today': today,
     }
     return render(request, 'dashboard/orders.html', context)
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def update_business_phone(request):
+    if request.method == 'POST':
+        from .models import ShopSetting
+        shop = ShopSetting.load()
+        phone = request.POST.get('business_phone', '').strip()
+        if len(phone) < 10:
+            messages.error(request, 'Enter a valid business phone number (at least 10 digits).')
+        else:
+            shop.business_phone = phone
+            shop.save()
+            messages.success(request, 'Business phone updated.')
+    return redirect(request.META.get('HTTP_REFERER', 'dashboard_overview'))
+
 
 @user_passes_test(is_barber_or_admin, login_url='dashboard_login')
 def toggle_otp(request):

@@ -6,8 +6,8 @@
 {% block content %}
 <div class="space-y-8">
 
-    <!-- OTP Toggle -->
-    <div class="flex justify-end">
+    <!-- Shop Settings -->
+    <div class="flex flex-col lg:flex-row lg:justify-end gap-3">
         <div class="bg-white p-3 px-5 rounded-xl border border-gray-100 shadow-sm flex items-center space-x-3">
             <span class="font-medium text-gray-700">OTP Verification Required</span>
             <form action="{% url 'toggle_otp' %}" method="POST" class="inline m-0">
@@ -20,27 +20,22 @@
                 </button>
             </form>
         </div>
+        <form action="{% url 'dashboard_update_business_phone' %}" method="POST"
+            class="bg-white p-3 px-5 rounded-xl border border-gray-100 shadow-sm flex flex-col sm:flex-row sm:items-center gap-3">
+            {% csrf_token %}
+            <label for="business_phone" class="text-sm font-medium text-gray-700 whitespace-nowrap">Business Phone</label>
+            <input type="tel" id="business_phone" name="business_phone" value="{{ business_phone|default:'' }}"
+                placeholder="Required for admin bookings"
+                class="w-full sm:w-44 px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <button type="submit"
+                class="bg-gray-900 hover:bg-gray-800 text-white px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap">
+                Save
+            </button>
+        </form>
     </div>
-
-    <!-- Smart Insights -->
-    {% if smart_insights %}
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {% for insight in smart_insights %}
-        <div
-            class="bg-white rounded-xl shadow-sm p-4 border-l-4 flex items-start space-x-3
-            {% if insight.type == 'warning' %}border-red-500{% elif insight.type == 'success' %}border-green-500{% elif insight.type == 'info' %}border-blue-500{% else %}border-amber-500{% endif %}">
-            <div class="flex-shrink-0 mt-1">
-                <i
-                    class="fas {{ insight.icon }} {% if insight.type == 'warning' %}text-red-500{% elif insight.type == 'success' %}text-green-500{% elif insight.type == 'info' %}text-blue-500{% else %}text-amber-500{% endif %}"></i>
-            </div>
-            <p class="text-sm font-medium text-gray-800">{{ insight.text }}</p>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
 
     <!-- Primary KPIs -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg shadow-amber-200">
             <p class="text-amber-100 text-sm font-medium">Sales This Month</p>
             <h3 class="text-3xl font-black mt-2">₹{{ business.month_revenue|floatformat:0 }}</h3>
@@ -59,12 +54,12 @@
         <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <div class="flex justify-between items-start">
                 <div>
-                    <p class="text-sm font-medium text-gray-500">Total Sales So Far</p>
-                    <h3 class="text-3xl font-black text-gray-900 mt-2">₹{{ business.lifetime_revenue|floatformat:0 }}</h3>
-                    <p class="text-sm text-gray-500 mt-3">{{ business.lifetime_bookings }} total bookings</p>
+                    <p class="text-sm font-medium text-gray-500">Today's Sale</p>
+                    <h3 class="text-3xl font-black text-gray-900 mt-2">₹{{ business.today_revenue|floatformat:0 }}</h3>
+                    <p class="text-sm text-gray-500 mt-3">{{ business.today_bookings }} booking{{ business.today_bookings|pluralize }} today</p>
                 </div>
                 <div class="p-3 bg-green-50 rounded-xl">
-                    <i class="fas fa-chart-line text-green-600 text-xl"></i>
+                    <i class="fas fa-sun text-green-600 text-xl"></i>
                 </div>
             </div>
         </div>
@@ -72,51 +67,100 @@
         <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <div class="flex justify-between items-start">
                 <div>
-                    <p class="text-sm font-medium text-gray-500">Year to Date</p>
-                    <h3 class="text-3xl font-black text-gray-900 mt-2">₹{{ business.year_revenue|floatformat:0 }}</h3>
-                    <p class="text-sm text-gray-500 mt-3">{{ business.year_bookings }} bookings in {{ business.today|date:"Y" }}</p>
+                    <p class="text-sm font-medium text-gray-500">This Week's Sale</p>
+                    <h3 class="text-3xl font-black text-gray-900 mt-2">₹{{ business.week_revenue|floatformat:0 }}</h3>
+                    <p class="text-sm text-gray-500 mt-3">{{ business.week_bookings }} booking{{ business.week_bookings|pluralize }} this week</p>
                 </div>
                 <div class="p-3 bg-blue-50 rounded-xl">
-                    <i class="fas fa-calendar-alt text-blue-600 text-xl"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-sm font-medium text-gray-500">Avg. Ticket Size</p>
-                    <h3 class="text-3xl font-black text-gray-900 mt-2">₹{{ business.avg_ticket|floatformat:0 }}</h3>
-                    <p class="text-sm text-gray-500 mt-3">Per confirmed/completed booking</p>
-                </div>
-                <div class="p-3 bg-purple-50 rounded-xl">
-                    <i class="fas fa-receipt text-purple-600 text-xl"></i>
+                    <i class="fas fa-calendar-week text-blue-600 text-xl"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Today & Week -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-            <p class="text-xs uppercase tracking-wider font-bold text-gray-400">Today</p>
-            <p class="text-2xl font-black text-gray-900 mt-2">₹{{ business.today_revenue|floatformat:0 }}</p>
-            <p class="text-sm text-gray-500 mt-1">{{ business.today_bookings }} booking{{ business.today_bookings|pluralize }}</p>
+    <!-- Monthly booking issues -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">No Visits This Month</p>
+                    <h3 class="text-3xl font-black text-orange-600 mt-2">{{ business.month_no_show_count }}</h3>
+                    <p class="text-sm text-gray-500 mt-3">Bookings marked as no visit in {{ business.today|date:"F Y" }}</p>
+                </div>
+                <div class="p-3 bg-orange-50 rounded-xl">
+                    <i class="fas fa-user-slash text-orange-600 text-xl"></i>
+                </div>
+            </div>
         </div>
-        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-            <p class="text-xs uppercase tracking-wider font-bold text-gray-400">This Week</p>
-            <p class="text-2xl font-black text-gray-900 mt-2">₹{{ business.week_revenue|floatformat:0 }}</p>
-            <p class="text-sm text-gray-500 mt-1">{{ business.week_bookings }} booking{{ business.week_bookings|pluralize }}</p>
+
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Cancelled This Month</p>
+                    <h3 class="text-3xl font-black text-red-600 mt-2">{{ business.month_cancelled_count }}</h3>
+                    <p class="text-sm text-gray-500 mt-3">Bookings cancelled in {{ business.today|date:"F Y" }}</p>
+                </div>
+                <div class="p-3 bg-red-50 rounded-xl">
+                    <i class="fas fa-ban text-red-600 text-xl"></i>
+                </div>
+            </div>
         </div>
-        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-            <p class="text-xs uppercase tracking-wider font-bold text-gray-400">Upcoming</p>
-            <p class="text-2xl font-black text-blue-600 mt-2">{{ business.confirmed_upcoming }}</p>
-            <p class="text-sm text-gray-500 mt-1">Confirmed bookings ahead</p>
+    </div>
+
+    <!-- Upcoming Bookings -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800">Upcoming Bookings</h3>
+            <p class="text-sm text-gray-500 mt-1">Appointments scheduled after the current time</p>
         </div>
-        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-            <p class="text-xs uppercase tracking-wider font-bold text-gray-400">Customers</p>
-            <p class="text-2xl font-black text-gray-900 mt-2">{{ business.total_customers }}</p>
-            <p class="text-sm text-gray-500 mt-1">{{ business.new_customers_this_month }} new this month</p>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                        <th class="px-6 py-3 font-semibold">Date / Time</th>
+                        <th class="px-6 py-3 font-semibold">Customer</th>
+                        <th class="px-6 py-3 font-semibold">Service</th>
+                        <th class="px-6 py-3 font-semibold">Status</th>
+                        <th class="px-6 py-3 font-semibold text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for booking in upcoming_bookings %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ booking.date|date:"d M Y" }}<br>
+                            <span class="text-gray-500">{{ booking.time|time:"g:i A" }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <span class="font-medium text-gray-900">{{ booking.customer_phone }}</span>
+                            <span class="text-gray-500 text-xs ml-1">({{ booking.customer_name }})</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600">{{ booking.service.name }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2.5 py-1 inline-flex text-xs font-semibold rounded-full
+                                {% if booking.status == 'confirmed' %}bg-green-100 text-green-800
+                                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                {{ booking.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right whitespace-nowrap">
+                            <form method="POST" class="inline"
+                                onsubmit="return confirm('Are you sure you want to cancel this booking? This is irreversible.');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="cancel_booking_admin">
+                                <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                                <button type="submit"
+                                    class="text-red-600 hover:text-red-800 text-sm font-medium">Cancel</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center text-gray-500">No upcoming bookings.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -143,61 +187,6 @@
             </div>
             <div class="h-80">
                 <canvas id="dailyChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Top Services -->
-        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-6 border-b border-gray-100">
-                <h3 class="text-lg font-bold text-gray-800">Top Earning Services</h3>
-                <p class="text-sm text-gray-500 mt-1">Best performers by total revenue</p>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead>
-                        <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
-                            <th class="px-6 py-3 font-semibold">Service</th>
-                            <th class="px-6 py-3 font-semibold">Bookings</th>
-                            <th class="px-6 py-3 font-semibold">Price</th>
-                            <th class="px-6 py-3 font-semibold">Revenue</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        {% for service in top_services %}
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 font-medium text-gray-900">{{ service.name }}</td>
-                            <td class="px-6 py-4 text-gray-600">{{ service.booking_count }}</td>
-                            <td class="px-6 py-4 text-gray-600">₹{{ service.price }}</td>
-                            <td class="px-6 py-4 font-bold text-green-600">₹{{ service.revenue|floatformat:0 }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="px-6 py-10 text-center text-gray-500">No service data yet.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Booking Status -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h3 class="text-lg font-bold text-gray-800 mb-1">Booking Status</h3>
-            <p class="text-sm text-gray-500 mb-4">Overall booking breakdown</p>
-            <div class="h-56 flex justify-center">
-                <canvas id="statusChart"></canvas>
-            </div>
-            <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-3 text-center">
-                <div>
-                    <p class="text-xl font-bold text-gray-900">{{ business.completed_count }}</p>
-                    <p class="text-xs text-gray-500 uppercase tracking-wider">Completed</p>
-                </div>
-                <div>
-                    <p class="text-xl font-bold text-red-600">{{ business.cancellation_rate }}%</p>
-                    <p class="text-xs text-gray-500 uppercase tracking-wider">Cancel Rate</p>
-                </div>
             </div>
         </div>
     </div>
@@ -263,23 +252,6 @@
                 y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
                 x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } }
             }
-        }
-    });
-
-    new Chart(document.getElementById('statusChart'), {
-        type: 'doughnut',
-        data: {
-            labels: {{ status_labels|safe }},
-            datasets: [{
-                data: {{ status_data|safe }},
-                backgroundColor: ['#10b981', '#3b82f6', '#ef4444', '#f59e0b', '#6b7280'],
-                borderWidth: 0,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }
         }
     });
 

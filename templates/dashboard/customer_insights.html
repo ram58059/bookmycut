@@ -103,6 +103,7 @@
                             </a>
                         </th>
                         <th class="px-6 py-4 font-semibold">Status</th>
+                        <th class="px-6 py-4 font-semibold text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -111,21 +112,22 @@
                         <td class="px-6 py-4">
                             <p class="font-semibold text-gray-900">{{ customer.customer_name|default:"Unknown" }}</p>
                             <p class="text-xs text-gray-400 mt-0.5">
-                                First visit {{ customer.first_visit|date:"d M Y" }}
+                                {% if customer.completed_visits %}
+                                First visit {{ customer.first_completed|date:"d M Y" }}
+                                {% else %}
+                                Booked since {{ customer.first_booking|date:"d M Y" }}
+                                {% endif %}
                             </p>
                         </td>
                         <td class="px-6 py-4 text-gray-700 font-medium">{{ customer.customer_phone }}</td>
                         <td class="px-6 py-4">
-                            <p class="font-bold text-gray-900">{{ customer.total_visits }}</p>
-                            <p class="text-xs text-gray-500 mt-0.5">
-                                {{ customer.completed_visits }} completed
-                                {% if customer.cancelled_visits %} · {{ customer.cancelled_visits }} cancelled{% endif %}
-                            </p>
+                            <p class="font-bold text-gray-900">{{ customer.completed_visits }}</p>
+                            <p class="text-xs text-gray-500 mt-0.5">{{ customer.booking_summary }}</p>
                         </td>
                         <td class="px-6 py-4">
                             <p class="text-sm font-medium text-gray-800">{{ customer.visit_frequency }}</p>
                         </td>
-                        <td class="px-6 py-4 text-gray-700">{{ customer.last_visit|date:"d M Y" }}</td>
+                        <td class="px-6 py-4 text-gray-700">{{ customer.last_visit_display }}</td>
                         <td class="px-6 py-4 font-bold text-green-600">₹{{ customer.total_spent|floatformat:0 }}</td>
                         <td class="px-6 py-4">
                             {% if customer.loyalty_label == 'VIP' %}
@@ -136,10 +138,18 @@
                             <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">New</span>
                             {% endif %}
                         </td>
+                        <td class="px-6 py-4 text-right whitespace-nowrap">
+                            <button type="button"
+                                onclick="openDeleteModal('{{ customer.customer_phone|escapejs }}', '{{ customer.customer_name|default:"Unknown"|escapejs }}')"
+                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
+                                title="Delete customer">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="px-6 py-16 text-center text-gray-500">
+                        <td colspan="8" class="px-6 py-16 text-center text-gray-500">
                             {% if query %}
                             No customers found matching "{{ query }}".
                             {% else %}
@@ -189,4 +199,51 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Delete Customer Modal -->
+<div id="deleteModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="closeDeleteModal()"></div>
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 class="text-lg font-bold text-gray-900">Delete Customer</h3>
+            <p class="text-sm text-gray-600 mt-2">
+                You are about to delete <span id="deleteCustomerName" class="font-semibold text-gray-900"></span>
+                (<span id="deleteCustomerPhone" class="font-medium"></span>).
+            </p>
+            <p class="text-sm text-red-600 mt-4 font-medium">
+                This action cannot be undone. Customer history may be permanently removed.
+            </p>
+            <form method="post" class="mt-6 flex flex-col sm:flex-row gap-3 sm:justify-end">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_customer">
+                <input type="hidden" name="customer_phone" id="deleteCustomerPhoneInput">
+                <input type="hidden" name="q" value="{{ query }}">
+                <input type="hidden" name="sort" value="{{ current_sort }}">
+                <input type="hidden" name="direction" value="{{ current_direction }}">
+                <input type="hidden" name="page" value="{{ page_obj.number }}">
+                <button type="button" onclick="closeDeleteModal()"
+                    class="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium">
+                    Delete Customer
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openDeleteModal(phone, name) {
+        document.getElementById('deleteCustomerPhone').textContent = phone;
+        document.getElementById('deleteCustomerName').textContent = name;
+        document.getElementById('deleteCustomerPhoneInput').value = phone;
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
+    }
+</script>
 {% endblock %}

@@ -1,9 +1,11 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from core.models import HomepageServiceCard
+
 
 def home(request):
-    return render(request, 'core/home.html')
+    service_cards = HomepageServiceCard.objects.filter(is_active=True)
+    return render(request, 'core/home.html', {'service_cards': service_cards})
 
-from django.shortcuts import redirect
 
 def quick_book(request):
     service_id = request.POST.get('service_id') or request.GET.get('service_id')

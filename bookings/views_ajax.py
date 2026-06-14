@@ -2,12 +2,11 @@ from django.views import View
 from django.http import JsonResponse
 from django.urls import reverse
 from django.utils import timezone
-from django.db import transaction, IntegrityError
-from datetime import datetime, time, timedelta
-import uuid
+from datetime import datetime
 import json
 from .models import Service, Booking, CustomerTrust
 from . import utils
+from . import booking_service
 
 # ========================
 # AJAX Views for Voice OTP
@@ -54,60 +53,36 @@ class InitiateBookingView(View):
             if request.user.is_authenticated:
                 is_trusted = True
             else:
-                is_trusted = True # As per user request: "Once logged in, no need of otp verification" 
-                # This is tricky - if they are NOT logged in, we should have already handled it via the login pop-up.
-                # So if they reach here and are NOT logged in, something is wrong? 
-                # Actually, the user wants the pop-up to handle login. Once logged in, they can book.
-                # If they bypass the pop-up somehow, we should probably still require login or handle it.
-                # But the request says "once logged in, no need of otp verification".
-                # For now, I'll set is_trusted = request.user.is_authenticated
                 is_trusted = request.user.is_authenticated
                 
-            group_id = uuid.uuid4()
             plain_otp = utils.generate_otp()
             hashed_otp = utils.hash_otp(plain_otp)
             now_time = timezone.now()
             
-            # Trusted users: confirm immediately; guests: pending OTP
             initial_status = 'confirmed' if is_trusted else 'pending_otp'
             is_initial_verified = True if is_trusted else False
             
             start_time_obj = datetime.strptime(time_str, '%H:%M:%S').time() if len(time_str) > 5 else datetime.strptime(time_str, '%H:%M').time()
             booking_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
             
-            # Create Bookings
             try:
-                with transaction.atomic():
-                    bookings_created = []
-                    current_start_time_dt = datetime.combine(booking_date_obj, start_time_obj)
-                    
-                    for service in sequenced_services:
-                        current_end_time_dt = current_start_time_dt + timedelta(minutes=service.duration_minutes)
-                        
-                        booking = Booking(
-                            customer_name=customer_name,
-                            customer_phone=phone,
-                            customer_email=email,
-                            customer_gender=selected_gender,
-                            service=service,
-                            booking_group_id=group_id,
-                            date=booking_date_obj,
-                            time=current_start_time_dt.time(),
-                            end_time=current_end_time_dt.time(),
-                            status=initial_status,
-                            ip_address=ip,
-                            otp=hashed_otp if not is_trusted else None,
-                            otp_created_at=now_time if not is_trusted else None,
-                            is_verified=is_initial_verified
-                        )
-                        booking.save()
-                        bookings_created.append(booking)
-                        
-                        # Next service starts when this one ends
-                        current_start_time_dt = current_end_time_dt
-                        
-            except IntegrityError:
-                return JsonResponse({'success': False, 'message': 'Time slot already booked.'})
+                group_id, bookings_created = booking_service.create_booking_group(
+                    sequenced_services=sequenced_services,
+                    booking_date=booking_date_obj,
+                    start_time=start_time_obj,
+                    customer_name=customer_name,
+                    customer_phone=phone,
+                    customer_email=email,
+                    customer_gender=selected_gender,
+                    booking_source='customer',
+                    status=initial_status,
+                    is_verified=is_initial_verified,
+                    ip_address=ip,
+                    otp=hashed_otp if not is_trusted else None,
+                    otp_created_at=now_time if not is_trusted else None,
+                )
+            except booking_service.BookingCreationError as exc:
+                return JsonResponse({'success': False, 'message': exc.message})
             
             # Response Handling
             if is_trusted:
@@ -139,7 +114,12 @@ class InitiateBookingView(View):
                 if 'selected_date' in request.session: del request.session['selected_date']
                 if 'selected_time' in request.session: del request.session['selected_time']
 
-                return JsonResponse({'success': True, 'trusted': True, 'redirect': reverse('booking_success')})
+                return JsonResponse({
+                    'success': True,
+                    'trusted': True,
+                    'booking_source': 'customer',
+                    'redirect': reverse('booking_success'),
+                })
             else:
                  # Send Voice OTP
                  sent = utils.send_voice_otp_2factor(phone, plain_otp)
@@ -149,7 +129,8 @@ class InitiateBookingView(View):
                  request.session['pending_group_id'] = str(group_id)
                  return JsonResponse({
                      'success': True, 
-                     'trusted': False, 
+                     'trusted': False,
+                     'booking_source': 'customer',
                      'group_id': str(group_id),
                      'otp_expiry': 300 # 5 mins
                  })

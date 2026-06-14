@@ -2,6 +2,7 @@ from django.db import models
 
 class ShopSetting(models.Model):
     is_otp_enabled = models.BooleanField(default=True)
+    business_phone = models.CharField(max_length=15, blank=True, default='')
 
     def save(self, *args, **kwargs):
         # Enforce singleton

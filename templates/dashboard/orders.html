@@ -6,6 +6,13 @@
 {% block content %}
 <div class="space-y-8">
 
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 -mt-2 mb-2">
+        <a href="{% url 'dashboard_book_slot' %}"
+            class="inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors">
+            <i class="fas fa-plus"></i> Book Slot
+        </a>
+    </div>
+
     <!-- 1. Next Booking Highlight -->
     {% if next_booking %}
     <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 shadow-sm">

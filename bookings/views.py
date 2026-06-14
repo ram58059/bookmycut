@@ -32,6 +32,8 @@ class GenderSelectionView(View):
             return redirect('gender_selection')
         
         request.session['selected_gender'] = gender
+        if 'selected_service_ids' in request.session:
+            del request.session['selected_service_ids']
         if gender == 'Girl':
             # Option to redirect to an empty page or valid page with no services
             pass
@@ -45,14 +47,11 @@ class ServiceListView(View):
             return redirect('gender_selection')
 
         services = Service.objects.filter(gender=selected_gender)
-        
-        # Pre-select services if returning from calendar
-        selected_service_ids = request.session.get('selected_service_ids', [])
-        # Convert to ints for comparison in template
-        try:
-            selected_service_ids = [int(i) for i in selected_service_ids]
-        except (ValueError, TypeError):
-            selected_service_ids = []
+
+        # Always start with a clean selection on the services page
+        if 'selected_service_ids' in request.session:
+            del request.session['selected_service_ids']
+        selected_service_ids = []
 
         grouped_services = {}
         category_order = [
@@ -75,13 +74,10 @@ class ServiceListView(View):
                 grouped_services[service.category] = []
             grouped_services[service.category].append(service)
 
-        price_increased_services = [s for s in all_services if s.price_increased_at]
-
         return render(request, 'bookings/services.html', {
             'grouped_services': grouped_services,
             'selected_gender': selected_gender,
             'selected_service_ids': selected_service_ids,
-            'price_increased_services': price_increased_services,
         })
 
     def post(self, request):
@@ -96,10 +92,12 @@ class ServiceListView(View):
                 grouped_services[service.category].append(service)
 
             price_increased_services = list(services.filter(price_increased_at__isnull=False))
-                
+            selected_service_ids = [int(s) for s in service_ids if str(s).isdigit()]
+
             return render(request, 'bookings/services.html', {
                 'grouped_services': grouped_services, 
                 'selected_gender': selected_gender,
+                'selected_service_ids': selected_service_ids,
                 'error': 'Please select at least one service.',
                 'price_increased_services': price_increased_services,
             })

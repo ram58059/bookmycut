@@ -1,0 +1,40 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header %}Book Slot{% endblock %}
+{% block subheader %}Configure your business phone before creating admin bookings{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+        <div class="text-center mb-6">
+            <div class="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-phone text-amber-600 text-xl"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-900">Business Phone Required</h2>
+            <p class="text-sm text-gray-500 mt-2">
+                Admin bookings use your shop phone number as the customer contact.
+                Please configure it before booking slots.
+            </p>
+        </div>
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_business_phone">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Business Phone Number</label>
+                <input type="tel" name="business_phone" value="{{ business_phone|default:'' }}" required
+                    placeholder="e.g. 9876543210"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+            <button type="submit"
+                class="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-xl font-semibold transition-colors">
+                Save & Continue
+            </button>
+            <a href="{% url 'dashboard_orders' %}"
+                class="block text-center text-sm text-gray-500 hover:text-gray-700">
+                Back to Orders
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}
