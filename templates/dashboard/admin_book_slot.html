@@ -10,17 +10,20 @@
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
         <div class="flex flex-wrap gap-2">
             {% for s in steps %}
+            {% if s.is_accessible and not s.is_current %}
+            <a href="{% url 'dashboard_book_slot' %}?step={{ s.id }}"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors">
+                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs bg-white/80">{{ forloop.counter }}</span>
+                {{ s.label }}
+            </a>
+            {% else %}
             <div class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
-                {% if step == s.id %}bg-gray-900 text-white{% elif forloop.counter0 < steps|length and step == s.id %}{% else %}
-                    {% if s.id == 'services' %}bg-gray-100 text-gray-600
-                    {% elif s.id == 'date' and draft.service_ids %}bg-gray-100 text-gray-600
-                    {% elif s.id == 'time' and draft.date %}bg-gray-100 text-gray-600
-                    {% elif s.id == 'confirm' and draft.time %}bg-gray-100 text-gray-600
-                    {% else %}bg-gray-50 text-gray-400{% endif %}{% endif %}">
+                {% if s.is_current %}bg-gray-900 text-white{% elif s.is_accessible %}bg-gray-100 text-gray-600{% else %}bg-gray-50 text-gray-400{% endif %}">
                 <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs
-                    {% if step == s.id %}bg-white text-gray-900{% else %}bg-white/80{% endif %}">{{ forloop.counter }}</span>
+                    {% if s.is_current %}bg-white text-gray-900{% else %}bg-white/80{% endif %}">{{ forloop.counter }}</span>
                 {{ s.label }}
             </div>
+            {% endif %}
             {% endfor %}
         </div>
     </div>
@@ -30,13 +33,21 @@
         <div class="p-6 border-b border-gray-100">
             <h3 class="text-lg font-bold text-gray-900">Select Service(s)</h3>
             <p class="text-sm text-gray-500 mt-1">Choose one or more services for this booking.</p>
+            <div class="relative mt-4">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="search" id="admin-service-search" placeholder="Search by name or category..."
+                    autocomplete="off"
+                    class="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
         </div>
         <form method="post">
             {% csrf_token %}
             <input type="hidden" name="action" value="select_services">
-            <div class="divide-y divide-gray-100">
+            <div id="admin-service-list" class="divide-y divide-gray-100">
                 {% for service in services %}
-                <label class="flex items-start gap-4 p-5 hover:bg-gray-50 cursor-pointer transition-colors">
+                <label data-service-row
+                    data-search="{{ service.name|lower }} {{ service.category|lower }}"
+                    class="flex items-start gap-4 p-5 hover:bg-gray-50 cursor-pointer transition-colors">
                     <input type="checkbox" name="service_ids" value="{{ service.id }}"
                         class="mt-1 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
                         {% if service.id|stringformat:'s' in draft.service_ids %}checked{% endif %}>
@@ -48,6 +59,9 @@
                 </label>
                 {% endfor %}
             </div>
+            <p id="admin-service-no-results" class="hidden p-8 text-center text-gray-500 text-sm">
+                No services match your search.
+            </p>
             <div class="p-6 border-t border-gray-100 flex flex-col sm:flex-row gap-3 sm:justify-between">
                 <a href="{% url 'dashboard_orders' %}" class="text-sm text-gray-500 hover:text-gray-700 py-2">Cancel</a>
                 <button type="submit"
@@ -57,6 +71,32 @@
             </div>
         </form>
     </div>
+    <script>
+        (function () {
+            const searchInput = document.getElementById('admin-service-search');
+            const rows = document.querySelectorAll('[data-service-row]');
+            const noResults = document.getElementById('admin-service-no-results');
+            const list = document.getElementById('admin-service-list');
+            if (!searchInput || !rows.length) return;
+
+            searchInput.addEventListener('input', () => {
+                const term = searchInput.value.trim().toLowerCase();
+                let visibleCount = 0;
+
+                rows.forEach((row) => {
+                    const haystack = row.getAttribute('data-search') || '';
+                    const matches = !term || haystack.includes(term);
+                    row.classList.toggle('hidden', !matches);
+                    if (matches) visibleCount += 1;
+                });
+
+                if (noResults && list) {
+                    noResults.classList.toggle('hidden', visibleCount > 0);
+                    list.classList.toggle('hidden', visibleCount === 0);
+                }
+            });
+        })();
+    </script>
 
     {% elif step == 'date' %}
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
@@ -79,7 +119,7 @@
                 value="{{ draft.date|default:min_allowed_date|date:'Y-m-d' }}"
                 class="w-full sm:w-auto px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
             <div class="flex flex-col sm:flex-row gap-3 pt-2">
-                <a href="{% url 'dashboard_book_slot' %}"
+                <a href="{% url 'dashboard_book_slot' %}?step=services"
                     class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     Back
                 </a>

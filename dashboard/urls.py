@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import admin_booking
+from . import finance_views
 
 urlpatterns = [
     path('', views.overview, name='dashboard_overview'),
@@ -14,5 +15,6 @@ urlpatterns = [
     path('orders/book/', admin_booking.admin_book_slot, name='dashboard_book_slot'),
     path('settings/business-phone/', views.update_business_phone, name='dashboard_update_business_phone'),
     path('manage/', views.manage_bookings, name='dashboard_manage_bookings'),
+    path('finance/', finance_views.finance_dashboard, name='dashboard_finance'),
     path('toggle-otp/', views.toggle_otp, name='toggle_otp'),
 ]

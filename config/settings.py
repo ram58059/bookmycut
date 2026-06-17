@@ -31,7 +31,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = 'django-insecure-ywuh!2o&ud4^+iqz4#x$vlbmew^-^w3*m=5c!(p1$lbokhvxcy'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'users',
     'bookings',
     'dashboard',
+    'finance',
     'cloudinary_storage',
     'cloudinary',
 ]

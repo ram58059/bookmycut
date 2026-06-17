@@ -1,0 +1,234 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header %}Finance{% endblock %}
+{% block subheader %}Track booked and additional revenue for any day.{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+
+    <!-- Date Selector -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <form method="get" class="flex flex-col sm:flex-row sm:items-end gap-4">
+            <div class="flex-1">
+                <label for="date-picker" class="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
+                <input type="date" id="date-picker" name="date" value="{{ selected_date|date:'Y-m-d' }}"
+                    class="w-full sm:w-64 px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+            <button type="submit"
+                class="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors">
+                <i class="fas fa-calendar-day mr-2"></i>Load Data
+            </button>
+        </form>
+    </div>
+
+    <!-- Booked Services -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900">Booked Services</h3>
+            <p class="text-sm text-gray-500 mt-1">
+                Services from customer bookings on {{ selected_date|date:"l, d M Y" }}
+            </p>
+        </div>
+
+        {% if booked_rows %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                        <th class="px-6 py-4 font-semibold">Booking ID</th>
+                        <th class="px-6 py-4 font-semibold">Customer Name</th>
+                        <th class="px-6 py-4 font-semibold">Service Name</th>
+                        <th class="px-6 py-4 font-semibold text-center">Quantity</th>
+                        <th class="px-6 py-4 font-semibold text-right">Service Price</th>
+                        <th class="px-6 py-4 font-semibold text-right">Total Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for row in booked_rows %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900">#{{ row.booking_id }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ row.customer_name }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ row.service_name }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700 text-center">{{ row.quantity }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700 text-right">₹{{ row.unit_price }}</td>
+                        <td class="px-6 py-4 text-sm font-semibold text-gray-900 text-right">₹{{ row.total_amount }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="bg-amber-50 border-t border-amber-100">
+                        <td colspan="5" class="px-6 py-4 text-sm font-bold text-gray-800 text-right">
+                            Total Revenue from Booked Services
+                        </td>
+                        <td class="px-6 py-4 text-sm font-bold text-amber-700 text-right">₹{{ booked_revenue }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-10 text-center text-gray-500">
+            <i class="fas fa-receipt text-gray-300 text-4xl mb-3"></i>
+            <p class="font-medium">No booked services for this date</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Additional Services -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h3 class="text-lg font-bold text-gray-900">Additional Services</h3>
+                <p class="text-sm text-gray-500 mt-1">
+                    Walk-in or manual services not captured through online bookings
+                </p>
+            </div>
+        </div>
+
+        {% if manual_entries %}
+        <div class="overflow-x-auto border-b border-gray-100">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                        <th class="px-6 py-4 font-semibold">Service Name</th>
+                        <th class="px-6 py-4 font-semibold text-center">Quantity</th>
+                        <th class="px-6 py-4 font-semibold text-right">Unit Price</th>
+                        <th class="px-6 py-4 font-semibold text-right">Total Amount</th>
+                        <th class="px-6 py-4 font-semibold text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for entry in manual_entries %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ entry.service.name }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700 text-center">{{ entry.quantity }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700 text-right">₹{{ entry.unit_price }}</td>
+                        <td class="px-6 py-4 text-sm font-semibold text-gray-900 text-right">₹{{ entry.total_amount }}</td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="inline-flex items-center gap-2">
+                                <a href="?date={{ selected_date|date:'Y-m-d' }}&edit={{ entry.id }}"
+                                    class="text-amber-600 hover:text-amber-700 text-sm font-medium">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <form method="post" class="inline"
+                                    onsubmit="return confirm('Delete this additional service entry?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_manual">
+                                    <input type="hidden" name="entry_id" value="{{ entry.id }}">
+                                    <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+                                    <button type="submit"
+                                        class="text-red-600 hover:text-red-700 text-sm font-medium">
+                                        <i class="fas fa-trash-alt"></i> Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="bg-gray-50 border-t border-gray-100">
+                        <td colspan="3" class="px-6 py-4 text-sm font-bold text-gray-800 text-right">
+                            Total Revenue from Additional Services
+                        </td>
+                        <td class="px-6 py-4 text-sm font-bold text-gray-900 text-right" colspan="2">
+                            ₹{{ additional_revenue }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-8 text-center text-gray-500 border-b border-gray-100">
+            <i class="fas fa-plus-circle text-gray-300 text-3xl mb-2"></i>
+            <p class="font-medium">No additional services recorded for this date</p>
+        </div>
+        {% endif %}
+
+        <!-- Add / Edit Form -->
+        <div class="p-6 bg-gray-50">
+            <h4 class="text-sm font-bold text-gray-800 mb-4">
+                {% if edit_entry %}Edit Entry{% else %}Add New Entry{% endif %}
+            </h4>
+            <form method="post" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{% if edit_entry %}edit_manual{% else %}add_manual{% endif %}">
+                {% if edit_entry %}
+                <input type="hidden" name="entry_id" value="{{ edit_entry.id }}">
+                {% endif %}
+                <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Service</label>
+                    {{ form.service }}
+                    {% if form.service.errors %}<p class="text-red-600 text-xs mt-1">{{ form.service.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Quantity</label>
+                    {{ form.quantity }}
+                    {% if form.quantity.errors %}<p class="text-red-600 text-xs mt-1">{{ form.quantity.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Unit Price</label>
+                    {{ form.unit_price }}
+                    {% if form.unit_price.errors %}<p class="text-red-600 text-xs mt-1">{{ form.unit_price.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Date</label>
+                    {{ form.date }}
+                    {% if form.date.errors %}<p class="text-red-600 text-xs mt-1">{{ form.date.errors.0 }}</p>{% endif %}
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit"
+                        class="flex-1 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
+                        {% if edit_entry %}Update{% else %}Add{% endif %}
+                    </button>
+                    {% if edit_entry %}
+                    <a href="?date={{ selected_date|date:'Y-m-d' }}"
+                        class="px-4 py-2.5 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors">
+                        Cancel
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Finance Summary -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Finance Summary</h3>
+        <p class="text-sm text-gray-500 mb-6">Totals for {{ selected_date|date:"l, d M Y" }}</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="rounded-xl border border-gray-100 p-5 bg-gray-50">
+                <p class="text-sm text-gray-500 font-medium">Revenue from Booked Services</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">₹{{ booked_revenue }}</p>
+            </div>
+            <div class="rounded-xl border border-gray-100 p-5 bg-gray-50">
+                <p class="text-sm text-gray-500 font-medium">Revenue from Additional Services</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">₹{{ additional_revenue }}</p>
+            </div>
+            <div class="rounded-xl border border-amber-200 p-5 bg-amber-50">
+                <p class="text-sm text-amber-800 font-medium">Grand Total Revenue</p>
+                <p class="text-2xl font-bold text-amber-700 mt-1">₹{{ grand_total }}</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    (function () {
+        const serviceSelect = document.getElementById('manual-service-select');
+        const unitPriceInput = document.getElementById('manual-unit-price');
+        const servicePrices = {{ service_prices_json|safe }};
+
+        if (!serviceSelect || !unitPriceInput) return;
+
+        serviceSelect.addEventListener('change', function () {
+            const price = servicePrices[this.value];
+            if (price !== undefined) {
+                unitPriceInput.value = price;
+            }
+        });
+    })();
+</script>
+{% endblock %}
