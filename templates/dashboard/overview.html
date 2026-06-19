@@ -36,7 +36,8 @@
 
     <!-- Primary KPIs -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg shadow-amber-200">
+        <a href="{% url 'dashboard_report' 'sales-month' %}"
+            class="block bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg shadow-amber-200 hover:from-amber-600 hover:to-orange-700 transition-all hover:shadow-xl hover:-translate-y-0.5">
             <p class="text-amber-100 text-sm font-medium">Sales This Month</p>
             <h3 class="text-3xl font-black mt-2">₹{{ business.month_revenue|floatformat:0 }}</h3>
             <div class="mt-4 flex items-center justify-between text-sm">
@@ -49,9 +50,10 @@
                 <span class="text-amber-100">vs ₹{{ business.last_month_revenue|floatformat:0 }} last month</span>
                 {% endif %}
             </div>
-        </div>
+        </a>
 
-        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        <a href="{% url 'dashboard_report' 'sales-today' %}"
+            class="block bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:border-amber-200 hover:shadow-md transition-all hover:-translate-y-0.5">
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-gray-500">Today's Sale</p>
@@ -62,9 +64,10 @@
                     <i class="fas fa-sun text-green-600 text-xl"></i>
                 </div>
             </div>
-        </div>
+        </a>
 
-        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        <a href="{% url 'dashboard_report' 'sales-week' %}"
+            class="block bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:border-amber-200 hover:shadow-md transition-all hover:-translate-y-0.5">
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-gray-500">This Week's Sale</p>
@@ -75,12 +78,13 @@
                     <i class="fas fa-calendar-week text-blue-600 text-xl"></i>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Monthly booking issues -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        <a href="{% url 'dashboard_report' 'no-shows-month' %}"
+            class="block bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:border-orange-200 hover:shadow-md transition-all hover:-translate-y-0.5">
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-gray-500">No Visits This Month</p>
@@ -91,9 +95,10 @@
                     <i class="fas fa-user-slash text-orange-600 text-xl"></i>
                 </div>
             </div>
-        </div>
+        </a>
 
-        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        <a href="{% url 'dashboard_report' 'cancelled-month' %}"
+            class="block bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:border-red-200 hover:shadow-md transition-all hover:-translate-y-0.5">
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-gray-500">Cancelled This Month</p>
@@ -104,7 +109,7 @@
                     <i class="fas fa-ban text-red-600 text-xl"></i>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Upcoming Bookings -->

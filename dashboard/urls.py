@@ -5,6 +5,7 @@ from . import finance_views
 
 urlpatterns = [
     path('', views.overview, name='dashboard_overview'),
+    path('reports/<slug:report>/', views.overview_report, name='dashboard_report'),
     path('login/', views.dashboard_login, name='dashboard_login'),
     path('services/', views.service_performance, name='dashboard_services'),
     path('services/add/', views.add_service, name='dashboard_add_service'),

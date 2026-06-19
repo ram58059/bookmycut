@@ -51,12 +51,147 @@ def get_month_start(d=None):
     return d.replace(day=1)
 
 
+def get_week_start(d=None):
+    d = d or timezone.localtime(timezone.now()).date()
+    return d - timedelta(days=d.weekday())
+
+
+OVERVIEW_REPORTS = {
+    'sales-month': {
+        'title': 'Sales This Month',
+        'subtitle': 'Confirmed and completed bookings in the current month',
+        'show_revenue': True,
+    },
+    'sales-today': {
+        'title': "Today's Sale",
+        'subtitle': 'Confirmed and completed bookings for today',
+        'show_revenue': True,
+    },
+    'sales-week': {
+        'title': "This Week's Sale",
+        'subtitle': 'Confirmed and completed bookings this week (Mon–today)',
+        'show_revenue': True,
+    },
+    'no-shows-month': {
+        'title': 'No Visits This Month',
+        'subtitle': 'Bookings marked as no visit in the current month',
+        'show_revenue': False,
+        'status': 'no_show',
+    },
+    'cancelled-month': {
+        'title': 'Cancelled This Month',
+        'subtitle': 'Bookings cancelled in the current month',
+        'show_revenue': False,
+        'status': 'cancelled',
+    },
+}
+
+
+def get_overview_report_period(report_slug):
+    today = timezone.localtime(timezone.now()).date()
+    month_start = get_month_start(today)
+    week_start = get_week_start(today)
+
+    if report_slug == 'sales-today':
+        return today, today
+    if report_slug == 'sales-week':
+        return week_start, today
+    if report_slug in ('sales-month', 'no-shows-month', 'cancelled-month'):
+        return month_start, today
+    return None
+
+
+def get_revenue_booking_rows(start_date, end_date):
+    bookings = (
+        _revenue_bookings()
+        .filter(date__gte=start_date, date__lte=end_date)
+        .select_related('service')
+        .order_by('-date', '-time', 'id')
+    )
+    rows = []
+    total = 0
+    for booking in bookings:
+        amount = booking.service.price
+        total += amount
+        rows.append({
+            'id': booking.id,
+            'customer_name': booking.customer_name,
+            'customer_phone': booking.customer_phone,
+            'service_name': booking.service.name,
+            'date': booking.date,
+            'time': booking.time,
+            'status': booking.status,
+            'status_display': booking.get_status_display(),
+            'amount': amount,
+        })
+    return rows, total
+
+
+def get_status_booking_rows(status, start_date, end_date):
+    bookings = (
+        Booking.objects.filter(status=status, date__gte=start_date, date__lte=end_date)
+        .select_related('service')
+        .order_by('-date', '-time', 'id')
+    )
+    rows = []
+    for booking in bookings:
+        rows.append({
+            'id': booking.id,
+            'customer_name': booking.customer_name,
+            'customer_phone': booking.customer_phone,
+            'service_name': booking.service.name,
+            'date': booking.date,
+            'time': booking.time,
+            'status': booking.status,
+            'status_display': booking.get_status_display(),
+            'amount': booking.service.price,
+        })
+    return rows
+
+
+def get_overview_report(report_slug):
+    if report_slug not in OVERVIEW_REPORTS:
+        return None
+
+    period = get_overview_report_period(report_slug)
+    if not period:
+        return None
+
+    start_date, end_date = period
+    config = OVERVIEW_REPORTS[report_slug]
+
+    if config.get('show_revenue'):
+        rows, total_revenue = get_revenue_booking_rows(start_date, end_date)
+        booking_count = len(rows)
+    else:
+        rows = get_status_booking_rows(config['status'], start_date, end_date)
+        total_revenue = 0
+        booking_count = len(rows)
+
+    period_label = (
+        start_date.strftime('%d %b %Y')
+        if start_date == end_date
+        else f'{start_date.strftime("%d %b")} – {end_date.strftime("%d %b %Y")}'
+    )
+
+    return {
+        **config,
+        'slug': report_slug,
+        'rows': rows,
+        'total_revenue': total_revenue,
+        'booking_count': booking_count,
+        'start_date': start_date,
+        'end_date': end_date,
+        'period_label': period_label,
+    }
+
+
 def get_business_overview():
     today = timezone.localtime(timezone.now()).date()
     month_start = get_month_start(today)
     last_month_end = month_start - timedelta(days=1)
     last_month_start = get_month_start(last_month_end)
-    week_start = today - timedelta(days=today.weekday())
+    week_start = get_week_start(today)
     year_start = today.replace(month=1, day=1)
 
     this_month = get_period_stats(month_start, today)

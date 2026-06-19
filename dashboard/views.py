@@ -73,6 +73,21 @@ def overview(request):
     }
     return render(request, 'dashboard/overview.html', context)
 
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def overview_report(request, report):
+    report_data = analytics.get_overview_report(report)
+    if not report_data:
+        messages.error(request, 'Report not found.')
+        return redirect('dashboard_overview')
+
+    context = {
+        'page_title': report_data['title'],
+        'report': report_data,
+    }
+    return render(request, 'dashboard/overview_report.html', context)
+
+
 @user_passes_test(is_barber_or_admin, login_url='dashboard_login')
 def service_performance(request):
     from core.models import HomepageServiceCard

@@ -1,0 +1,99 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header %}{{ report.title }}{% endblock %}
+{% block subheader %}{{ report.subtitle }} · {{ report.period_label }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <a href="{% url 'dashboard_overview' %}"
+        class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left"></i> Back to Overview
+    </a>
+
+    <div class="grid grid-cols-1 sm:grid-cols-{% if report.show_revenue %}3{% else %}2{% endif %} gap-4">
+        <div class="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+            <p class="text-sm text-gray-500 font-medium">Period</p>
+            <p class="text-lg font-bold text-gray-900 mt-1">{{ report.period_label }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+            <p class="text-sm text-gray-500 font-medium">Total Bookings</p>
+            <p class="text-lg font-bold text-gray-900 mt-1">{{ report.booking_count }}</p>
+        </div>
+        {% if report.show_revenue %}
+        <div class="bg-amber-50 rounded-xl border border-amber-100 p-5 shadow-sm">
+            <p class="text-sm text-amber-800 font-medium">Total Revenue</p>
+            <p class="text-2xl font-black text-amber-700 mt-1">₹{{ report.total_revenue|floatformat:0 }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                        <th class="px-6 py-4 font-semibold">Booking ID</th>
+                        <th class="px-6 py-4 font-semibold">Date / Time</th>
+                        <th class="px-6 py-4 font-semibold">Customer</th>
+                        <th class="px-6 py-4 font-semibold">Service</th>
+                        <th class="px-6 py-4 font-semibold">Status</th>
+                        {% if report.show_revenue %}
+                        <th class="px-6 py-4 font-semibold text-right">Amount</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for row in report.rows %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900">#{{ row.id }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
+                            {{ row.date|date:"d M Y" }}<br>
+                            <span class="text-gray-500">{{ row.time|time:"g:i A" }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-700">
+                            <span class="font-medium text-gray-900">{{ row.customer_name }}</span><br>
+                            <span class="text-gray-500">{{ row.customer_phone }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ row.service_name }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2.5 py-1 inline-flex text-xs font-semibold rounded-full
+                                {% if row.status == 'confirmed' %}bg-green-100 text-green-800
+                                {% elif row.status == 'completed' %}bg-blue-100 text-blue-800
+                                {% elif row.status == 'no_show' %}bg-orange-100 text-orange-800
+                                {% elif row.status == 'cancelled' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ row.status_display }}
+                            </span>
+                        </td>
+                        {% if report.show_revenue %}
+                        <td class="px-6 py-4 text-sm font-semibold text-gray-900 text-right">₹{{ row.amount }}</td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if report.show_revenue %}6{% else %}5{% endif %}"
+                            class="px-6 py-12 text-center text-gray-500">
+                            No bookings found for this period.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if report.show_revenue and report.rows %}
+                <tfoot>
+                    <tr class="bg-amber-50 border-t border-amber-100">
+                        <td colspan="5" class="px-6 py-4 text-sm font-bold text-gray-800 text-right">
+                            Total ({{ report.booking_count }} booking{{ report.booking_count|pluralize }})
+                        </td>
+                        <td class="px-6 py-4 text-sm font-bold text-amber-700 text-right">
+                            ₹{{ report.total_revenue|floatformat:0 }}
+                        </td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
