@@ -131,10 +131,10 @@
                     {% for service in services %}
                     <div class="glass-card relative rounded-xl p-4 sm:p-6 transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 select-none group service-card-interactive"
                         id="card-{{ service.id }}"
-                        data-name="{{ service.name|escapejs }}"
+                        data-name="{{ service.name|escape }}"
                         data-price="{{ service.price }}"
                         data-duration="{{ service.duration_minutes }}"
-                        data-desc="{{ service.description|default:''|escapejs }}"
+                        data-desc="{{ service.description|default:''|escape }}"
                         data-img="{% if service.image %}{{ service.image.url }}{% endif %}"
                         {% if service.price_increased_at %}
                         data-price-increased="true"
@@ -414,24 +414,48 @@
         const modalImage = document.getElementById('modalImage');
         const modalFallback = document.getElementById('modalImageFallback');
 
+        function formatServiceDescription(desc) {
+            if (!desc) {
+                return null;
+            }
+            // Legacy pages may still contain Django escapejs sequences in data attributes.
+            return desc.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => (
+                String.fromCharCode(parseInt(hex, 16))
+            ));
+        }
+
+        function renderServiceDescription(desc) {
+            modalDesc.textContent = '';
+            const text = formatServiceDescription(desc);
+            if (!text) {
+                const empty = document.createElement('p');
+                empty.className = 'italic text-gray-400';
+                empty.textContent = 'No description available for this service.';
+                modalDesc.appendChild(empty);
+                return;
+            }
+
+            const paragraph = document.createElement('p');
+            text.split('\n').forEach((line, index) => {
+                if (index > 0) {
+                    paragraph.appendChild(document.createElement('br'));
+                }
+                paragraph.appendChild(document.createTextNode(line));
+            });
+            modalDesc.appendChild(paragraph);
+        }
+
         function openServiceModal(cardElement) {
             const name = cardElement.getAttribute('data-name');
             const price = cardElement.getAttribute('data-price');
             const duration = cardElement.getAttribute('data-duration');
-            let desc = cardElement.getAttribute('data-desc');
+            const desc = cardElement.getAttribute('data-desc');
             const img = cardElement.getAttribute('data-img');
 
             modalName.textContent = name;
             modalPrice.textContent = `₹${price}`;
             modalDuration.textContent = `${duration} min`;
-            
-            if (desc) {
-                // simple formatting: replace newlines with br to preserve paragraphs
-                desc = desc.replace(/\n/g, '<br>');
-                modalDesc.innerHTML = `<p>${desc}</p>`;
-            } else {
-                modalDesc.innerHTML = `<p class="italic text-gray-400">No description available for this service.</p>`;
-            }
+            renderServiceDescription(desc);
 
             if (img && img.trim() !== '') {
                 modalImage.src = img;
