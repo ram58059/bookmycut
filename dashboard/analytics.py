@@ -1,9 +1,12 @@
+from datetime import time as dt_time, timedelta, date
+
 from django.db import models
-from django.db.models import Sum, Count, Q
-from django.db.models.functions import TruncDay, TruncMonth, ExtractWeekDay
+from django.db.models import Count, F, Q, Sum
+from django.db.models.functions import ExtractWeekDay, TruncDay, TruncMonth
 from django.utils import timezone
-from datetime import timedelta, date
+
 from bookings.models import Booking, Service
+from finance.models import ManualServiceEntry
 
 # Bookings that count toward revenue/sales. Excludes no_show, cancelled, and pending.
 REVENUE_STATUSES = ['completed', 'confirmed']
@@ -29,6 +32,16 @@ def _period_bounds(start_date, end_date):
     return Q(date__gte=start_date, date__lte=end_date)
 
 
+def _manual_revenue_for_period(start_date, end_date=None):
+    qs = ManualServiceEntry.objects.all()
+    if end_date:
+        qs = qs.filter(date__gte=start_date, date__lte=end_date)
+    else:
+        qs = qs.filter(date__gte=start_date)
+    result = qs.aggregate(revenue=Sum(F('unit_price') * F('quantity')))
+    return result['revenue'] or 0
+
+
 def get_period_stats(start_date, end_date=None):
     qs = _revenue_bookings()
     if end_date:
@@ -40,8 +53,10 @@ def get_period_stats(start_date, end_date=None):
         revenue=Sum('service__price'),
         bookings=Count('id'),
     )
+    booking_revenue = stats['revenue'] or 0
+    manual_revenue = _manual_revenue_for_period(start_date, end_date)
     return {
-        'revenue': stats['revenue'] or 0,
+        'revenue': booking_revenue + manual_revenue,
         'bookings': stats['bookings'] or 0,
     }
 
@@ -124,6 +139,31 @@ def get_revenue_booking_rows(start_date, end_date):
             'status_display': booking.get_status_display(),
             'amount': amount,
         })
+
+    manual_entries = (
+        ManualServiceEntry.objects.filter(date__gte=start_date, date__lte=end_date)
+        .select_related('service')
+        .order_by('-date', '-created_at')
+    )
+    for entry in manual_entries:
+        amount = entry.total_amount
+        total += amount
+        service_name = entry.service.name
+        if entry.quantity > 1:
+            service_name = f'{service_name} x{entry.quantity}'
+        rows.append({
+            'id': entry.id,
+            'customer_name': 'Additional service',
+            'customer_phone': '',
+            'service_name': service_name,
+            'date': entry.date,
+            'time': None,
+            'status': 'manual',
+            'status_display': 'Additional service',
+            'amount': amount,
+        })
+
+    rows.sort(key=lambda row: (row['date'], row['time'] or dt_time.min), reverse=True)
     return rows, total
 
 
