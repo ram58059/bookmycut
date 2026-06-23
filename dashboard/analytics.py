@@ -42,6 +42,35 @@ def _manual_revenue_for_period(start_date, end_date=None):
     return result['revenue'] or 0
 
 
+def _manual_revenue_by_month(start_date, end_date):
+    rows = (
+        ManualServiceEntry.objects.filter(date__gte=start_date, date__lte=end_date)
+        .annotate(month=TruncMonth('date'))
+        .values('month')
+        .annotate(revenue=Sum(F('unit_price') * F('quantity')))
+    )
+    return {_to_date(row['month']): row['revenue'] or 0 for row in rows}
+
+
+def _manual_revenue_by_day(start_date, end_date):
+    rows = (
+        ManualServiceEntry.objects.filter(date__gte=start_date, date__lte=end_date)
+        .annotate(day=TruncDay('date'))
+        .values('day')
+        .annotate(revenue=Sum(F('unit_price') * F('quantity')))
+    )
+    return {_to_date(row['day']): row['revenue'] or 0 for row in rows}
+
+
+def _manual_revenue_by_weekday():
+    rows = (
+        ManualServiceEntry.objects.annotate(weekday=ExtractWeekDay('date'))
+        .values('weekday')
+        .annotate(revenue=Sum(F('unit_price') * F('quantity')))
+    )
+    return {row['weekday']: row['revenue'] or 0 for row in rows}
+
+
 def get_period_stats(start_date, end_date=None):
     qs = _revenue_bookings()
     if end_date:
@@ -325,14 +354,17 @@ def get_monthly_revenue_trend(months=6):
     )
 
     month_map = {_to_date(row['month']): row for row in rows}
+    manual_map = _manual_revenue_by_month(start_month, today)
     trend = []
     cursor = get_month_start(start_month)
     while cursor <= month_start:
         row = month_map.get(cursor, {})
+        booking_revenue = row.get('revenue') or 0
+        manual_revenue = manual_map.get(cursor, 0)
         trend.append({
             'month': cursor,
             'label': cursor.strftime('%b %Y'),
-            'revenue': row.get('revenue') or 0,
+            'revenue': booking_revenue + manual_revenue,
             'bookings': row.get('bookings') or 0,
         })
         if cursor.month == 12:
@@ -359,14 +391,17 @@ def get_daily_revenue_trend(days=30):
     )
 
     day_map = {_to_date(row['day']): row for row in rows}
+    manual_map = _manual_revenue_by_day(start_date, today)
     trend = []
     for i in range(days):
         d = start_date + timedelta(days=i)
         row = day_map.get(d, {})
+        booking_revenue = row.get('revenue') or 0
+        manual_revenue = manual_map.get(d, 0)
         trend.append({
             'day': d,
             'label': d.strftime('%d %b'),
-            'revenue': row.get('revenue') or 0,
+            'revenue': booking_revenue + manual_revenue,
             'bookings': row.get('bookings') or 0,
         })
     return trend
@@ -387,13 +422,16 @@ def get_busiest_days():
         )
     )
     row_map = {row['weekday']: row for row in rows}
+    manual_map = _manual_revenue_by_weekday()
     stats = []
     for weekday in display_order:
         row = row_map.get(weekday, {})
+        booking_revenue = row.get('revenue') or 0
+        manual_revenue = manual_map.get(weekday, 0)
         stats.append({
             'day': day_labels[weekday],
             'bookings': row.get('bookings') or 0,
-            'revenue': row.get('revenue') or 0,
+            'revenue': booking_revenue + manual_revenue,
         })
     return stats
 
