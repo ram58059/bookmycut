@@ -16,10 +16,13 @@ BOOKING_STEPS = [
     {'id': 'services', 'label': 'Services'},
     {'id': 'date', 'label': 'Date'},
     {'id': 'time', 'label': 'Time'},
+    {'id': 'customer', 'label': 'Customer'},
     {'id': 'confirm', 'label': 'Confirm'},
 ]
 STEP_IDS = [step['id'] for step in BOOKING_STEPS]
 STEP_LABELS = {step['id']: step['label'] for step in BOOKING_STEPS}
+
+DEFAULT_CUSTOMER_NAME = 'Admin'
 
 
 def _step_url(step):
@@ -33,6 +36,8 @@ def _step_data_complete(draft, step):
         return bool(draft.get('date'))
     if step == 'time':
         return bool(draft.get('time'))
+    if step == 'customer':
+        return bool(draft.get('customer_name') and draft.get('customer_phone'))
     return True
 
 
@@ -43,8 +48,16 @@ def _draft_prerequisites_met(draft, step):
         return bool(draft.get('service_ids'))
     if step == 'time':
         return bool(draft.get('service_ids') and draft.get('date'))
-    if step == 'confirm':
+    if step == 'customer':
         return bool(draft.get('service_ids') and draft.get('date') and draft.get('time'))
+    if step == 'confirm':
+        return bool(
+            draft.get('service_ids')
+            and draft.get('date')
+            and draft.get('time')
+            and draft.get('customer_name')
+            and draft.get('customer_phone')
+        )
     return False
 
 
@@ -199,6 +212,30 @@ def admin_book_slot(request):
                 return redirect(_step_url('time'))
 
             draft['time'] = selected_time.strftime('%H:%M')
+            draft['step'] = 'customer'
+            _save_booking_draft(request, draft)
+            return redirect(_step_url('customer'))
+
+        elif action == 'save_customer':
+            service_ids = draft.get('service_ids', [])
+            date_str = draft.get('date')
+            time_str = draft.get('time')
+            if not (service_ids and date_str and time_str):
+                messages.info(request, 'Please complete the previous steps first.')
+                return redirect(_step_url(_earliest_incomplete_step(draft)))
+
+            customer_name = request.POST.get('customer_name', '').strip() or DEFAULT_CUSTOMER_NAME
+            customer_phone = request.POST.get('customer_phone', '').strip() or business_phone
+            if len(customer_phone) < 10:
+                messages.error(request, 'Enter a valid mobile number (at least 10 digits).')
+                draft['customer_name'] = customer_name
+                draft['customer_phone'] = customer_phone
+                draft['step'] = 'customer'
+                _save_booking_draft(request, draft)
+                return redirect(_step_url('customer'))
+
+            draft['customer_name'] = customer_name
+            draft['customer_phone'] = customer_phone
             draft['step'] = 'confirm'
             _save_booking_draft(request, draft)
             return redirect(_step_url('confirm'))
@@ -207,10 +244,15 @@ def admin_book_slot(request):
             service_ids = draft.get('service_ids', [])
             date_str = draft.get('date')
             time_str = draft.get('time')
+            customer_name = (draft.get('customer_name') or '').strip() or DEFAULT_CUSTOMER_NAME
+            customer_phone = (draft.get('customer_phone') or '').strip() or business_phone
             if not (service_ids and date_str and time_str):
                 messages.error(request, 'Booking session expired. Please start again.')
                 _clear_booking_draft(request)
                 return redirect(_step_url('services'))
+            if len(customer_phone) < 10:
+                messages.error(request, 'Customer mobile number is missing or invalid.')
+                return redirect(_step_url('customer'))
 
             sequenced_services = booking_service.resolve_sequenced_services(service_ids)
             booking_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -221,8 +263,8 @@ def admin_book_slot(request):
                     sequenced_services=sequenced_services,
                     booking_date=booking_date,
                     start_time=start_time,
-                    customer_name='Admin',
-                    customer_phone=business_phone,
+                    customer_name=customer_name,
+                    customer_phone=customer_phone,
                     customer_email='',
                     customer_gender='Male',
                     booking_source='admin',
@@ -250,7 +292,7 @@ def admin_book_slot(request):
         'page_title': 'Book Slot',
         'step': step,
         'steps': _build_step_nav(step, draft),
-        'services': Service.objects.order_by('category', 'name'),
+        'services': Service.bookable().order_by('category', 'name'),
         'draft': draft,
         'business_phone': business_phone,
     }
@@ -262,7 +304,7 @@ def admin_book_slot(request):
         'max_date': max_date,
     })
 
-    if step in ('date', 'time', 'confirm') and draft.get('service_ids'):
+    if step in ('date', 'time', 'customer', 'confirm') and draft.get('service_ids'):
         sequenced_services = booking_service.resolve_sequenced_services(draft['service_ids'])
         context['sequenced_services'] = sequenced_services
         context['total_price'] = sum(s.price for s in sequenced_services)
@@ -278,8 +320,14 @@ def admin_book_slot(request):
             enforce_advance_buffer=False,
         )
 
+    if step == 'customer':
+        context['customer_name'] = draft.get('customer_name') or DEFAULT_CUSTOMER_NAME
+        context['customer_phone'] = draft.get('customer_phone') or business_phone
+
     if step == 'confirm':
         context['selected_date'] = datetime.strptime(draft['date'], '%Y-%m-%d').date()
         context['selected_time'] = datetime.strptime(draft['time'], '%H:%M').time()
+        context['customer_name'] = draft.get('customer_name') or DEFAULT_CUSTOMER_NAME
+        context['customer_phone'] = draft.get('customer_phone') or business_phone
 
     return render(request, 'dashboard/admin_book_slot.html', context)

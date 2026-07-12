@@ -3,6 +3,10 @@ from django.utils import timezone
 from datetime import timedelta, datetime
 
 class Service(models.Model):
+    # Used for custom Finance "additional service" names without a schema change.
+    # Excluded from customer/admin bookable service lists.
+    FINANCE_MANUAL_CATEGORY = 'Finance Manual'
+
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=6, decimal_places=2)
     duration_minutes = models.IntegerField()
@@ -11,6 +15,10 @@ class Service(models.Model):
     category = models.CharField(max_length=100, default='General')
     gender = models.CharField(max_length=10, choices=[('Boy', 'Boy'), ('Girl', 'Girl')], default='Boy')
     price_increased_at = models.DateTimeField(null=True, blank=True)
+
+    @classmethod
+    def bookable(cls):
+        return cls.objects.exclude(category=cls.FINANCE_MANUAL_CATEGORY)
 
     def save(self, *args, **kwargs):
         if self.pk:

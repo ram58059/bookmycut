@@ -74,7 +74,7 @@
     </div>
 
     <!-- Additional Services -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
         <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h3 class="text-lg font-bold text-gray-900">Additional Services</h3>
@@ -85,7 +85,7 @@
         </div>
 
         {% if manual_entries %}
-        <div class="overflow-x-auto border-b border-gray-100">
+        <div class="overflow-x-auto border-b border-gray-100 rounded-none">
             <table class="w-full text-left">
                 <thead>
                     <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
@@ -145,11 +145,12 @@
         {% endif %}
 
         <!-- Add / Edit Form -->
-        <div class="p-6 bg-gray-50">
-            <h4 class="text-sm font-bold text-gray-800 mb-4">
+        <div class="p-6 bg-gray-50 rounded-b-2xl overflow-visible">
+            <h4 class="text-sm font-bold text-gray-800 mb-1">
                 {% if edit_entry %}Edit Entry{% else %}Add New Entry{% endif %}
             </h4>
-            <form method="post" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+            <p class="text-xs text-gray-400 mb-4">Search existing services or type a custom name.</p>
+            <form method="post" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end overflow-visible">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="{% if edit_entry %}edit_manual{% else %}add_manual{% endif %}">
                 {% if edit_entry %}
@@ -157,10 +158,10 @@
                 {% endif %}
                 <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
 
-                <div>
+                <div class="relative">
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Service</label>
-                    {{ form.service }}
-                    {% if form.service.errors %}<p class="text-red-600 text-xs mt-1">{{ form.service.errors.0 }}</p>{% endif %}
+                    {{ form.service_name }}
+                    {% if form.service_name.errors %}<p class="text-red-600 text-xs mt-1">{{ form.service_name.errors.0 }}</p>{% endif %}
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Quantity</label>
@@ -217,18 +218,170 @@
 
 <script>
     (function () {
-        const serviceSelect = document.getElementById('manual-service-select');
+        const input = document.getElementById('manual-service-name');
         const unitPriceInput = document.getElementById('manual-unit-price');
-        const servicePrices = {{ service_prices_json|safe }};
+        const services = {{ service_suggestions_json|safe }};
 
-        if (!serviceSelect || !unitPriceInput) return;
+        if (!input) return;
 
-        serviceSelect.addEventListener('change', function () {
-            const price = servicePrices[this.value];
-            if (price !== undefined) {
-                unitPriceInput.value = price;
+        // Render in document.body with fixed positioning so parent overflow cannot clip it.
+        const list = document.createElement('ul');
+        list.id = 'manual-service-suggestions';
+        list.setAttribute('role', 'listbox');
+        list.className = (
+            'hidden fixed z-[100] max-h-56 overflow-auto rounded-lg border border-gray-200 ' +
+            'bg-white shadow-lg text-sm'
+        );
+        document.body.appendChild(list);
+
+        let activeIndex = -1;
+        let filtered = [];
+
+        function positionList() {
+            const rect = input.getBoundingClientRect();
+            const viewportSpaceBelow = window.innerHeight - rect.bottom;
+            const openUpward = viewportSpaceBelow < 220 && rect.top > viewportSpaceBelow;
+
+            list.style.left = rect.left + 'px';
+            list.style.width = Math.max(rect.width, 220) + 'px';
+            list.style.maxHeight = '14rem';
+
+            if (openUpward) {
+                list.style.top = 'auto';
+                list.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+            } else {
+                list.style.bottom = 'auto';
+                list.style.top = (rect.bottom + 4) + 'px';
+            }
+        }
+
+        function hideSuggestions() {
+            list.classList.add('hidden');
+            list.innerHTML = '';
+            activeIndex = -1;
+            input.setAttribute('aria-expanded', 'false');
+        }
+
+        function applyPrice(service) {
+            if (!unitPriceInput || !service) return;
+            unitPriceInput.value = service.price;
+        }
+
+        function selectService(service) {
+            input.value = service.name;
+            applyPrice(service);
+            hideSuggestions();
+            input.focus();
+        }
+
+        function rankMatch(name, query) {
+            const lower = name.toLowerCase();
+            if (lower.startsWith(query)) return 0;
+            if (lower.split(/\s+/).some((word) => word.startsWith(query))) return 1;
+            if (lower.includes(query)) return 2;
+            return -1;
+        }
+
+        function renderSuggestions(query) {
+            const q = query.trim().toLowerCase();
+            if (!q) {
+                hideSuggestions();
+                return;
+            }
+
+            filtered = services
+                .map((service) => ({ service, rank: rankMatch(service.name, q) }))
+                .filter((item) => item.rank >= 0)
+                .sort((a, b) => a.rank - b.rank || a.service.name.localeCompare(b.service.name))
+                .map((item) => item.service)
+                .slice(0, 12);
+
+            if (!filtered.length) {
+                list.innerHTML = (
+                    '<li class="px-3 py-2.5 text-gray-500">' +
+                    'No matches — press Add to save “' + query.trim().replace(/[<>&]/g, '') + '” as a custom service' +
+                    '</li>'
+                );
+            } else {
+                list.innerHTML = filtered.map((service, index) => (
+                    '<li role="option" data-index="' + index + '" ' +
+                    'class="px-3 py-2.5 cursor-pointer hover:bg-amber-50 text-gray-800 flex justify-between gap-3">' +
+                    '<span>' + service.name.replace(/[<>&]/g, '') + '</span>' +
+                    '<span class="text-gray-400 whitespace-nowrap">₹' + service.price + '</span>' +
+                    '</li>'
+                )).join('');
+            }
+
+            positionList();
+            list.classList.remove('hidden');
+            input.setAttribute('aria-expanded', 'true');
+            activeIndex = -1;
+        }
+
+        function setActive(index) {
+            const options = list.querySelectorAll('[data-index]');
+            options.forEach((el) => el.classList.remove('bg-amber-50'));
+            if (index < 0 || index >= options.length) {
+                activeIndex = -1;
+                return;
+            }
+            activeIndex = index;
+            options[index].classList.add('bg-amber-50');
+            options[index].scrollIntoView({ block: 'nearest' });
+        }
+
+        input.addEventListener('input', function () {
+            renderSuggestions(this.value);
+        });
+
+        input.addEventListener('focus', function () {
+            if (this.value.trim()) {
+                renderSuggestions(this.value);
             }
         });
+
+        input.addEventListener('keydown', function (event) {
+            if (list.classList.contains('hidden')) return;
+
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                setActive(Math.min(activeIndex + 1, filtered.length - 1));
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                setActive(Math.max(activeIndex - 1, 0));
+            } else if (event.key === 'Enter' && activeIndex >= 0 && filtered[activeIndex]) {
+                event.preventDefault();
+                selectService(filtered[activeIndex]);
+            } else if (event.key === 'Escape') {
+                hideSuggestions();
+            }
+        });
+
+        list.addEventListener('mousedown', function (event) {
+            const option = event.target.closest('[data-index]');
+            if (!option) return;
+            event.preventDefault();
+            const index = Number(option.getAttribute('data-index'));
+            if (filtered[index]) {
+                selectService(filtered[index]);
+            }
+        });
+
+        input.addEventListener('blur', function () {
+            setTimeout(hideSuggestions, 150);
+        });
+
+        window.addEventListener('resize', function () {
+            if (!list.classList.contains('hidden')) {
+                positionList();
+            }
+        });
+
+        document.querySelector('main')?.addEventListener('scroll', function () {
+            if (!list.classList.contains('hidden')) {
+                positionList();
+            }
+        }, { passive: true });
     })();
 </script>
 {% endblock %}

@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from bookings.models import Service
 from dashboard.views import is_barber_or_admin
 from finance.forms import ManualServiceEntryForm
 from finance.models import ManualServiceEntry
@@ -80,10 +81,11 @@ def finance_dashboard(request):
     additional_revenue = get_manual_revenue(selected_date)
     grand_total = booked_revenue + additional_revenue
 
-    service_prices = {
-        str(service.id): str(service.price)
-        for service in form.fields['service'].queryset
-    }
+    # Include finance-manual services so previously typed custom names appear in suggestions.
+    service_suggestions = [
+        {'id': service.id, 'name': service.name, 'price': str(service.price)}
+        for service in Service.objects.order_by('name')
+    ]
 
     context = {
         'page_title': 'Finance',
@@ -96,6 +98,6 @@ def finance_dashboard(request):
         'grand_total': grand_total,
         'form': form,
         'edit_entry': edit_entry,
-        'service_prices_json': json.dumps(service_prices),
+        'service_suggestions_json': json.dumps(service_suggestions),
     }
     return render(request, 'dashboard/finance.html', context)

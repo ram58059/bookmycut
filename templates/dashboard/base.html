@@ -204,15 +204,23 @@
                 }, 300);
             });
 
-            // Show loader entirely when navigating or submitting forms
+            // Show loader when navigating or submitting forms
             document.querySelectorAll('a[href]').forEach(link => {
                 link.addEventListener('click', (e) => {
-                    const href = link.getAttribute('href');
+                    const href = (link.getAttribute('href') || '').trim();
                     const target = link.getAttribute('target');
-                    if (href && !href.startsWith('#') && !href.startsWith('javascript') && target !== '_blank') {
-                        loader.classList.remove('hidden');
-                        loader.classList.remove('opacity-0');
+                    const isExternalProtocol = /^(tel|mailto|sms|whatsapp):/i.test(href);
+                    const isInPageHash = href.startsWith('#');
+                    const isJavascript = href.toLowerCase().startsWith('javascript');
+                    const opensNewTab = target === '_blank';
+                    const hasDownload = link.hasAttribute('download');
+
+                    if (!href || isExternalProtocol || isInPageHash || isJavascript || opensNewTab || hasDownload) {
+                        return;
                     }
+
+                    loader.classList.remove('hidden');
+                    loader.classList.remove('opacity-0');
                 });
             });
 

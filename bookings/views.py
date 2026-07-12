@@ -46,7 +46,7 @@ class ServiceListView(View):
         if not selected_gender:
             return redirect('gender_selection')
 
-        services = Service.objects.filter(gender=selected_gender)
+        services = Service.bookable().filter(gender=selected_gender)
 
         # Always start with a clean selection on the services page
         if 'selected_service_ids' in request.session:
@@ -84,7 +84,7 @@ class ServiceListView(View):
         service_ids = request.POST.getlist('services')
         if not service_ids:
             selected_gender = request.session.get('selected_gender')
-            services = Service.objects.filter(gender=selected_gender)
+            services = Service.bookable().filter(gender=selected_gender)
             grouped_services = {}
             for service in services:
                 if service.category not in grouped_services:

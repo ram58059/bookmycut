@@ -41,7 +41,7 @@
             <p class="text-amber-100 text-sm font-medium">Sales This Month</p>
             <h3 class="text-3xl font-black mt-2">₹{{ business.month_revenue|floatformat:0 }}</h3>
             <div class="mt-4 flex items-center justify-between text-sm">
-                <span class="text-amber-100">{{ business.month_bookings }} bookings</span>
+                <span class="text-amber-100">{{ business.month_bookings }} sale{{ business.month_bookings|pluralize }}</span>
                 {% if business.month_revenue_change > 0 %}
                 <span class="bg-white/20 px-2 py-0.5 rounded-full font-semibold">+{{ business.month_revenue_change }}% vs last month</span>
                 {% elif business.month_revenue_change < 0 %}
@@ -58,7 +58,7 @@
                 <div>
                     <p class="text-sm font-medium text-gray-500">Today's Sale</p>
                     <h3 class="text-3xl font-black text-gray-900 mt-2">₹{{ business.today_revenue|floatformat:0 }}</h3>
-                    <p class="text-sm text-gray-500 mt-3">{{ business.today_bookings }} booking{{ business.today_bookings|pluralize }} today</p>
+                    <p class="text-sm text-gray-500 mt-3">{{ business.today_bookings }} sale{{ business.today_bookings|pluralize }} today</p>
                 </div>
                 <div class="p-3 bg-green-50 rounded-xl">
                     <i class="fas fa-sun text-green-600 text-xl"></i>
@@ -72,7 +72,7 @@
                 <div>
                     <p class="text-sm font-medium text-gray-500">This Week's Sale</p>
                     <h3 class="text-3xl font-black text-gray-900 mt-2">₹{{ business.week_revenue|floatformat:0 }}</h3>
-                    <p class="text-sm text-gray-500 mt-3">{{ business.week_bookings }} booking{{ business.week_bookings|pluralize }} this week</p>
+                    <p class="text-sm text-gray-500 mt-3">{{ business.week_bookings }} sale{{ business.week_bookings|pluralize }} this week</p>
                 </div>
                 <div class="p-3 bg-blue-50 rounded-xl">
                     <i class="fas fa-calendar-week text-blue-600 text-xl"></i>

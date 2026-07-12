@@ -17,7 +17,7 @@
             <p class="text-lg font-bold text-gray-900 mt-1">{{ report.period_label }}</p>
         </div>
         <div class="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-            <p class="text-sm text-gray-500 font-medium">Total Bookings</p>
+            <p class="text-sm text-gray-500 font-medium">{% if report.show_revenue %}Total Sales{% else %}Total Bookings{% endif %}</p>
             <p class="text-lg font-bold text-gray-900 mt-1">{{ report.booking_count }}</p>
         </div>
         {% if report.show_revenue %}
@@ -49,7 +49,9 @@
                         <td class="px-6 py-4 text-sm font-medium text-gray-900">#{{ row.id }}</td>
                         <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
                             {{ row.date|date:"d M Y" }}<br>
-                            <span class="text-gray-500">{{ row.time|time:"g:i A" }}</span>
+                            <span class="text-gray-500">
+                                {% if row.time %}{{ row.time|time:"g:i A" }}{% else %}—{% endif %}
+                            </span>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-700">
                             <span class="font-medium text-gray-900">{{ row.customer_name }}</span><br>
@@ -62,6 +64,7 @@
                                 {% elif row.status == 'completed' %}bg-blue-100 text-blue-800
                                 {% elif row.status == 'no_show' %}bg-orange-100 text-orange-800
                                 {% elif row.status == 'cancelled' %}bg-red-100 text-red-800
+                                {% elif row.status == 'manual' %}bg-amber-100 text-amber-800
                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
                                 {{ row.status_display }}
                             </span>
@@ -83,7 +86,7 @@
                 <tfoot>
                     <tr class="bg-amber-50 border-t border-amber-100">
                         <td colspan="5" class="px-6 py-4 text-sm font-bold text-gray-800 text-right">
-                            Total ({{ report.booking_count }} booking{{ report.booking_count|pluralize }})
+                            Total ({{ report.booking_count }} sale{{ report.booking_count|pluralize }})
                         </td>
                         <td class="px-6 py-4 text-sm font-bold text-amber-700 text-right">
                             ₹{{ report.total_revenue|floatformat:0 }}

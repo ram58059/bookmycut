@@ -42,14 +42,34 @@ def _manual_revenue_for_period(start_date, end_date=None):
     return result['revenue'] or 0
 
 
+def _manual_sales_count_for_period(start_date, end_date=None):
+    """Count additional-service units sold in a period (quantity summed)."""
+    qs = ManualServiceEntry.objects.all()
+    if end_date:
+        qs = qs.filter(date__gte=start_date, date__lte=end_date)
+    else:
+        qs = qs.filter(date__gte=start_date)
+    result = qs.aggregate(count=Sum('quantity'))
+    return result['count'] or 0
+
+
 def _manual_revenue_by_month(start_date, end_date):
     rows = (
         ManualServiceEntry.objects.filter(date__gte=start_date, date__lte=end_date)
         .annotate(month=TruncMonth('date'))
         .values('month')
-        .annotate(revenue=Sum(F('unit_price') * F('quantity')))
+        .annotate(
+            revenue=Sum(F('unit_price') * F('quantity')),
+            sales=Sum('quantity'),
+        )
     )
-    return {_to_date(row['month']): row['revenue'] or 0 for row in rows}
+    return {
+        _to_date(row['month']): {
+            'revenue': row['revenue'] or 0,
+            'sales': row['sales'] or 0,
+        }
+        for row in rows
+    }
 
 
 def _manual_revenue_by_day(start_date, end_date):
@@ -57,18 +77,36 @@ def _manual_revenue_by_day(start_date, end_date):
         ManualServiceEntry.objects.filter(date__gte=start_date, date__lte=end_date)
         .annotate(day=TruncDay('date'))
         .values('day')
-        .annotate(revenue=Sum(F('unit_price') * F('quantity')))
+        .annotate(
+            revenue=Sum(F('unit_price') * F('quantity')),
+            sales=Sum('quantity'),
+        )
     )
-    return {_to_date(row['day']): row['revenue'] or 0 for row in rows}
+    return {
+        _to_date(row['day']): {
+            'revenue': row['revenue'] or 0,
+            'sales': row['sales'] or 0,
+        }
+        for row in rows
+    }
 
 
 def _manual_revenue_by_weekday():
     rows = (
         ManualServiceEntry.objects.annotate(weekday=ExtractWeekDay('date'))
         .values('weekday')
-        .annotate(revenue=Sum(F('unit_price') * F('quantity')))
+        .annotate(
+            revenue=Sum(F('unit_price') * F('quantity')),
+            sales=Sum('quantity'),
+        )
     )
-    return {row['weekday']: row['revenue'] or 0 for row in rows}
+    return {
+        row['weekday']: {
+            'revenue': row['revenue'] or 0,
+            'sales': row['sales'] or 0,
+        }
+        for row in rows
+    }
 
 
 def get_period_stats(start_date, end_date=None):
@@ -83,10 +121,12 @@ def get_period_stats(start_date, end_date=None):
         bookings=Count('id'),
     )
     booking_revenue = stats['revenue'] or 0
+    booking_count = stats['bookings'] or 0
     manual_revenue = _manual_revenue_for_period(start_date, end_date)
+    manual_sales = _manual_sales_count_for_period(start_date, end_date)
     return {
         'revenue': booking_revenue + manual_revenue,
-        'bookings': stats['bookings'] or 0,
+        'bookings': booking_count + manual_sales,
     }
 
 
@@ -103,17 +143,17 @@ def get_week_start(d=None):
 OVERVIEW_REPORTS = {
     'sales-month': {
         'title': 'Sales This Month',
-        'subtitle': 'Confirmed and completed bookings in the current month',
+        'subtitle': 'Confirmed/completed bookings and additional services in the current month',
         'show_revenue': True,
     },
     'sales-today': {
         'title': "Today's Sale",
-        'subtitle': 'Confirmed and completed bookings for today',
+        'subtitle': 'Confirmed/completed bookings and additional services for today',
         'show_revenue': True,
     },
     'sales-week': {
         'title': "This Week's Sale",
-        'subtitle': 'Confirmed and completed bookings this week (Mon–today)',
+        'subtitle': 'Confirmed/completed bookings and additional services this week (Mon–today)',
         'show_revenue': True,
     },
     'no-shows-month': {
@@ -167,6 +207,7 @@ def get_revenue_booking_rows(start_date, end_date):
             'status': booking.status,
             'status_display': booking.get_status_display(),
             'amount': amount,
+            'quantity': 1,
         })
 
     manual_entries = (
@@ -190,6 +231,7 @@ def get_revenue_booking_rows(start_date, end_date):
             'status': 'manual',
             'status_display': 'Additional service',
             'amount': amount,
+            'quantity': entry.quantity,
         })
 
     rows.sort(key=lambda row: (row['date'], row['time'] or dt_time.min), reverse=True)
@@ -231,7 +273,7 @@ def get_overview_report(report_slug):
 
     if config.get('show_revenue'):
         rows, total_revenue = get_revenue_booking_rows(start_date, end_date)
-        booking_count = len(rows)
+        booking_count = sum(row.get('quantity') or 1 for row in rows)
     else:
         rows = get_status_booking_rows(config['status'], start_date, end_date)
         total_revenue = 0
@@ -359,13 +401,16 @@ def get_monthly_revenue_trend(months=6):
     cursor = get_month_start(start_month)
     while cursor <= month_start:
         row = month_map.get(cursor, {})
+        manual = manual_map.get(cursor, {})
         booking_revenue = row.get('revenue') or 0
-        manual_revenue = manual_map.get(cursor, 0)
+        booking_count = row.get('bookings') or 0
+        manual_revenue = manual.get('revenue') or 0
+        manual_sales = manual.get('sales') or 0
         trend.append({
             'month': cursor,
             'label': cursor.strftime('%b %Y'),
             'revenue': booking_revenue + manual_revenue,
-            'bookings': row.get('bookings') or 0,
+            'bookings': booking_count + manual_sales,
         })
         if cursor.month == 12:
             cursor = cursor.replace(year=cursor.year + 1, month=1)
@@ -396,13 +441,16 @@ def get_daily_revenue_trend(days=30):
     for i in range(days):
         d = start_date + timedelta(days=i)
         row = day_map.get(d, {})
+        manual = manual_map.get(d, {})
         booking_revenue = row.get('revenue') or 0
-        manual_revenue = manual_map.get(d, 0)
+        booking_count = row.get('bookings') or 0
+        manual_revenue = manual.get('revenue') or 0
+        manual_sales = manual.get('sales') or 0
         trend.append({
             'day': d,
             'label': d.strftime('%d %b'),
             'revenue': booking_revenue + manual_revenue,
-            'bookings': row.get('bookings') or 0,
+            'bookings': booking_count + manual_sales,
         })
     return trend
 
@@ -426,18 +474,21 @@ def get_busiest_days():
     stats = []
     for weekday in display_order:
         row = row_map.get(weekday, {})
+        manual = manual_map.get(weekday, {})
         booking_revenue = row.get('revenue') or 0
-        manual_revenue = manual_map.get(weekday, 0)
+        booking_count = row.get('bookings') or 0
+        manual_revenue = manual.get('revenue') or 0
+        manual_sales = manual.get('sales') or 0
         stats.append({
             'day': day_labels[weekday],
-            'bookings': row.get('bookings') or 0,
+            'bookings': booking_count + manual_sales,
             'revenue': booking_revenue + manual_revenue,
         })
     return stats
 
 
 def get_service_performance():
-    return Service.objects.all()
+    return Service.bookable()
 
 
 def get_customer_insights():

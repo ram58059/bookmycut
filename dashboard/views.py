@@ -145,7 +145,7 @@ def service_performance(request):
         'page_title': 'Services',
         'services': services,
         'homepage_cards': HomepageServiceCard.objects.all(),
-        'all_services': Service.objects.order_by('name'),
+        'all_services': Service.bookable().order_by('name'),
         'current_sort': sort_by,
         'current_direction': direction,
         'query': query,
@@ -400,7 +400,12 @@ def add_service(request):
     else:
         form = ServiceForm()
     
-    categories = Service.objects.values_list('category', flat=True).distinct()
+    categories = (
+        Service.bookable()
+        .exclude(category='')
+        .values_list('category', flat=True)
+        .distinct()
+    )
     
     context = {
         'page_title': 'Add New Service',
@@ -423,7 +428,12 @@ def edit_service(request, pk):
     else:
         form = ServiceForm(instance=service)
     
-    categories = Service.objects.values_list('category', flat=True).distinct()
+    categories = (
+        Service.bookable()
+        .exclude(category='')
+        .values_list('category', flat=True)
+        .distinct()
+    )
     
     context = {
         'page_title': f'Edit Service: {service.name}',

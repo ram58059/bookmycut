@@ -158,7 +158,7 @@
                 </a>
                 <button type="submit"
                     class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-xl font-semibold transition-colors">
-                    Continue to Confirm
+                    Continue to Customer
                 </button>
             </div>
         </form>
@@ -170,6 +170,50 @@
                 class="inline-block mt-4 text-amber-600 font-medium hover:text-amber-700">Choose another date</a>
         </div>
         {% endif %}
+    </div>
+
+    {% elif step == 'customer' %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-1">Customer Details</h3>
+        <p class="text-sm text-gray-500 mb-6">Defaults to Admin and your shop phone. Edit if you want to record the customer's name and mobile number.</p>
+
+        {% if sequenced_services %}
+        <div class="mb-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-600">
+            <span class="font-medium text-gray-900">{{ sequenced_services|length }} service{{ sequenced_services|length|pluralize }} selected</span>
+            · {{ total_duration }} min total · ₹{{ total_price }}
+        </div>
+        {% endif %}
+
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_customer">
+            <div>
+                <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-1.5">Customer name</label>
+                <input type="text" id="customer_name" name="customer_name" maxlength="100"
+                    value="{{ customer_name }}"
+                    placeholder="Admin"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+            <div>
+                <label for="customer_phone" class="block text-sm font-medium text-gray-700 mb-1.5">Mobile number</label>
+                <input type="tel" id="customer_phone" name="customer_phone" maxlength="15"
+                    value="{{ customer_phone }}"
+                    placeholder="{{ business_phone }}"
+                    inputmode="numeric"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <p class="text-xs text-gray-400 mt-1.5">Leave as-is to use the shop phone number.</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                <a href="{% url 'dashboard_book_slot' %}?step=time"
+                    class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Back
+                </a>
+                <button type="submit"
+                    class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-xl font-semibold transition-colors">
+                    Continue to Confirm
+                </button>
+            </div>
+        </form>
     </div>
 
     {% elif step == 'confirm' %}
@@ -203,8 +247,8 @@
                 </div>
                 <div class="p-4 bg-gray-50 rounded-xl">
                     <p class="text-xs uppercase tracking-wider font-bold text-gray-400 mb-1">Customer Details</p>
-                    <p class="font-semibold text-gray-900">Admin</p>
-                    <p class="text-gray-600">{{ business_phone }}</p>
+                    <p class="font-semibold text-gray-900">{{ customer_name }}</p>
+                    <p class="text-gray-600">{{ customer_phone }}</p>
                 </div>
             </div>
         </div>
@@ -216,7 +260,7 @@
                 <button type="submit" class="text-sm text-gray-500 hover:text-gray-700">Start over</button>
             </form>
             <div class="flex flex-col sm:flex-row gap-3">
-                <a href="{% url 'dashboard_book_slot' %}?step=time"
+                <a href="{% url 'dashboard_book_slot' %}?step=customer"
                     class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     Back
                 </a>
