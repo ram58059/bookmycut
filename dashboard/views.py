@@ -5,7 +5,7 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from . import analytics
-from bookings.models import Booking, Service
+from bookings.models import Booking, Service, Coupon, ComboOffer
 from django.db.models import Count, Q
 from django.db.models.functions import ExtractWeekDay
 from django.utils import timezone
@@ -457,6 +457,250 @@ def delete_service(request, pk):
         'service': service,
     }
     return render(request, 'dashboard/service_confirm_delete.html', context)
+
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def offers_list(request):
+    coupons = Coupon.objects.all()
+    now = timezone.now()
+    coupon_rows = []
+    for coupon in coupons:
+        if not coupon.is_active:
+            status_label = 'Inactive'
+            status_class = 'bg-gray-100 text-gray-600'
+        elif coupon.valid_until and now > coupon.valid_until:
+            status_label = 'Expired'
+            status_class = 'bg-red-50 text-red-700'
+        elif coupon.valid_from and now < coupon.valid_from:
+            status_label = 'Scheduled'
+            status_class = 'bg-blue-50 text-blue-700'
+        else:
+            status_label = 'Active'
+            status_class = 'bg-green-50 text-green-700'
+        coupon_rows.append({
+            'coupon': coupon,
+            'status_label': status_label,
+            'status_class': status_class,
+        })
+
+    return render(request, 'dashboard/offers.html', {
+        'page_title': 'Offers',
+        'coupon_rows': coupon_rows,
+    })
+
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def search_coupon_customers(request):
+    """Return matching customer phones/names for coupon assignment autocomplete."""
+    from django.http import JsonResponse
+    from django.db.models import Max
+
+    q = (request.GET.get('q') or '').strip()
+    digits = ''.join(ch for ch in q if ch.isdigit())
+    if len(digits) < 2 and len(q) < 2:
+        return JsonResponse({'results': []})
+
+    bookings = Booking.objects.exclude(customer_phone='').exclude(customer_phone__isnull=True)
+    if digits:
+        bookings = bookings.filter(customer_phone__icontains=digits)
+    elif q:
+        bookings = bookings.filter(
+            Q(customer_phone__icontains=q) | Q(customer_name__icontains=q)
+        )
+
+    rows = (
+        bookings.values('customer_phone')
+        .annotate(
+            customer_name=Max('customer_name'),
+            last_visit=Max('date'),
+        )
+        .order_by('-last_visit')[:12]
+    )
+
+    results = []
+    seen = set()
+    for row in rows:
+        phone = ''.join(ch for ch in (row['customer_phone'] or '') if ch.isdigit())[-10:]
+        if not phone or phone in seen:
+            continue
+        seen.add(phone)
+        results.append({
+            'phone': phone,
+            'name': (row['customer_name'] or '').strip(),
+            'label': f"{phone}" + (f" — {row['customer_name']}" if row['customer_name'] else ''),
+        })
+
+    return JsonResponse({'results': results})
+
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def add_coupon(request):
+    from .forms import CouponForm
+
+    if request.method == 'POST':
+        form = CouponForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Coupon created successfully!')
+            return redirect('dashboard_offers')
+    else:
+        form = CouponForm(initial={'is_active': True})
+
+    return render(request, 'dashboard/coupon_form.html', {
+        'page_title': 'Create Coupon',
+        'form': form,
+    })
+
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def edit_coupon(request, pk):
+    from .forms import CouponForm
+    coupon = get_object_or_404(Coupon, pk=pk)
+
+    if request.method == 'POST':
+        form = CouponForm(request.POST, instance=coupon)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Coupon updated successfully!')
+            return redirect('dashboard_offers')
+    else:
+        form = CouponForm(instance=coupon)
+
+    return render(request, 'dashboard/coupon_form.html', {
+        'page_title': f'Edit Coupon: {coupon.code}',
+        'form': form,
+        'coupon': coupon,
+    })
+
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def delete_coupon(request, pk):
+    coupon = get_object_or_404(Coupon, pk=pk)
+
+    if request.method == 'POST':
+        coupon.delete()
+        messages.success(request, 'Coupon deleted successfully!')
+        return redirect('dashboard_offers')
+
+    return render(request, 'dashboard/coupon_confirm_delete.html', {
+        'page_title': 'Delete Coupon',
+        'coupon': coupon,
+    })
+
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def combo_services_list(request):
+    combos = (
+        ComboOffer.objects.select_related('linked_service')
+        .prefetch_related('trigger_services')
+        .order_by('sort_order', 'name')
+    )
+    return render(request, 'dashboard/combo_services.html', {
+        'page_title': 'Combo Services',
+        'combos': combos,
+    })
+
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def add_combo_service(request):
+    from .forms import ComboOfferForm
+
+    if request.method == 'POST':
+        form = ComboOfferForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Combo service created successfully!')
+            return redirect('dashboard_combo_services')
+    else:
+        default_triggers = Service.bookable().filter(
+            name__in=['Haircut', 'Haircut Shave', 'Haircut trim']
+        )
+        form = ComboOfferForm(initial={
+            'is_active': True,
+            'badge_text': 'Combo Deal',
+            'sort_order': (ComboOffer.objects.count() + 1) * 10,
+        })
+        form.fields['trigger_services'].initial = default_triggers
+
+    return render(request, 'dashboard/combo_service_form.html', {
+        'page_title': 'Add Combo Service',
+        'form': form,
+    })
+
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def edit_combo_service(request, pk):
+    from .forms import ComboOfferForm
+    combo = get_object_or_404(ComboOffer, pk=pk)
+
+    if request.method == 'POST':
+        form = ComboOfferForm(request.POST, request.FILES, instance=combo)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Combo service updated successfully!')
+            return redirect('dashboard_combo_services')
+    else:
+        form = ComboOfferForm(instance=combo)
+
+    return render(request, 'dashboard/combo_service_form.html', {
+        'page_title': f'Edit Combo: {combo.name}',
+        'form': form,
+        'combo': combo,
+    })
+
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def delete_combo_service(request, pk):
+    combo = get_object_or_404(ComboOffer, pk=pk)
+    if request.method == 'POST':
+        combo.delete()
+        messages.success(request, 'Combo service deleted successfully!')
+        return redirect('dashboard_combo_services')
+    return render(request, 'dashboard/combo_service_confirm_delete.html', {
+        'page_title': 'Delete Combo Service',
+        'combo': combo,
+    })
+
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def reorder_combo_service(request, pk, direction):
+    combo = get_object_or_404(ComboOffer, pk=pk)
+    combos = list(ComboOffer.objects.order_by('sort_order', 'name', 'id'))
+    try:
+        index = next(i for i, item in enumerate(combos) if item.id == combo.id)
+    except StopIteration:
+        return redirect('dashboard_combo_services')
+
+    if direction == 'up' and index > 0:
+        other = combos[index - 1]
+    elif direction == 'down' and index < len(combos) - 1:
+        other = combos[index + 1]
+    else:
+        return redirect('dashboard_combo_services')
+
+    combo.sort_order, other.sort_order = other.sort_order, combo.sort_order
+    # Ensure uniqueness even if both had the same order
+    if combo.sort_order == other.sort_order:
+        if direction == 'up':
+            combo.sort_order = max(other.sort_order - 1, 0)
+        else:
+            combo.sort_order = other.sort_order + 1
+    ComboOffer.objects.bulk_update([combo, other], ['sort_order'])
+    return redirect('dashboard_combo_services')
+
+
+@user_passes_test(is_barber_or_admin, login_url='dashboard_login')
+def toggle_combo_service(request, pk):
+    combo = get_object_or_404(ComboOffer, pk=pk)
+    if request.method == 'POST':
+        combo.is_active = not combo.is_active
+        combo.save(update_fields=['is_active', 'updated_at'])
+        messages.success(
+            request,
+            f'Combo "{combo.name}" is now {"active" if combo.is_active else "inactive"}.',
+        )
+    return redirect('dashboard_combo_services')
+
 
 @user_passes_test(is_barber_or_admin, login_url='dashboard_login')
 def orders_dashboard(request):

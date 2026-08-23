@@ -30,7 +30,7 @@ def get_booked_service_rows(selected_date):
         for booking in group_bookings:
             name = booking.service.name
             service_counts[name]['quantity'] += 1
-            service_counts[name]['unit_price'] = booking.service.price
+            service_counts[name]['unit_price'] = booking.line_price
 
         for name, data in service_counts.items():
             quantity = data['quantity']
@@ -42,6 +42,19 @@ def get_booked_service_rows(selected_date):
                 'quantity': quantity,
                 'unit_price': unit_price,
                 'total_amount': unit_price * quantity,
+            })
+
+        discount = max((b.discount_amount or Decimal('0') for b in group_bookings), default=Decimal('0'))
+        if discount > 0:
+            code = next((b.coupon_code for b in group_bookings if b.coupon_code), '')
+            label = f'Discount ({code})' if code else 'Discount'
+            rows.append({
+                'booking_id': first.id,
+                'customer_name': first.customer_name,
+                'service_name': label,
+                'quantity': 1,
+                'unit_price': -discount,
+                'total_amount': -discount,
             })
 
     return rows

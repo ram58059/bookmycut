@@ -1,0 +1,174 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header %}{{ page_title }}{% endblock %}
+{% block subheader %}{% if coupon %}Update this coupon for customer bookings.{% else %}Create a unique coupon code customers can apply at checkout.{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <form method="post" class="space-y-6" autocomplete="off">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-500 p-4">
+                <p class="text-sm text-red-700">{{ form.non_field_errors|join:", " }}</p>
+            </div>
+            {% endif %}
+
+            {% for field in form %}
+            <div {% if field.name == 'customer_phone' %}class="relative"{% endif %}>
+                {% if field.name == 'is_active' %}
+                <label class="inline-flex items-center gap-2">
+                    {{ field }}
+                    <span class="text-sm font-medium text-gray-700">{{ field.label }}</span>
+                </label>
+                {% else %}
+                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                    {{ field.label }}
+                </label>
+                {{ field }}
+                {% endif %}
+                {% if field.name == 'customer_phone' %}
+                <div id="customer-phone-suggestions"
+                    class="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-56 overflow-y-auto">
+                </div>
+                {% endif %}
+                {% if field.help_text %}
+                <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
+                {% endif %}
+                {% if field.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ field.errors|join:", " }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-100">
+                <a href="{% url 'dashboard_offers' %}"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Cancel
+                </a>
+                <button type="submit"
+                    class="px-4 py-2 text-sm font-medium text-white bg-amber-500 border border-transparent rounded-lg hover:bg-amber-600">
+                    {% if coupon %}Update Coupon{% else %}Create Coupon{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function () {
+    const input = document.getElementById('id_customer_phone');
+    const dropdown = document.getElementById('customer-phone-suggestions');
+    if (!input || !dropdown) return;
+
+    let debounceTimer = null;
+    let activeIndex = -1;
+    let currentResults = [];
+
+    function hideDropdown() {
+        dropdown.classList.add('hidden');
+        dropdown.innerHTML = '';
+        activeIndex = -1;
+        currentResults = [];
+    }
+
+    function selectResult(result) {
+        input.value = result.phone;
+        hideDropdown();
+        input.focus();
+    }
+
+    function renderResults(results) {
+        currentResults = results || [];
+        activeIndex = -1;
+        if (!currentResults.length) {
+            hideDropdown();
+            return;
+        }
+
+        dropdown.innerHTML = currentResults.map(function (item, index) {
+            const nameHtml = item.name
+                ? '<span class="block text-xs text-gray-500 truncate">' + item.name.replace(/</g, '&lt;') + '</span>'
+                : '';
+            return (
+                '<button type="button" data-index="' + index + '" class="suggestion-item w-full text-left px-3 py-2 hover:bg-amber-50 focus:bg-amber-50 focus:outline-none border-b border-gray-50 last:border-0">' +
+                    '<span class="font-medium text-gray-900">' + item.phone + '</span>' +
+                    nameHtml +
+                '</button>'
+            );
+        }).join('');
+        dropdown.classList.remove('hidden');
+
+        dropdown.querySelectorAll('.suggestion-item').forEach(function (btn) {
+            btn.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                const idx = Number(btn.getAttribute('data-index'));
+                selectResult(currentResults[idx]);
+            });
+        });
+    }
+
+    function highlightActive() {
+        dropdown.querySelectorAll('.suggestion-item').forEach(function (btn, idx) {
+            if (idx === activeIndex) {
+                btn.classList.add('bg-amber-50');
+            } else {
+                btn.classList.remove('bg-amber-50');
+            }
+        });
+    }
+
+    async function searchCustomers(query) {
+        const q = (query || '').trim();
+        if (q.length < 2) {
+            hideDropdown();
+            return;
+        }
+        try {
+            const response = await fetch('{% url "dashboard_search_coupon_customers" %}?q=' + encodeURIComponent(q));
+            const data = await response.json();
+            renderResults(data.results || []);
+        } catch (err) {
+            hideDropdown();
+        }
+    }
+
+    input.addEventListener('input', function () {
+        this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () {
+            searchCustomers(input.value);
+        }, 200);
+    });
+
+    input.addEventListener('keydown', function (e) {
+        if (dropdown.classList.contains('hidden') || !currentResults.length) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIndex = (activeIndex + 1) % currentResults.length;
+            highlightActive();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIndex = activeIndex <= 0 ? currentResults.length - 1 : activeIndex - 1;
+            highlightActive();
+        } else if (e.key === 'Enter' && activeIndex >= 0) {
+            e.preventDefault();
+            selectResult(currentResults[activeIndex]);
+        } else if (e.key === 'Escape') {
+            hideDropdown();
+        }
+    });
+
+    input.addEventListener('blur', function () {
+        setTimeout(hideDropdown, 150);
+    });
+
+    input.addEventListener('focus', function () {
+        if (this.value.trim().length >= 2) {
+            searchCustomers(this.value);
+        }
+    });
+})();
+</script>
+{% endblock %}

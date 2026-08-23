@@ -1,0 +1,109 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header %}Combo Services{% endblock %}
+{% block subheader %}Manage upsell combos shown on the booking confirmation page{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h3 class="text-lg font-bold text-gray-800">Combo Offers</h3>
+                <p class="text-sm text-gray-500 mt-1">{{ combos|length }} combo{{ combos|length|pluralize }} configured</p>
+            </div>
+            <a href="{% url 'dashboard_add_combo_service' %}"
+                class="inline-flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                <i class="fas fa-plus mr-2"></i> Add Combo Service
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-gray-500 uppercase text-xs tracking-wider">
+                    <tr>
+                        <th class="px-4 py-3.5 font-semibold">Order</th>
+                        <th class="px-4 py-3.5 font-semibold">Service</th>
+                        <th class="px-4 py-3.5 font-semibold">Pricing</th>
+                        <th class="px-4 py-3.5 font-semibold">Triggers</th>
+                        <th class="px-4 py-3.5 font-semibold">Status</th>
+                        <th class="px-4 py-3.5 font-semibold text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for combo in combos %}
+                    <tr class="hover:bg-gray-50/80 transition-colors">
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <div class="flex items-center gap-1">
+                                <a href="{% url 'dashboard_reorder_combo_service' combo.id 'up' %}"
+                                    class="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100"
+                                    title="Move up"><i class="fas fa-arrow-up text-xs"></i></a>
+                                <a href="{% url 'dashboard_reorder_combo_service' combo.id 'down' %}"
+                                    class="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100"
+                                    title="Move down"><i class="fas fa-arrow-down text-xs"></i></a>
+                                <span class="ml-1 text-xs text-gray-400">{{ combo.sort_order }}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex items-center gap-3">
+                                {% if combo.image %}
+                                <img src="{{ combo.image.url }}" alt="" class="w-12 h-12 rounded-xl object-cover">
+                                {% elif combo.linked_service.image %}
+                                <img src="{{ combo.linked_service.image.url }}" alt="" class="w-12 h-12 rounded-xl object-cover">
+                                {% else %}
+                                <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                    <i class="fas fa-spa"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <p class="font-semibold text-gray-900">{{ combo.name }}</p>
+                                    <p class="text-xs text-gray-400 mt-0.5">{{ combo.duration_minutes }} min · links to {{ combo.linked_service.name }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <p class="font-semibold text-gray-900">₹{{ combo.combo_price }}</p>
+                            <p class="text-xs text-gray-400 line-through">₹{{ combo.original_price }}</p>
+                            <p class="text-xs text-green-600 font-medium">Save ₹{{ combo.savings }}</p>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1 max-w-xs">
+                                {% for trigger in combo.trigger_services.all %}
+                                <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700">{{ trigger.name }}</span>
+                                {% empty %}
+                                <span class="text-xs text-red-500">No triggers</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <form method="post" action="{% url 'dashboard_toggle_combo_service' combo.id %}">
+                                {% csrf_token %}
+                                <button type="submit"
+                                    class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium {% if combo.is_active %}bg-green-50 text-green-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+                                    {% if combo.is_active %}Active{% else %}Inactive{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                        <td class="px-4 py-4 text-right whitespace-nowrap">
+                            <div class="inline-flex items-center gap-2">
+                                <a href="{% url 'dashboard_edit_combo_service' combo.id %}"
+                                    class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:text-amber-600 hover:border-amber-200 hover:bg-amber-50 transition-colors"
+                                    title="Edit"><i class="fas fa-edit text-sm"></i></a>
+                                <a href="{% url 'dashboard_delete_combo_service' combo.id %}"
+                                    class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
+                                    title="Delete"><i class="fas fa-trash text-sm"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-16 text-center text-gray-500">
+                            No combo services yet. Add your first combo offer to start upselling on confirmation.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

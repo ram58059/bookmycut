@@ -65,6 +65,16 @@
                     <i class="fas fa-cut w-6"></i>
                     <span class="font-medium">Services</span>
                 </a>
+                <a href="{% url 'dashboard_offers' %}"
+                    class="flex items-center p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors {% if request.resolver_match.url_name == 'dashboard_offers' or request.resolver_match.url_name == 'dashboard_add_coupon' or request.resolver_match.url_name == 'dashboard_edit_coupon' or request.resolver_match.url_name == 'dashboard_delete_coupon' %}bg-gray-800 text-white border-l-4 border-amber-500{% endif %}">
+                    <i class="fas fa-tags w-6"></i>
+                    <span class="font-medium">Offers</span>
+                </a>
+                <a href="{% url 'dashboard_combo_services' %}"
+                    class="flex items-center p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors {% if 'combo_service' in request.resolver_match.url_name %}bg-gray-800 text-white border-l-4 border-amber-500{% endif %}">
+                    <i class="fas fa-layer-group w-6"></i>
+                    <span class="font-medium">Combo Services</span>
+                </a>
                 <a href="{% url 'dashboard_customers' %}"
                     class="flex items-center p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors {% if request.resolver_match.url_name == 'dashboard_customers' %}bg-gray-800 text-white border-l-4 border-amber-500{% endif %}">
                     <i class="fas fa-users w-6"></i>

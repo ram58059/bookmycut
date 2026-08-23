@@ -194,8 +194,13 @@ def get_revenue_booking_rows(start_date, end_date):
     )
     rows = []
     total = 0
+    discount_applied_groups = set()
     for booking in bookings:
-        amount = booking.service.price
+        amount = booking.line_price
+        group_key = str(booking.booking_group_id or f'single_{booking.id}')
+        if group_key not in discount_applied_groups and booking.discount_amount:
+            amount = amount - booking.discount_amount
+            discount_applied_groups.add(group_key)
         total += amount
         rows.append({
             'id': booking.id,

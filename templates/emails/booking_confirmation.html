@@ -54,11 +54,21 @@
                             <ul style="margin: 0; padding-left: 18px;">
                                 {% for b in group_bookings %}
                                 <li>
-                                    {{ b.service.name }} — ₹{{ b.service.price }} ({{ b.time|time:"g:i A" }})
+                                    {{ b.service.name }} — ₹{{ b.line_price }} ({{ b.time|time:"g:i A" }})
                                 </li>
                                 {% endfor %}
                             </ul>
                         </td>
+                    </tr>
+                    {% endif %}
+                    {% if discount_amount %}
+                    <tr>
+                        <td style="padding: 8px 0; color: #888888; font-size: 14px;">Subtotal</td>
+                        <td style="padding: 8px 0; color: #4A3728; font-size: 14px;">₹{{ subtotal }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #888888; font-size: 14px;">Discount{% if coupon_code %} ({{ coupon_code }}){% endif %}</td>
+                        <td style="padding: 8px 0; color: #15803d; font-size: 14px;">−₹{{ discount_amount }}</td>
                     </tr>
                     {% endif %}
                     <tr>

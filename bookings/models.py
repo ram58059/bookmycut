@@ -53,6 +53,79 @@ class Service(models.Model):
     def __str__(self):
         return self.name
 
+
+class Coupon(models.Model):
+    DISCOUNT_PERCENTAGE = 'percentage'
+    DISCOUNT_FIXED = 'fixed'
+    DISCOUNT_TYPE_CHOICES = [
+        (DISCOUNT_PERCENTAGE, 'Percentage'),
+        (DISCOUNT_FIXED, 'Fixed Amount'),
+    ]
+
+    code = models.CharField(max_length=40, unique=True)
+    discount_type = models.CharField(max_length=20, choices=DISCOUNT_TYPE_CHOICES)
+    discount_value = models.DecimalField(max_digits=8, decimal_places=2)
+    customer_phone = models.CharField(
+        max_length=15,
+        blank=True,
+        default='',
+        help_text='Optional. Leave blank for all customers, or set a mobile number to restrict this coupon.',
+    )
+    is_active = models.BooleanField(default=True)
+    valid_from = models.DateTimeField(null=True, blank=True)
+    valid_until = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        if self.code:
+            self.code = self.code.strip().upper()
+        if self.customer_phone:
+            self.customer_phone = ''.join(ch for ch in self.customer_phone if ch.isdigit())[-10:]
+        else:
+            self.customer_phone = ''
+        super().save(*args, **kwargs)
+
+    def is_assigned_to_customer(self):
+        return bool(self.customer_phone)
+
+    def is_currently_valid(self, now=None):
+        if not self.is_active:
+            return False
+        now = now or timezone.now()
+        if self.valid_from and now < self.valid_from:
+            return False
+        if self.valid_until and now > self.valid_until:
+            return False
+        return True
+
+    def calculate_discount(self, subtotal):
+        from decimal import Decimal, ROUND_HALF_UP
+
+        subtotal = Decimal(subtotal)
+        if subtotal <= 0:
+            return Decimal('0.00')
+
+        if self.discount_type == self.DISCOUNT_PERCENTAGE:
+            discount = (subtotal * Decimal(self.discount_value) / Decimal('100')).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP
+            )
+        else:
+            discount = Decimal(self.discount_value).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        if discount > subtotal:
+            discount = subtotal
+        if discount < 0:
+            discount = Decimal('0.00')
+        return discount
+
+    def __str__(self):
+        return self.code
+
+
 class CustomerTrust(models.Model):
     phone_number = models.CharField(max_length=15, unique=True)
     successful_bookings = models.IntegerField(default=0)
@@ -120,6 +193,10 @@ class Booking(models.Model):
         choices=BOOKING_SOURCE_CHOICES,
         default='customer',
     )
+    coupon_code = models.CharField(max_length=40, blank=True, default='')
+    discount_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    # When set (e.g. haircut combo add-on), used instead of service.price for totals.
+    charged_price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     # Anti-Abuse & Verification
@@ -144,6 +221,12 @@ class Booking(models.Model):
         return timezone.now() > self.otp_created_at + timedelta(minutes=5)
 
     @property
+    def line_price(self):
+        if self.charged_price is not None:
+            return self.charged_price
+        return self.service.price
+
+    @property
     def is_cancellable(self):
         if self.status != 'confirmed':
             return False
@@ -159,6 +242,57 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"Booking {self.id} - {self.customer_phone} ({self.service.name} @ {self.time})"
+
+
+class ComboOffer(models.Model):
+    """
+    Admin-managed combo upsell shown on booking confirmation when a trigger
+    service (e.g. Haircut) is in the cart. Adding it books `linked_service`
+    at `combo_price` instead of the list/original price.
+    """
+    name = models.CharField(max_length=120)
+    description = models.TextField(blank=True)
+    duration_minutes = models.PositiveIntegerField(default=30)
+    original_price = models.DecimalField(max_digits=8, decimal_places=2)
+    combo_price = models.DecimalField(max_digits=8, decimal_places=2)
+    image = models.ImageField(upload_to='combo_offers/', blank=True, null=True)
+    badge_text = models.CharField(max_length=40, blank=True, default='Combo Deal')
+    linked_service = models.ForeignKey(
+        Service,
+        on_delete=models.PROTECT,
+        related_name='combo_offers',
+        help_text='The bookable service added to the customer cart when this combo is selected.',
+    )
+    trigger_services = models.ManyToManyField(
+        Service,
+        related_name='triggered_combo_offers',
+        blank=True,
+        help_text='Main services that unlock this combo on the confirmation page.',
+    )
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+
+    @property
+    def savings(self):
+        from decimal import Decimal
+        diff = Decimal(self.original_price) - Decimal(self.combo_price)
+        return diff if diff > 0 else Decimal('0.00')
+
+    def display_image_url(self):
+        if self.image:
+            return self.image.url
+        if self.linked_service_id and self.linked_service.image:
+            return self.linked_service.image.url
+        return ''
+
+    def __str__(self):
+        return self.name
+
 
 class BlockedDay(models.Model):
     date = models.DateField(unique=True)

@@ -17,6 +17,9 @@ env/
 # Environment variables
 .env
 
+# Local DB sync dumps (may contain PII)
+.db_sync/
+
 # IDE
 .vscode/
 .idea/

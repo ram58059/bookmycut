@@ -91,7 +91,9 @@ def send_booking_confirmation_email(booking, request=None):
 
     # Calculate group total and list of services for this booking group
     group_bookings = Booking.objects.filter(booking_group_id=booking.booking_group_id).order_by('time')
-    total_price = sum(b.service.price for b in group_bookings)
+    from .coupons import group_pricing
+    subtotal, discount_amount, total_price = group_pricing(group_bookings)
+    coupon_code = next((b.coupon_code for b in group_bookings if b.coupon_code), '')
 
     # Render HTML content
     google_calendar_url = generate_google_calendar_url(booking)
@@ -100,6 +102,9 @@ def send_booking_confirmation_email(booking, request=None):
         {
             'booking': booking,
             'group_bookings': group_bookings,
+            'subtotal': subtotal,
+            'discount_amount': discount_amount,
+            'coupon_code': coupon_code,
             'total_price': total_price,
             'google_calendar_url': google_calendar_url,
         },
@@ -149,6 +154,9 @@ def send_booking_confirmation_email(booking, request=None):
             {
                 'booking': booking,
                 'group_bookings': group_bookings,
+                'subtotal': subtotal,
+                'discount_amount': discount_amount,
+                'coupon_code': coupon_code,
                 'total_price': total_price,
                 'dashboard_url': dashboard_url,
             },

@@ -18,6 +18,10 @@ urlpatterns = [
 
     # AJAX Endpoints (Restoring these!)
     path('api/initiate-booking/', views_ajax.InitiateBookingView.as_view(), name='api_initiate_booking'),
+    path('api/apply-coupon/', views_ajax.ApplyCouponView.as_view(), name='api_apply_coupon'),
+    path('api/remove-coupon/', views_ajax.RemoveCouponView.as_view(), name='api_remove_coupon'),
+    path('api/eligible-coupons/', views_ajax.EligibleCouponsView.as_view(), name='api_eligible_coupons'),
+    path('api/toggle-addon/', views_ajax.ToggleAddonView.as_view(), name='api_toggle_addon'),
     path('api/verify-otp/', views_ajax.VerifyBookingOTPView.as_view(), name='api_verify_otp'),
     path('api/resend-otp/', views_ajax.ResendOTPView.as_view(), name='api_resend_otp'),
 ]

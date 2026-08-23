@@ -2,11 +2,83 @@ from django.views import View
 from django.http import JsonResponse
 from django.urls import reverse
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, timedelta
+from decimal import Decimal
 import json
 from .models import Service, Booking, CustomerTrust
 from . import utils
 from . import booking_service
+from . import coupons as coupon_utils
+from . import addons as addon_utils
+from . import slots as slot_utils
+
+
+def _session_cart(request):
+    """Return selected ids, synced combo overrides, priced rows, and subtotal."""
+    selected_service_ids = list(request.session.get('selected_service_ids') or [])
+    overrides = addon_utils.sync_combo_overrides(selected_service_ids)
+    request.session['combo_price_overrides'] = overrides
+    priced_rows = addon_utils.build_priced_services(selected_service_ids, overrides)
+    subtotal = sum((row['price'] for row in priced_rows), Decimal('0.00'))
+    return selected_service_ids, overrides, priced_rows, subtotal
+
+
+def _pricing_payload(request, priced_rows, subtotal, discount_amount=None, coupon_code='', coupon_message=''):
+    if discount_amount is None:
+        discount_amount = Decimal('0.00')
+        coupon_code = request.session.get('applied_coupon_code', '')
+        if coupon_code:
+            try:
+                phone = ''
+                if request.user.is_authenticated:
+                    phone = getattr(request.user, 'phone_number', '') or ''
+                coupon, discount_amount = coupon_utils.validate_and_apply_coupon(
+                    coupon_code, subtotal, customer_phone=phone
+                )
+                coupon_code = coupon.code
+                request.session['applied_coupon_code'] = coupon.code
+            except coupon_utils.CouponError as exc:
+                request.session.pop('applied_coupon_code', None)
+                coupon_code = ''
+                discount_amount = Decimal('0.00')
+                coupon_message = exc.message
+
+    payable = subtotal - discount_amount
+    if payable < 0:
+        payable = Decimal('0.00')
+
+    return {
+        'services': [
+            {
+                'id': row['service_id'],
+                'name': row['name'],
+                'price': f"{row['price']:.2f}",
+                'regular_price': f"{row['regular_price']:.2f}",
+                'is_combo': row['is_combo'],
+            }
+            for row in priced_rows
+        ],
+        'subtotal': f'{subtotal:.2f}',
+        'discount_amount': f'{discount_amount:.2f}',
+        'total_price': f'{payable:.2f}',
+        'applied_coupon_code': coupon_code,
+        'coupon_message': coupon_message,
+        'upsell_addons': [
+            {
+                'service_id': card['service_id'],
+                'name': card['name'],
+                'already_added': card['already_added'],
+                'regular_price': f"{card['regular_price']:.2f}",
+                'combo_price': f"{card['combo_price']:.2f}",
+                'savings': f"{card['savings']:.2f}",
+            }
+            for card in addon_utils.get_upsell_carousel_items(
+                request.session.get('selected_service_ids') or [],
+                request.session.get('combo_price_overrides') or {},
+            )
+        ],
+    }
+
 
 # ========================
 # AJAX Views for Voice OTP
@@ -44,7 +116,10 @@ class InitiateBookingView(View):
             
             if not (selected_service_ids and date_str and time_str):
                 return JsonResponse({'success': False, 'message': 'Session expired. Please start over.', 'redirect': reverse('service_list')})
-                
+
+            overrides = addon_utils.sync_combo_overrides(selected_service_ids)
+            request.session['combo_price_overrides'] = overrides
+
             unique_services = Service.objects.filter(id__in=set(selected_service_ids))
             service_dict = {str(s.id): s for s in unique_services}
             sequenced_services = [service_dict[str(sid)] for sid in selected_service_ids if str(sid) in service_dict]
@@ -66,6 +141,22 @@ class InitiateBookingView(View):
             booking_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
             
             try:
+                subtotal = addon_utils.cart_subtotal(selected_service_ids, overrides)
+                coupon_code = ''
+                discount_amount = Decimal('0.00')
+                session_coupon = request.session.get('applied_coupon_code')
+                if session_coupon:
+                    try:
+                        coupon, discount_amount = coupon_utils.validate_and_apply_coupon(
+                            session_coupon,
+                            subtotal,
+                            customer_phone=phone,
+                        )
+                        coupon_code = coupon.code
+                    except coupon_utils.CouponError as exc:
+                        request.session.pop('applied_coupon_code', None)
+                        return JsonResponse({'success': False, 'message': exc.message})
+
                 group_id, bookings_created = booking_service.create_booking_group(
                     sequenced_services=sequenced_services,
                     booking_date=booking_date_obj,
@@ -80,6 +171,9 @@ class InitiateBookingView(View):
                     ip_address=ip,
                     otp=hashed_otp if not is_trusted else None,
                     otp_created_at=now_time if not is_trusted else None,
+                    coupon_code=coupon_code,
+                    discount_amount=discount_amount,
+                    price_overrides=overrides,
                 )
             except booking_service.BookingCreationError as exc:
                 return JsonResponse({'success': False, 'message': exc.message})
@@ -110,9 +204,9 @@ class InitiateBookingView(View):
                 request.session['last_booking_group_id'] = str(group_id)
 
                 # Clear session
-                if 'selected_service_ids' in request.session: del request.session['selected_service_ids']
-                if 'selected_date' in request.session: del request.session['selected_date']
-                if 'selected_time' in request.session: del request.session['selected_time']
+                for key in ('selected_service_ids', 'selected_date', 'selected_time', 'applied_coupon_code', 'combo_price_overrides'):
+                    if key in request.session:
+                        del request.session[key]
 
                 return JsonResponse({
                     'success': True,
@@ -137,6 +231,175 @@ class InitiateBookingView(View):
                  
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'Server error: {str(e)}'})
+
+class ApplyCouponView(View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            code = data.get('code', '')
+            customer_phone = data.get('customer_phone', '')
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid data'})
+
+        selected_service_ids, overrides, priced_rows, subtotal = _session_cart(request)
+        if not selected_service_ids:
+            return JsonResponse({'success': False, 'message': 'Session expired. Please start over.'})
+
+        if not customer_phone and request.user.is_authenticated:
+            customer_phone = getattr(request.user, 'phone_number', '') or ''
+
+        try:
+            coupon, discount = coupon_utils.validate_and_apply_coupon(
+                code,
+                subtotal,
+                customer_phone=customer_phone,
+            )
+        except coupon_utils.CouponError as exc:
+            return JsonResponse({'success': False, 'message': exc.message})
+
+        request.session['applied_coupon_code'] = coupon.code
+        payload = _pricing_payload(
+            request,
+            priced_rows,
+            subtotal,
+            discount_amount=discount,
+            coupon_code=coupon.code,
+        )
+        payload.update({
+            'success': True,
+            'code': coupon.code,
+            'discount_label': (
+                f'{coupon.discount_value}% off'
+                if coupon.discount_type == coupon.DISCOUNT_PERCENTAGE
+                else f'₹{coupon.discount_value} off'
+            ),
+            'customer_specific': bool(coupon.customer_phone),
+        })
+        return JsonResponse(payload)
+
+
+class RemoveCouponView(View):
+    def post(self, request):
+        request.session.pop('applied_coupon_code', None)
+        selected_service_ids, overrides, priced_rows, subtotal = _session_cart(request)
+        payload = _pricing_payload(
+            request,
+            priced_rows,
+            subtotal,
+            discount_amount=Decimal('0.00'),
+            coupon_code='',
+        )
+        payload['success'] = True
+        return JsonResponse(payload)
+
+
+class EligibleCouponsView(View):
+    def get(self, request):
+        selected_service_ids, overrides, priced_rows, subtotal = _session_cart(request)
+        if not selected_service_ids:
+            return JsonResponse({'success': False, 'message': 'Session expired.', 'coupons': []})
+
+        customer_phone = request.GET.get('customer_phone', '')
+        if not customer_phone and request.user.is_authenticated:
+            customer_phone = getattr(request.user, 'phone_number', '') or ''
+
+        coupons = coupon_utils.get_eligible_coupons(
+            customer_phone=customer_phone,
+            subtotal=subtotal,
+        )
+        return JsonResponse({
+            'success': True,
+            'subtotal': f'{subtotal:.2f}',
+            'coupons': coupons,
+        })
+
+
+class ToggleAddonView(View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            service_id = str(data.get('service_id', '')).strip()
+            action = (data.get('action') or 'add').strip().lower()
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid data'})
+
+        if not service_id.isdigit():
+            return JsonResponse({'success': False, 'message': 'Invalid add-on.'})
+
+        selected_service_ids = [str(sid) for sid in (request.session.get('selected_service_ids') or [])]
+        if not selected_service_ids:
+            return JsonResponse({'success': False, 'message': 'Session expired. Please start over.'})
+
+        unique = Service.objects.filter(id__in=set(selected_service_ids))
+        service_dict = {str(s.id): s for s in unique}
+        current_services = [service_dict[sid] for sid in selected_service_ids if sid in service_dict]
+
+        if action == 'add' and not addon_utils.selection_has_any_combo_trigger(current_services):
+            return JsonResponse({
+                'success': False,
+                'message': 'Combo add-ons are available when you book an eligible main service.',
+            })
+
+        offer = addon_utils.get_offer_for_linked_service(int(service_id), selected_service_ids)
+        if action == 'add' and not offer:
+            return JsonResponse({
+                'success': False,
+                'message': 'This combo is not available for your selected services.',
+            })
+
+        addon = Service.objects.filter(id=int(service_id)).first()
+        if not addon:
+            return JsonResponse({'success': False, 'message': 'Add-on not found.'})
+
+        date_str = request.session.get('selected_date')
+        time_str = request.session.get('selected_time')
+        if not date_str or not time_str:
+            return JsonResponse({'success': False, 'message': 'Session expired. Please start over.'})
+
+        if action == 'remove':
+            selected_service_ids = [sid for sid in selected_service_ids if sid != service_id]
+        else:
+            if service_id not in selected_service_ids:
+                # Use offer duration for slot check when available
+                duration_minutes = offer.duration_minutes if offer else addon.duration_minutes
+                other_duration = sum(s.duration_minutes for s in current_services)
+                total_duration = other_duration + duration_minutes
+                try:
+                    booking_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                    start_time = (
+                        datetime.strptime(time_str, '%H:%M:%S').time()
+                        if len(time_str) > 5
+                        else datetime.strptime(time_str, '%H:%M').time()
+                    )
+                except ValueError:
+                    return JsonResponse({'success': False, 'message': 'Invalid date or time in session.'})
+
+                requested_start = datetime.combine(booking_date, start_time)
+                requested_end = requested_start + timedelta(minutes=total_duration)
+                if not slot_utils.is_interval_free(booking_date, requested_start, requested_end):
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Your selected time slot is too short for this add-on. Please go back and choose a later slot, or continue without it.',
+                    })
+                selected_service_ids = selected_service_ids + [service_id]
+
+        request.session['selected_service_ids'] = selected_service_ids
+        selected_service_ids, overrides, priced_rows, subtotal = _session_cart(request)
+        payload = _pricing_payload(request, priced_rows, subtotal)
+        combo_price = offer.combo_price if offer else overrides.get(service_id, addon.price)
+        display_name = offer.name if offer else addon.name
+        payload.update({
+            'success': True,
+            'message': (
+                f'{display_name} removed.'
+                if action == 'remove'
+                else f'{display_name} added at combo price ₹{Decimal(combo_price):.0f}.'
+            ),
+            'action': action,
+            'service_id': int(service_id),
+        })
+        return JsonResponse(payload)
+
 
 class VerifyBookingOTPView(View):
     def post(self, request):
@@ -178,7 +441,7 @@ class VerifyBookingOTPView(View):
                 del request.session['pending_group_id']
 
             # Clear selection data
-            k = ['selected_service_ids', 'selected_date', 'selected_time']
+            k = ['selected_service_ids', 'selected_date', 'selected_time', 'applied_coupon_code', 'combo_price_overrides']
             for key in k:
                 if key in request.session: del request.session[key]
 

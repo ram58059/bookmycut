@@ -101,6 +101,9 @@ def create_booking_group(
     otp=None,
     otp_created_at=None,
     enforce_advance_buffer=True,
+    coupon_code='',
+    discount_amount=None,
+    price_overrides=None,
 ):
     if not sequenced_services:
         raise BookingCreationError('No valid services selected.')
@@ -118,6 +121,11 @@ def create_booking_group(
     if not slot_utils.is_interval_free(booking_date, requested_start, requested_end):
         raise BookingCreationError('The selected time slot is no longer available.')
 
+    from decimal import Decimal
+    applied_discount = Decimal(discount_amount or 0)
+    applied_code = (coupon_code or '').strip().upper()
+    overrides = price_overrides or {}
+
     group_id = uuid.uuid4()
     bookings_created = []
 
@@ -126,6 +134,10 @@ def create_booking_group(
             current_start = requested_start
             for service in sequenced_services:
                 current_end = current_start + timedelta(minutes=service.duration_minutes)
+                override_key = str(service.id)
+                charged = None
+                if override_key in overrides:
+                    charged = Decimal(str(overrides[override_key]))
                 booking = Booking(
                     customer_name=customer_name,
                     customer_phone=customer_phone,
@@ -142,6 +154,9 @@ def create_booking_group(
                     otp=otp,
                     otp_created_at=otp_created_at,
                     is_verified=is_verified,
+                    coupon_code=applied_code,
+                    discount_amount=applied_discount,
+                    charged_price=charged,
                 )
                 booking.save()
                 bookings_created.append(booking)

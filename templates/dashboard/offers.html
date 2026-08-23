@@ -1,0 +1,96 @@
+{% extends 'dashboard/base.html' %}
+
+{% block header %}Offers{% endblock %}
+{% block subheader %}Create and manage coupon codes for customer discounts{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h3 class="text-lg font-bold text-gray-800">Coupons</h3>
+                <p class="text-sm text-gray-500 mt-1">{{ coupon_rows|length }} coupon{{ coupon_rows|length|pluralize }} configured</p>
+            </div>
+            <a href="{% url 'dashboard_add_coupon' %}"
+                class="inline-flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                <i class="fas fa-plus mr-2"></i> Create Coupon
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-gray-500 uppercase text-xs tracking-wider">
+                    <tr>
+                        <th class="px-6 py-3.5 font-semibold">Code</th>
+                        <th class="px-6 py-3.5 font-semibold">Discount</th>
+                        <th class="px-6 py-3.5 font-semibold">Customer</th>
+                        <th class="px-6 py-3.5 font-semibold">Validity</th>
+                        <th class="px-6 py-3.5 font-semibold">Status</th>
+                        <th class="px-6 py-3.5 font-semibold text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for row in coupon_rows %}
+                    <tr class="hover:bg-gray-50/80 transition-colors">
+                        <td class="px-6 py-4">
+                            <p class="font-semibold text-gray-900 tracking-wide">{{ row.coupon.code }}</p>
+                        </td>
+                        <td class="px-6 py-4 text-gray-800">
+                            {% if row.coupon.discount_type == 'percentage' %}
+                            {{ row.coupon.discount_value }}% off
+                            {% else %}
+                            ₹{{ row.coupon.discount_value }} off
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-gray-700 text-sm">
+                            {% if row.coupon.customer_phone %}
+                            <span class="inline-flex items-center gap-1.5">
+                                <i class="fas fa-user text-amber-500 text-xs"></i>
+                                {{ row.coupon.customer_phone }}
+                            </span>
+                            {% else %}
+                            <span class="text-gray-400">All customers</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-gray-600 text-sm">
+                            {% if row.coupon.valid_from or row.coupon.valid_until %}
+                            {% if row.coupon.valid_from %}From {{ row.coupon.valid_from|date:"M j, Y g:i A" }}{% else %}Immediate{% endif %}
+                            <br>
+                            {% if row.coupon.valid_until %}Until {{ row.coupon.valid_until|date:"M j, Y g:i A" }}{% else %}No expiry{% endif %}
+                            {% else %}
+                            No date limits
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium {{ row.status_class }}">
+                                {{ row.status_label }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right whitespace-nowrap">
+                            <div class="inline-flex items-center gap-2">
+                                <a href="{% url 'dashboard_edit_coupon' row.coupon.id %}"
+                                    class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:text-amber-600 hover:border-amber-200 hover:bg-amber-50 transition-colors"
+                                    title="Edit">
+                                    <i class="fas fa-edit text-sm"></i>
+                                </a>
+                                <a href="{% url 'dashboard_delete_coupon' row.coupon.id %}"
+                                    class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
+                                    title="Delete">
+                                    <i class="fas fa-trash text-sm"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-16 text-center text-gray-500">
+                            No coupons yet. Create your first offer to get started.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -7,10 +7,13 @@ from django.db.models import Q
 from django.db import transaction, IntegrityError
 from django.contrib import messages
 from datetime import datetime, time, timedelta
+from decimal import Decimal
 from .models import Service, Booking, CustomerTrust
 from .forms import GuestDetailsForm
 from . import utils
 from . import slots as slot_utils
+from . import addons as addon_utils
+from . import coupons as coupon_utils
 import uuid
 import json
 from django.conf import settings
@@ -274,12 +277,39 @@ class BookingConfirmationView(View):
         
         if not (selected_service_ids and date_str and time_str):
             return redirect('service_list')
-            
-        # Fix: Filter returns unique objects, but we need to preserve duplicates from session
-        unique_services = Service.objects.filter(id__in=set(selected_service_ids))
-        service_dict = {str(s.id): s for s in unique_services}
-        services = [service_dict[str(sid)] for sid in selected_service_ids if str(sid) in service_dict]
-        total_price = sum(s.price for s in services)
+
+        # Keep combo pricing in sync when haircut + addon are both selected
+        overrides = addon_utils.sync_combo_overrides(selected_service_ids)
+        request.session['combo_price_overrides'] = overrides
+
+        priced_rows = addon_utils.build_priced_services(selected_service_ids, overrides)
+        services = [row['service'] for row in priced_rows]
+        subtotal = sum((row['price'] for row in priced_rows), Decimal('0.00'))
+
+        applied_coupon_code = request.session.get('applied_coupon_code', '')
+        discount_amount = 0
+        payable_total = subtotal
+        coupon_error = ''
+
+        customer_phone_for_coupon = ''
+        if request.user.is_authenticated:
+            customer_phone_for_coupon = getattr(request.user, 'phone_number', '') or ''
+
+        if applied_coupon_code:
+            try:
+                coupon, discount_amount = coupon_utils.validate_and_apply_coupon(
+                    applied_coupon_code,
+                    subtotal,
+                    customer_phone=customer_phone_for_coupon,
+                )
+                request.session['applied_coupon_code'] = coupon.code
+                payable_total = subtotal - discount_amount
+            except coupon_utils.CouponError as exc:
+                request.session.pop('applied_coupon_code', None)
+                applied_coupon_code = ''
+                coupon_error = exc.message
+                discount_amount = 0
+                payable_total = subtotal
         
         initial_data = {}
         if request.user.is_authenticated:
@@ -291,10 +321,24 @@ class BookingConfirmationView(View):
         
         shop_setting = ShopSetting.objects.first()
         is_otp_enabled = shop_setting.is_otp_enabled if shop_setting else True
+
+        eligible_coupons = coupon_utils.get_eligible_coupons(
+            customer_phone=customer_phone_for_coupon,
+            subtotal=subtotal,
+        )
+        upsell_addons = addon_utils.get_upsell_carousel_items(selected_service_ids, overrides)
         
         return render(request, 'bookings/confirmation.html', {
             'services': services,
-            'total_price': total_price,
+            'priced_services': priced_rows,
+            'subtotal': subtotal,
+            'total_price': payable_total,
+            'discount_amount': discount_amount,
+            'applied_coupon_code': applied_coupon_code,
+            'coupon_error': coupon_error,
+            'eligible_coupons': eligible_coupons,
+            'upsell_addons': upsell_addons,
+            'show_upsell_carousel': bool(upsell_addons),
             'date': date_str,
             'time': time_str,
             'form': form,
@@ -446,15 +490,46 @@ class BookingConfirmationView(View):
         
         # If invalid, re-render confirmation
         selected_service_ids = request.session.get('selected_service_ids')
-        # Fix: Filter returns unique objects, but we need to preserve duplicates from session
-        unique_services = Service.objects.filter(id__in=set(selected_service_ids))
-        service_dict = {str(s.id): s for s in unique_services}
-        services = [service_dict[str(sid)] for sid in selected_service_ids if str(sid) in service_dict]
-        total_price = sum(s.price for s in services)
-        
+        overrides = addon_utils.sync_combo_overrides(selected_service_ids or [])
+        request.session['combo_price_overrides'] = overrides
+        priced_rows = addon_utils.build_priced_services(selected_service_ids or [], overrides)
+        services = [row['service'] for row in priced_rows]
+        subtotal = sum((row['price'] for row in priced_rows), Decimal('0.00'))
+        applied_coupon_code = request.session.get('applied_coupon_code', '')
+        discount_amount = 0
+        payable_total = subtotal
+        if applied_coupon_code:
+            try:
+                coupon, discount_amount = coupon_utils.validate_and_apply_coupon(
+                    applied_coupon_code,
+                    subtotal,
+                    customer_phone=form.data.get('customer_phone', ''),
+                )
+                applied_coupon_code = coupon.code
+                payable_total = subtotal - discount_amount
+            except coupon_utils.CouponError:
+                request.session.pop('applied_coupon_code', None)
+                applied_coupon_code = ''
+                discount_amount = 0
+                payable_total = subtotal
+
+        eligible_coupons = coupon_utils.get_eligible_coupons(
+            customer_phone=form.data.get('customer_phone', ''),
+            subtotal=subtotal,
+        )
+        upsell_addons = addon_utils.get_upsell_carousel_items(selected_service_ids or [], overrides)
+
         return render(request, 'bookings/confirmation.html', {
             'services': services,
-            'total_price': total_price,
+            'priced_services': priced_rows,
+            'subtotal': subtotal,
+            'total_price': payable_total,
+            'discount_amount': discount_amount,
+            'applied_coupon_code': applied_coupon_code,
+            'coupon_error': '',
+            'eligible_coupons': eligible_coupons,
+            'upsell_addons': upsell_addons,
+            'show_upsell_carousel': bool(upsell_addons),
             'date': request.session.get('selected_date'),
             'time': request.session.get('selected_time'),
             'form': form,

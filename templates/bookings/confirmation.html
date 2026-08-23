@@ -2,10 +2,292 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-12">
-    <div class="text-center mb-12 animate-fade-in-down">
+    <div class="text-center mb-8 md:mb-10 animate-fade-in-down">
         <h1 class="text-4xl font-bold text-brown mb-4">Confirm <span class="text-gold">Booking</span></h1>
         <p class="text-gray-600">Please review your appointment details</p>
     </div>
+
+    {% if show_upsell_carousel %}
+    <style>
+        .combo-s-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            line-height: 1.3;
+            color: var(--primary-brown);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.6rem;
+            max-height: 2.6rem;
+        }
+        .combo-card {
+            display: flex;
+            flex-direction: column;
+            width: min(300px, 82vw);
+            height: 210px;
+            padding: 0.9rem 1rem !important;
+        }
+        @media (min-width: 640px) {
+            .combo-card {
+                width: 300px;
+                height: 200px;
+            }
+        }
+        .combo-card-inner {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            height: 100%;
+            position: relative;
+            z-index: 10;
+            min-height: 0;
+        }
+        .combo-card-body {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .combo-card-meta {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.35rem;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .combo-card-actions {
+            margin-top: auto;
+            padding-top: 0.65rem;
+            flex-shrink: 0;
+        }
+        .combo-card-actions .upsell-cta {
+            padding-top: 0.6rem;
+            padding-bottom: 0.6rem;
+        }
+        .combo-card-thumb {
+            width: 3.25rem;
+            height: 3.25rem;
+            flex-shrink: 0;
+        }
+        .combo-card-highlight.active {
+            border-color: var(--primary-gold);
+            background-color: rgba(212, 175, 55, 0.05);
+        }
+        .combo-original-price {
+            margin-left: 0.35rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #9ca3af;
+            text-decoration: line-through;
+            text-decoration-thickness: 1.5px;
+        }
+        .combo-view-details {
+            display: inline-flex;
+            align-items: center;
+            margin-top: 0.35rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--primary-gold);
+        }
+        #comboServiceModalOverlay {
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #comboServiceModalOverlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        #comboServiceModalContent {
+            transform: scale(0.9) translateY(20px);
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+        }
+        #comboServiceModalOverlay.active #comboServiceModalContent {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+        #upsell-carousel::-webkit-scrollbar { display: none; }
+        .combo-modal-original {
+            margin-left: 0.35rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #9ca3af;
+            text-decoration: line-through;
+            text-decoration-thickness: 1.5px;
+        }
+        .summary-original-price {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #9ca3af;
+            text-decoration: line-through;
+            text-decoration-thickness: 1.5px;
+        }
+    </style>
+
+    <section id="upsell-carousel-section" class="mb-10">
+        <div class="flex items-end justify-between gap-3 mb-5 px-1">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-[0.18em] text-gold mb-1">Upgrade your experience</p>
+                <h2 class="text-2xl md:text-3xl font-bold text-brown">Complete Your Look</h2>
+                <p class="text-sm text-gray-600 mt-1">
+                    Save more with a combo — discounted rates unlocked with your haircut.
+                </p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <button type="button" id="upsell-prev"
+                    class="w-10 h-10 rounded-full border border-yellow-100 bg-white text-brown hover:bg-brown hover:text-white transition shadow-sm"
+                    aria-label="Previous offer">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button type="button" id="upsell-next"
+                    class="w-10 h-10 rounded-full border border-yellow-100 bg-white text-brown hover:bg-brown hover:text-white transition shadow-sm"
+                    aria-label="Next offer">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="upsell-carousel"
+            class="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 scroll-smooth items-stretch"
+            style="scrollbar-width: none; -ms-overflow-style: none;">
+            {% for addon in upsell_addons %}
+            <div class="combo-card glass-card relative rounded-xl transform transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 select-none group snap-center shrink-0 cursor-pointer"
+                id="combo-card-{{ addon.service_id }}"
+                data-service-id="{{ addon.service_id }}"
+                data-name="{{ addon.name|escape }}"
+                data-price="{{ addon.combo_price }}"
+                data-regular-price="{{ addon.regular_price }}"
+                data-savings="{{ addon.savings }}"
+                data-duration="{{ addon.duration_minutes }}"
+                data-desc="{{ addon.description|default:addon.tagline|escape }}"
+                data-img="{{ addon.image_url }}"
+                data-added="{{ addon.already_added|yesno:'true,false' }}"
+                onclick="openComboServiceModal(this)">
+
+                <div class="combo-card-highlight absolute inset-0 border-2 {% if addon.already_added %}border-gold bg-yellow-50/40 active{% else %}border-transparent{% endif %} rounded-xl transition-all duration-300 pointer-events-none"
+                    id="combo-highlight-{{ addon.service_id }}"></div>
+
+                <div class="combo-card-inner">
+                    <div class="combo-card-body">
+                        {% if addon.image_url %}
+                        <img src="{{ addon.image_url }}" alt="{{ addon.name }}"
+                            class="combo-card-thumb rounded-full object-cover border-2 border-white shadow-sm">
+                        {% else %}
+                        <div class="combo-card-thumb rounded-full bg-soft-cream border border-yellow-100 flex items-center justify-center text-brown shadow-sm">
+                            <i class="fas fa-spa"></i>
+                        </div>
+                        {% endif %}
+                        <div class="flex-grow min-w-0">
+                            <div class="flex items-start justify-between gap-2">
+                                <h3 class="combo-s-title">{{ addon.name }}</h3>
+                                <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700 border border-green-100 whitespace-nowrap">
+                                    Save ₹{{ addon.savings|floatformat:0 }}
+                                </span>
+                            </div>
+                            <div class="combo-card-meta text-sm text-gray-500">
+                                <span class="flex items-center"><i class="far fa-clock mr-1.5 text-gold"></i>{{ addon.duration_minutes }} min</span>
+                                <span class="font-bold text-base text-brown">
+                                    ₹{{ addon.combo_price|floatformat:0 }}<span class="combo-original-price">₹{{ addon.regular_price|floatformat:0 }}</span>
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-green-700 font-medium mt-0.5">Combo price with your haircut</p>
+                            <div class="combo-view-details">
+                                <span>View Details</span> <i class="fas fa-arrow-right ml-1 text-[10px]"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="combo-card-actions" onclick="event.stopPropagation()">
+                        <button type="button"
+                            class="upsell-cta w-full rounded-full font-bold text-sm transition shadow-sm {% if addon.already_added %}bg-gray-100 text-gray-700 hover:bg-gray-200{% else %}bg-brown hover:bg-gold text-white{% endif %}"
+                            data-service-id="{{ addon.service_id }}"
+                            data-added="{{ addon.already_added|yesno:'true,false' }}"
+                            onclick="toggleUpsellAddon({{ addon.service_id }})">
+                            {% if addon.already_added %}
+                            <i class="fas fa-check mr-2"></i>Added — Tap to Remove
+                            {% else %}
+                            <i class="fas fa-plus mr-2"></i>Add to Booking
+                            {% endif %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <p id="upsell-message" class="hidden text-sm mt-3 px-1"></p>
+    </section>
+
+    <!-- Combo Service Details Modal -->
+    <div id="comboServiceModalOverlay" class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 sm:p-6">
+        <div id="comboServiceModalContent" class="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative flex flex-col max-h-[90vh]">
+            <button type="button" onclick="closeComboServiceModal()"
+                class="absolute top-4 right-4 w-10 h-10 bg-black/20 hover:bg-black/40 text-white rounded-full flex items-center justify-center transition-colors z-10 backdrop-blur-md">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <div class="w-full h-56 sm:h-64 bg-gray-100 relative">
+                <img id="comboModalImage" src="" alt="Service Image" class="w-full h-full object-cover hidden">
+                <div id="comboModalImageFallback" class="w-full h-full bg-soft-cream flex items-center justify-center text-brown border-b border-yellow-100">
+                    <i class="fas fa-spa text-5xl opacity-50"></i>
+                </div>
+                <div class="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
+            </div>
+
+            <div class="p-6 sm:p-8 overflow-y-auto flex-grow">
+                <h2 id="comboModalName" class="text-2xl sm:text-3xl font-bold text-brown mb-2 leading-tight"></h2>
+
+                <div class="flex flex-wrap items-center gap-6 mb-6 pb-6 border-b border-gray-100">
+                    <div class="flex items-center text-brown">
+                        <div class="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center mr-3 text-gold">
+                            <i class="fas fa-rupee-sign"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wider font-bold">Combo Price</p>
+                            <p id="comboModalPrice" class="font-bold text-lg"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center text-brown">
+                        <div class="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center mr-3 text-gold">
+                            <i class="far fa-clock"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wider font-bold">Duration</p>
+                            <p id="comboModalDuration" class="font-bold text-lg"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-5">
+                    <p id="comboModalSavings" class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-100"></p>
+                    <p class="text-xs text-gray-500 mt-2">Discounted rate available only as a combo with your selected haircut service.</p>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">About this service</h3>
+                    <div id="comboModalDesc" class="text-gray-600 text-sm sm:text-base leading-relaxed space-y-3"></div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-3 sm:justify-end">
+                <button type="button" onclick="closeComboServiceModal()"
+                    class="px-6 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 font-bold hover:bg-gray-50 transition-colors shadow-sm">
+                    Close
+                </button>
+                <button type="button" id="comboModalAddBtn"
+                    class="px-6 py-2.5 bg-brown hover:bg-gold text-white rounded-xl font-bold shadow-sm transition-colors">
+                    Add to Booking
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         <!-- Summary Card -->
@@ -26,19 +308,88 @@
 
                 <div class="border-t border-yellow-100 pt-4 mb-6">
                     <h4 class="font-bold text-brown mb-4">Services</h4>
-                    <div class="space-y-3">
-                        {% for service in services %}
-                        <div class="flex justify-between text-sm">
-                            <span class="text-gray-600">{{ service.name }}</span>
-                            <span class="font-bold text-brown">₹{{ service.price }}</span>
+                    <div id="order-services-list" class="space-y-3">
+                        {% for row in priced_services %}
+                        <div class="flex justify-between text-sm gap-3">
+                            <span class="text-gray-600">
+                                {{ row.name }}
+                                {% if row.is_combo %}
+                                <span class="block text-[11px] text-green-700 font-medium">Combo price</span>
+                                {% endif %}
+                            </span>
+                            <span class="font-bold text-brown text-right whitespace-nowrap">
+                                {% if row.is_combo %}
+                                <span class="summary-original-price">₹{{ row.regular_price }}</span>
+                                {% endif %}
+                                ₹{{ row.price }}
+                            </span>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
 
-                <div class="border-t border-brown pt-4 flex justify-between items-center">
-                    <span class="font-bold text-lg text-brown">Total</span>
-                    <span class="font-bold text-2xl text-gold">₹{{ total_price }}</span>
+                <div class="border-t border-yellow-100 pt-4 mb-4" id="coupon-section">
+                    <label class="block text-sm font-medium text-brown mb-2">
+                        <i class="fas fa-tag mr-1 text-gold"></i> Coupons & Offers
+                    </label>
+
+                    <div id="eligible-coupons-wrap" class="mb-3">
+                        <p id="eligible-coupons-empty" class="text-xs text-gray-500 mb-2 {% if eligible_coupons %}hidden{% endif %}">
+                            Enter your mobile number to see personalized offers. General coupons appear below when available.
+                        </p>
+                        <div id="eligible-coupons-list" class="space-y-2 {% if not eligible_coupons %}hidden{% endif %}">
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Suggested for you</p>
+                            {% for coupon in eligible_coupons %}
+                            <button type="button"
+                                class="eligible-coupon-btn w-full text-left px-3 py-2.5 rounded-xl border transition {% if applied_coupon_code == coupon.code %}border-gold bg-yellow-50 ring-1 ring-gold/40{% else %}border-yellow-100 bg-white hover:border-gold/50{% endif %}"
+                                data-code="{{ coupon.code }}"
+                                onclick="selectSuggestedCoupon('{{ coupon.code }}')">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div>
+                                        <p class="font-bold text-brown tracking-wide text-sm">{{ coupon.code }}</p>
+                                        <p class="text-xs text-gray-500 mt-0.5">
+                                            {{ coupon.discount_label }}
+                                            {% if coupon.customer_specific %} · Exclusive for you{% endif %}
+                                        </p>
+                                    </div>
+                                    <span class="text-xs font-bold text-green-700 whitespace-nowrap">Save ₹{{ coupon.discount_amount }}</span>
+                                </div>
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mb-2">Or enter a coupon code</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="coupon-code-input" maxlength="40"
+                            value="{{ applied_coupon_code }}"
+                            placeholder="Enter code"
+                            class="flex-1 px-3 py-2 border border-yellow-100 rounded-lg text-sm uppercase focus:outline-none focus:ring-2 focus:ring-gold/40 bg-white"
+                            {% if applied_coupon_code %}readonly{% endif %}>
+                        <button type="button" id="coupon-apply-btn"
+                            class="px-4 py-2 rounded-lg text-sm font-bold {% if applied_coupon_code %}bg-gray-100 text-gray-700{% else %}bg-brown text-white hover:bg-gold{% endif %} transition whitespace-nowrap"
+                            onclick="{% if applied_coupon_code %}removeCoupon(){% else %}applyCoupon(){% endif %}">
+                            {% if applied_coupon_code %}Remove{% else %}Apply{% endif %}
+                        </button>
+                    </div>
+                    <p id="coupon-message" class="text-sm mt-2 {% if coupon_error %}text-red-600{% elif applied_coupon_code %}text-green-700{% else %}hidden{% endif %}">
+                        {% if coupon_error %}{{ coupon_error }}{% elif applied_coupon_code %}Coupon {{ applied_coupon_code }} applied{% endif %}
+                    </p>
+                </div>
+
+                <div class="border-t border-brown pt-4 space-y-2">
+                    <div class="flex justify-between items-center text-gray-600 text-sm">
+                        <span>Subtotal</span>
+                        <span id="order-subtotal">₹{{ subtotal }}</span>
+                    </div>
+                    <div id="order-discount-row" class="flex justify-between items-center text-green-700 text-sm {% if not discount_amount %}hidden{% endif %}">
+                        <span>Discount <span id="order-coupon-label">{% if applied_coupon_code %}({{ applied_coupon_code }}){% endif %}</span></span>
+                        <span id="order-discount">−₹{{ discount_amount|default:"0" }}</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-2">
+                        <span class="font-bold text-lg text-brown">Total</span>
+                        <span id="order-total" class="font-bold text-2xl text-gold">₹{{ total_price }}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -56,6 +407,18 @@
 
                 <form method="post" class="space-y-6" id="booking-form">
                     {% csrf_token %}
+
+                    <!-- Action Buttons (top — visible without scrolling on mobile) -->
+                    <div class="flex items-center justify-between pb-2 border-b border-yellow-50">
+                        <a href="{% url 'date_time_selection' %}"
+                            class="text-gray-500 hover:text-brown transition flex items-center">
+                            <i class="fas fa-arrow-left mr-2"></i> Back
+                        </a>
+                        <button type="submit"
+                            class="btn-primary px-8 py-3 rounded-full font-bold shadow-lg flex items-center">
+                            Confirm Booking <i class="fas fa-check ml-2"></i>
+                        </button>
+                    </div>
 
                     <!-- Name Field -->
                     <div>
@@ -240,12 +603,498 @@
     let hasConfirmedBookingIntent = false;
     let isUserLoggedIn = {% if user.is_authenticated %}true{% else %} false{% endif %};
 
+    function formatMoney(value) {
+        const num = Number(value);
+        if (Number.isInteger(num)) return String(num);
+        return num.toFixed(2);
+    }
+
+    function escapeHtml(text) {
+        return String(text || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function highlightSelectedSuggestion(code) {
+        document.querySelectorAll('.eligible-coupon-btn').forEach(function (btn) {
+            const selected = code && btn.getAttribute('data-code') === code;
+            btn.className = 'eligible-coupon-btn w-full text-left px-3 py-2.5 rounded-xl border transition ' +
+                (selected
+                    ? 'border-gold bg-yellow-50 ring-1 ring-gold/40'
+                    : 'border-yellow-100 bg-white hover:border-gold/50');
+        });
+    }
+
+    function renderEligibleCoupons(coupons) {
+        const list = document.getElementById('eligible-coupons-list');
+        const empty = document.getElementById('eligible-coupons-empty');
+        if (!list || !empty) return;
+
+        const applied = (document.getElementById('coupon-code-input').value || '').trim().toUpperCase();
+        const items = coupons || [];
+
+        if (!items.length) {
+            list.classList.add('hidden');
+            list.innerHTML = '';
+            empty.classList.remove('hidden');
+            empty.textContent = getCustomerPhone().length >= 10
+                ? 'No eligible coupons right now.'
+                : 'Enter your mobile number to see personalized offers. General coupons appear below when available.';
+            return;
+        }
+
+        empty.classList.add('hidden');
+        list.classList.remove('hidden');
+        list.innerHTML = '<p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Suggested for you</p>' +
+            items.map(function (coupon) {
+                const selected = applied && applied === coupon.code;
+                const exclusive = coupon.customer_specific ? ' · Exclusive for you' : '';
+                return (
+                    '<button type="button" class="eligible-coupon-btn w-full text-left px-3 py-2.5 rounded-xl border transition ' +
+                    (selected ? 'border-gold bg-yellow-50 ring-1 ring-gold/40' : 'border-yellow-100 bg-white hover:border-gold/50') +
+                    '" data-code="' + escapeHtml(coupon.code) + '" onclick="selectSuggestedCoupon(\'' + escapeHtml(coupon.code) + '\')">' +
+                    '<div class="flex items-center justify-between gap-2">' +
+                    '<div>' +
+                    '<p class="font-bold text-brown tracking-wide text-sm">' + escapeHtml(coupon.code) + '</p>' +
+                    '<p class="text-xs text-gray-500 mt-0.5">' + escapeHtml(coupon.discount_label) + exclusive + '</p>' +
+                    '</div>' +
+                    '<span class="text-xs font-bold text-green-700 whitespace-nowrap">Save ₹' + formatMoney(coupon.discount_amount) + '</span>' +
+                    '</div>' +
+                    '</button>'
+                );
+            }).join('');
+    }
+
+    async function refreshEligibleCoupons() {
+        try {
+            const response = await fetch(
+                '{% url "api_eligible_coupons" %}?customer_phone=' + encodeURIComponent(getCustomerPhone())
+            );
+            const data = await response.json();
+            if (data.success) {
+                renderEligibleCoupons(data.coupons || []);
+            }
+        } catch (err) {
+            // Keep existing suggestions on network failure
+        }
+    }
+
+    function selectSuggestedCoupon(code) {
+        const input = document.getElementById('coupon-code-input');
+        if (!input) return;
+        if (input.readOnly && input.value.toUpperCase() === String(code || '').toUpperCase()) {
+            return;
+        }
+        input.readOnly = false;
+        input.value = code;
+        applyCoupon();
+    }
+
+    function updateCouponUI({ code, subtotal, discountAmount, totalPrice, message, isError }) {
+        const input = document.getElementById('coupon-code-input');
+        const applyBtn = document.getElementById('coupon-apply-btn');
+        const msg = document.getElementById('coupon-message');
+        const discountRow = document.getElementById('order-discount-row');
+        const discountEl = document.getElementById('order-discount');
+        const couponLabel = document.getElementById('order-coupon-label');
+        const subtotalEl = document.getElementById('order-subtotal');
+        const totalEl = document.getElementById('order-total');
+
+        subtotalEl.textContent = '₹' + formatMoney(subtotal);
+        totalEl.textContent = '₹' + formatMoney(totalPrice);
+
+        const discount = Number(discountAmount || 0);
+        if (discount > 0 && code) {
+            discountRow.classList.remove('hidden');
+            discountEl.textContent = '−₹' + formatMoney(discount);
+            couponLabel.textContent = '(' + code + ')';
+            input.value = code;
+            input.readOnly = true;
+            applyBtn.textContent = 'Remove';
+            applyBtn.setAttribute('onclick', 'removeCoupon()');
+            applyBtn.className = 'px-4 py-2 rounded-lg text-sm font-bold bg-gray-100 text-gray-700 transition whitespace-nowrap';
+            msg.className = 'text-sm mt-2 text-green-700';
+            msg.textContent = message || ('Coupon ' + code + ' applied');
+            msg.classList.remove('hidden');
+            highlightSelectedSuggestion(code);
+        } else {
+            discountRow.classList.add('hidden');
+            discountEl.textContent = '−₹0';
+            couponLabel.textContent = '';
+            if (!code) {
+                input.readOnly = false;
+            }
+            applyBtn.textContent = 'Apply';
+            applyBtn.setAttribute('onclick', 'applyCoupon()');
+            applyBtn.className = 'px-4 py-2 rounded-lg text-sm font-bold bg-brown text-white hover:bg-gold transition whitespace-nowrap';
+            highlightSelectedSuggestion('');
+            if (message) {
+                msg.className = 'text-sm mt-2 ' + (isError ? 'text-red-600' : 'text-green-700');
+                msg.textContent = message;
+                msg.classList.remove('hidden');
+            } else {
+                msg.classList.add('hidden');
+                msg.textContent = '';
+            }
+        }
+    }
+
+    function getCustomerPhone() {
+        const phoneInput = document.getElementById('id_customer_phone');
+        return phoneInput ? (phoneInput.value || '').trim() : '';
+    }
+
+    function updateOrderServicesList(services) {
+        const list = document.getElementById('order-services-list');
+        if (!list) return;
+        list.innerHTML = (services || []).map(function (row) {
+            const comboNote = row.is_combo
+                ? '<span class="block text-[11px] text-green-700 font-medium">Combo price</span>'
+                : '';
+            const regular = row.is_combo
+                ? '<span class="summary-original-price">₹' + formatMoney(row.regular_price) + '</span>'
+                : '';
+            return (
+                '<div class="flex justify-between text-sm gap-3">' +
+                '<span class="text-gray-600">' + escapeHtml(row.name) + comboNote + '</span>' +
+                '<span class="font-bold text-brown text-right whitespace-nowrap">' + regular + '₹' + formatMoney(row.price) + '</span>' +
+                '</div>'
+            );
+        }).join('');
+    }
+
+    function updateUpsellButtons(addons) {
+        (addons || []).forEach(function (addon) {
+            const btn = document.querySelector('.upsell-cta[data-service-id="' + addon.service_id + '"]');
+            const card = document.getElementById('combo-card-' + addon.service_id);
+            const highlight = document.getElementById('combo-highlight-' + addon.service_id);
+            const added = !!addon.already_added;
+
+            if (btn) {
+                btn.setAttribute('data-added', added ? 'true' : 'false');
+                if (added) {
+                    btn.className = 'upsell-cta w-full py-3 rounded-full font-bold text-sm transition shadow-md bg-gray-100 text-gray-700 hover:bg-gray-200';
+                    btn.innerHTML = '<i class="fas fa-check mr-2"></i>Added — Tap to Remove';
+                } else {
+                    btn.className = 'upsell-cta w-full py-3 rounded-full font-bold text-sm transition shadow-md bg-brown hover:bg-gold text-white';
+                    btn.innerHTML = '<i class="fas fa-plus mr-2"></i>Add to Booking';
+                }
+            }
+            if (card) {
+                card.setAttribute('data-added', added ? 'true' : 'false');
+            }
+            if (highlight) {
+                if (added) {
+                    highlight.classList.add('active', 'border-gold', 'bg-yellow-50/40');
+                    highlight.classList.remove('border-transparent');
+                } else {
+                    highlight.classList.remove('active', 'border-gold', 'bg-yellow-50/40');
+                    highlight.classList.add('border-transparent');
+                }
+            }
+        });
+
+        const modalBtn = document.getElementById('comboModalAddBtn');
+        if (modalBtn && modalBtn.dataset.serviceId) {
+            const current = (addons || []).find(function (a) {
+                return String(a.service_id) === String(modalBtn.dataset.serviceId);
+            });
+            if (current) {
+                syncComboModalAddButton(current.already_added, current.service_id);
+            }
+        }
+    }
+
+    function syncComboModalAddButton(added, serviceId) {
+        const modalBtn = document.getElementById('comboModalAddBtn');
+        if (!modalBtn) return;
+        modalBtn.dataset.serviceId = serviceId;
+        if (added) {
+            modalBtn.textContent = 'Remove from Booking';
+            modalBtn.className = 'px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold shadow-sm transition-colors';
+        } else {
+            modalBtn.textContent = 'Add to Booking';
+            modalBtn.className = 'px-6 py-2.5 bg-brown hover:bg-gold text-white rounded-xl font-bold shadow-sm transition-colors';
+        }
+    }
+
+    function openComboServiceModal(cardEl) {
+        const overlay = document.getElementById('comboServiceModalOverlay');
+        if (!overlay || !cardEl) return;
+
+        const name = cardEl.getAttribute('data-name') || '';
+        const comboPrice = cardEl.getAttribute('data-price') || '';
+        const regularPrice = cardEl.getAttribute('data-regular-price') || '';
+        const savings = cardEl.getAttribute('data-savings') || '0';
+        const duration = cardEl.getAttribute('data-duration') || '';
+        const desc = cardEl.getAttribute('data-desc') || '';
+        const img = cardEl.getAttribute('data-img') || '';
+        const serviceId = cardEl.getAttribute('data-service-id');
+        const added = cardEl.getAttribute('data-added') === 'true';
+
+        document.getElementById('comboModalName').textContent = name;
+        document.getElementById('comboModalPrice').innerHTML =
+            '₹' + formatMoney(comboPrice) +
+            '<span class="combo-modal-original">₹' + formatMoney(regularPrice) + '</span>';
+        document.getElementById('comboModalDuration').textContent = duration + ' min';
+        document.getElementById('comboModalSavings').textContent = 'Save ₹' + formatMoney(savings) + ' with this combo';
+
+        const descEl = document.getElementById('comboModalDesc');
+        descEl.innerHTML = '';
+        if (desc && desc.trim()) {
+            const p = document.createElement('p');
+            p.textContent = desc;
+            descEl.appendChild(p);
+        } else {
+            const empty = document.createElement('p');
+            empty.className = 'text-gray-400 italic';
+            empty.textContent = 'No additional details available for this service.';
+            descEl.appendChild(empty);
+        }
+
+        const modalImage = document.getElementById('comboModalImage');
+        const modalFallback = document.getElementById('comboModalImageFallback');
+        if (img) {
+            modalImage.src = img;
+            modalImage.classList.remove('hidden');
+            modalFallback.classList.add('hidden');
+        } else {
+            modalImage.src = '';
+            modalImage.classList.add('hidden');
+            modalFallback.classList.remove('hidden');
+        }
+
+        syncComboModalAddButton(added, serviceId);
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeComboServiceModal() {
+        const overlay = document.getElementById('comboServiceModalOverlay');
+        if (!overlay) return;
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function applyPricingPayload(data, options) {
+        options = options || {};
+        if (data.services) {
+            updateOrderServicesList(data.services);
+        }
+        if (data.upsell_addons) {
+            updateUpsellButtons(data.upsell_addons);
+        }
+
+        const code = data.applied_coupon_code || data.code || '';
+        const discount = Number(data.discount_amount || 0);
+        updateCouponUI({
+            code: discount > 0 ? code : '',
+            subtotal: data.subtotal,
+            discountAmount: discount,
+            totalPrice: data.total_price,
+            message: options.couponMessage || data.coupon_message || (discount > 0 && code ? ('Coupon ' + code + ' applied') : options.clearMessage ? '' : undefined),
+            isError: !!options.isError,
+        });
+
+        if (options.upsellMessage) {
+            const msg = document.getElementById('upsell-message');
+            if (msg) {
+                msg.className = 'text-sm mt-3 px-1 ' + (options.isError ? 'text-red-600' : 'text-green-700');
+                msg.textContent = options.upsellMessage;
+                msg.classList.remove('hidden');
+            }
+        }
+    }
+
+    async function toggleUpsellAddon(serviceId) {
+        const btn = document.querySelector('.upsell-cta[data-service-id="' + serviceId + '"]');
+        const currentlyAdded = btn && btn.getAttribute('data-added') === 'true';
+        const action = currentlyAdded ? 'remove' : 'add';
+        if (btn) {
+            btn.disabled = true;
+            btn.classList.add('opacity-70');
+        }
+        try {
+            const response = await fetch('{% url "api_toggle_addon" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ service_id: serviceId, action: action })
+            });
+            const data = await response.json();
+            if (data.success) {
+                applyPricingPayload(data, { upsellMessage: data.message, clearMessage: true });
+                refreshEligibleCoupons();
+            } else {
+                const msg = document.getElementById('upsell-message');
+                if (msg) {
+                    msg.className = 'text-sm mt-3 px-1 text-red-600';
+                    msg.textContent = data.message || 'Could not update add-on.';
+                    msg.classList.remove('hidden');
+                }
+            }
+        } catch (err) {
+            const msg = document.getElementById('upsell-message');
+            if (msg) {
+                msg.className = 'text-sm mt-3 px-1 text-red-600';
+                msg.textContent = 'Network error. Please try again.';
+                msg.classList.remove('hidden');
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-70');
+            }
+        }
+    }
+
+    function initUpsellCarousel() {
+        const track = document.getElementById('upsell-carousel');
+        if (!track) return;
+        const prev = document.getElementById('upsell-prev');
+        const next = document.getElementById('upsell-next');
+        const scrollByCard = function (dir) {
+            const card = track.querySelector('.combo-card');
+            const amount = card ? card.offsetWidth + 16 : 280;
+            track.scrollBy({ left: dir * amount, behavior: 'smooth' });
+        };
+        if (prev) prev.addEventListener('click', function () { scrollByCard(-1); });
+        if (next) next.addEventListener('click', function () { scrollByCard(1); });
+
+        const overlay = document.getElementById('comboServiceModalOverlay');
+        if (overlay) {
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay) closeComboServiceModal();
+            });
+        }
+        const modalBtn = document.getElementById('comboModalAddBtn');
+        if (modalBtn) {
+            modalBtn.addEventListener('click', function () {
+                const serviceId = this.dataset.serviceId;
+                if (serviceId) {
+                    toggleUpsellAddon(serviceId);
+                }
+            });
+        }
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeComboServiceModal();
+        });
+    }
+
+    async function applyCoupon() {
+        const input = document.getElementById('coupon-code-input');
+        const code = (input.value || '').trim();
+        if (!code) {
+            updateCouponUI({
+                code: '',
+                subtotal: document.getElementById('order-subtotal').textContent.replace('₹', ''),
+                discountAmount: 0,
+                totalPrice: document.getElementById('order-total').textContent.replace('₹', ''),
+                message: 'Please enter a coupon code.',
+                isError: true,
+            });
+            return;
+        }
+
+        try {
+            const response = await fetch('{% url "api_apply_coupon" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    code: code,
+                    customer_phone: getCustomerPhone()
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                applyPricingPayload({
+                    services: data.services,
+                    upsell_addons: data.upsell_addons,
+                    subtotal: data.subtotal,
+                    discount_amount: data.discount_amount,
+                    total_price: data.total_price,
+                    applied_coupon_code: data.code,
+                    code: data.code,
+                }, {
+                    couponMessage: 'Coupon ' + data.code + ' applied' + (data.discount_label ? ' (' + data.discount_label + ')' : ''),
+                });
+                refreshEligibleCoupons();
+            } else {
+                updateCouponUI({
+                    code: '',
+                    subtotal: document.getElementById('order-subtotal').textContent.replace('₹', ''),
+                    discountAmount: 0,
+                    totalPrice: document.getElementById('order-subtotal').textContent.replace('₹', ''),
+                    message: data.message || 'Invalid coupon code.',
+                    isError: true,
+                });
+                input.readOnly = false;
+                refreshEligibleCoupons();
+            }
+        } catch (err) {
+            updateCouponUI({
+                code: '',
+                subtotal: document.getElementById('order-subtotal').textContent.replace('₹', ''),
+                discountAmount: 0,
+                totalPrice: document.getElementById('order-total').textContent.replace('₹', ''),
+                message: 'Network error. Please try again.',
+                isError: true,
+            });
+        }
+    }
+
+    async function removeCoupon() {
+        try {
+            const response = await fetch('{% url "api_remove_coupon" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({})
+            });
+            const data = await response.json();
+            const input = document.getElementById('coupon-code-input');
+            input.value = '';
+            input.readOnly = false;
+            updateCouponUI({
+                code: '',
+                subtotal: data.subtotal,
+                discountAmount: 0,
+                totalPrice: data.total_price,
+                message: 'Coupon removed.',
+                isError: false,
+            });
+            if (data.services) updateOrderServicesList(data.services);
+            refreshEligibleCoupons();
+        } catch (err) {
+            alert('Could not remove coupon. Please try again.');
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('booking-form');
         const emailInput = document.getElementById('id_customer_email');
         const phoneInput = document.getElementById('id_customer_phone');
         const nameInput = document.getElementById('id_customer_name');
         const emailError = document.getElementById('email-error');
+        const couponInput = document.getElementById('coupon-code-input');
+
+        if (couponInput) {
+            couponInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!this.readOnly) applyCoupon();
+                }
+            });
+        }
 
         // Real-time Email Validation
         emailInput.addEventListener('input', function () {
@@ -259,6 +1108,33 @@
                 this.classList.remove('input-error');
             }
         });
+
+        // Re-check customer-specific coupons when mobile number changes
+        let phoneCouponTimer = null;
+        function onPhoneUpdatedForCoupons() {
+            clearTimeout(phoneCouponTimer);
+            phoneCouponTimer = setTimeout(async function () {
+                await refreshEligibleCoupons();
+                const couponInput = document.getElementById('coupon-code-input');
+                if (couponInput && couponInput.readOnly && couponInput.value) {
+                    await applyCoupon();
+                }
+            }, 200);
+        }
+        phoneInput.addEventListener('change', onPhoneUpdatedForCoupons);
+        phoneInput.addEventListener('blur', onPhoneUpdatedForCoupons);
+        phoneInput.addEventListener('input', function () {
+            if (this.value.replace(/[^0-9]/g, '').length === 10) {
+                onPhoneUpdatedForCoupons();
+            }
+        });
+
+        // Initial suggestions refresh if phone already present
+        if (getCustomerPhone()) {
+            refreshEligibleCoupons();
+        }
+
+        initUpsellCarousel();
 
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
