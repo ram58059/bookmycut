@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from bookings.models import Service
+from bookings.models import Booking, Service
 from dashboard.views import is_barber_or_admin
 from finance.forms import ManualServiceEntryForm
 from finance.models import ManualServiceEntry
@@ -16,6 +16,7 @@ from finance.services import (
     get_booked_service_rows,
     get_manual_entries,
     get_manual_revenue,
+    update_booked_service_line,
 )
 
 
@@ -65,6 +66,23 @@ def finance_dashboard(request):
             messages.success(request, 'Additional service entry deleted.')
             return _finance_redirect(selected_date)
 
+        elif action == 'edit_booked':
+            booking_id = request.POST.get('booking_line_id')
+            service_id = request.POST.get('service_id')
+            unit_price = request.POST.get('unit_price')
+            try:
+                booking = update_booked_service_line(booking_id, service_id, unit_price)
+                messages.success(
+                    request,
+                    f'Updated booked service for {booking.customer_name} to '
+                    f'{booking.service.name} at ₹{booking.line_price}.',
+                )
+            except (Booking.DoesNotExist, Service.DoesNotExist):
+                messages.error(request, 'Could not find that booking or service.')
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            return _finance_redirect(selected_date)
+
     edit_id = request.GET.get('edit')
     if edit_id and edit_entry is None:
         edit_entry = get_object_or_404(ManualServiceEntry, pk=edit_id)
@@ -82,9 +100,10 @@ def finance_dashboard(request):
     grand_total = booked_revenue + additional_revenue
 
     # Include finance-manual services so previously typed custom names appear in suggestions.
+    catalog_services = list(Service.objects.order_by('name'))
     service_suggestions = [
         {'id': service.id, 'name': service.name, 'price': str(service.price)}
-        for service in Service.objects.order_by('name')
+        for service in catalog_services
     ]
 
     context = {
@@ -98,6 +117,7 @@ def finance_dashboard(request):
         'grand_total': grand_total,
         'form': form,
         'edit_entry': edit_entry,
+        'catalog_services': catalog_services,
         'service_suggestions_json': json.dumps(service_suggestions),
     }
     return render(request, 'dashboard/finance.html', context)

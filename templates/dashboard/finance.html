@@ -26,41 +26,82 @@
         <div class="p-6 border-b border-gray-100">
             <h3 class="text-lg font-bold text-gray-900">Booked Services</h3>
             <p class="text-sm text-gray-500 mt-1">
-                Services from customer bookings on {{ selected_date|date:"l, d M Y" }}
+                Services from customer bookings on {{ selected_date|date:"l, d M Y" }}.
+                Change the service or charged price if what was delivered/paid differs from the online booking.
             </p>
         </div>
 
         {% if booked_rows %}
         <div class="overflow-x-auto">
-            <table class="w-full text-left">
+            <table class="w-full text-left min-w-[860px]">
                 <thead>
                     <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
-                        <th class="px-6 py-4 font-semibold">Booking ID</th>
-                        <th class="px-6 py-4 font-semibold">Customer Name</th>
-                        <th class="px-6 py-4 font-semibold">Service Name</th>
-                        <th class="px-6 py-4 font-semibold text-center">Quantity</th>
-                        <th class="px-6 py-4 font-semibold text-right">Service Price</th>
-                        <th class="px-6 py-4 font-semibold text-right">Total Amount</th>
+                        <th class="px-4 py-4 font-semibold">Booking</th>
+                        <th class="px-4 py-4 font-semibold">Customer</th>
+                        <th class="px-4 py-4 font-semibold">Service</th>
+                        <th class="px-4 py-4 font-semibold text-right">Charged Price</th>
+                        <th class="px-4 py-4 font-semibold text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     {% for row in booked_rows %}
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-6 py-4 text-sm font-medium text-gray-900">#{{ row.booking_id }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-700">{{ row.customer_name }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-700">{{ row.service_name }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-700 text-center">{{ row.quantity }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-700 text-right">₹{{ row.unit_price }}</td>
-                        <td class="px-6 py-4 text-sm font-semibold text-gray-900 text-right">₹{{ row.total_amount }}</td>
+                    {% if row.editable %}
+                    <tr class="hover:bg-gray-50 transition-colors" id="booked-row-{{ row.booking_line_id }}">
+                        <td class="px-4 py-4 text-sm font-medium text-gray-900 align-middle">#{{ row.booking_id }}</td>
+                        <td class="px-4 py-4 text-sm text-gray-700 align-middle">{{ row.customer_name }}</td>
+                        <td class="px-4 py-4 align-middle" colspan="3">
+                            <form method="post" class="booked-edit-form flex flex-col sm:flex-row gap-3 sm:items-center">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="edit_booked">
+                                <input type="hidden" name="booking_line_id" value="{{ row.booking_line_id }}">
+                                <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+
+                                <div class="flex-1 min-w-0">
+                                    <select name="service_id"
+                                        class="booked-service-select w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                                        data-row="{{ row.booking_line_id }}">
+                                        {% for service in catalog_services %}
+                                        <option value="{{ service.id }}"
+                                            data-price="{{ service.price }}"
+                                            {% if service.id == row.service_id %}selected{% endif %}>
+                                            {{ service.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="w-full sm:w-36 relative shrink-0">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                                    <input type="number" name="unit_price" step="0.01" min="0" required
+                                        value="{{ row.unit_price }}"
+                                        class="booked-price-input w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                        data-row="{{ row.booking_line_id }}">
+                                </div>
+                                <button type="submit"
+                                    class="shrink-0 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+                                    Save
+                                </button>
+                            </form>
+                        </td>
                     </tr>
+                    {% else %}
+                    <tr class="bg-green-50/50">
+                        <td class="px-4 py-4 text-sm font-medium text-gray-900">#{{ row.booking_id }}</td>
+                        <td class="px-4 py-4 text-sm text-gray-700">{{ row.customer_name }}</td>
+                        <td class="px-4 py-4 text-sm text-green-700 font-medium">{{ row.service_name }}</td>
+                        <td class="px-4 py-4 text-sm font-semibold text-green-800 text-right">₹{{ row.unit_price }}</td>
+                        <td class="px-4 py-4 text-xs text-gray-400 text-right">Coupon</td>
+                    </tr>
+                    {% endif %}
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr class="bg-amber-50 border-t border-amber-100">
-                        <td colspan="5" class="px-6 py-4 text-sm font-bold text-gray-800 text-right">
+                        <td colspan="3" class="px-4 py-4 text-sm font-bold text-gray-800 text-right">
                             Total Revenue from Booked Services
                         </td>
-                        <td class="px-6 py-4 text-sm font-bold text-amber-700 text-right">₹{{ booked_revenue }}</td>
+                        <td class="px-4 py-4 text-sm font-bold text-amber-700 text-right" colspan="2">
+                            ₹{{ booked_revenue }}
+                        </td>
                     </tr>
                 </tfoot>
             </table>
@@ -218,6 +259,20 @@
 
 <script>
     (function () {
+        // When admin changes a booked service, fill the default catalog price.
+        // They can still override the charged price before saving.
+        document.querySelectorAll('.booked-service-select').forEach(function (select) {
+            select.addEventListener('change', function () {
+                const option = this.options[this.selectedIndex];
+                const price = option ? option.getAttribute('data-price') : '';
+                const rowId = this.getAttribute('data-row');
+                const priceInput = document.querySelector('.booked-price-input[data-row="' + rowId + '"]');
+                if (priceInput && price !== null && price !== '') {
+                    priceInput.value = price;
+                }
+            });
+        });
+
         const input = document.getElementById('manual-service-name');
         const unitPriceInput = document.getElementById('manual-unit-price');
         const services = {{ service_suggestions_json|safe }};

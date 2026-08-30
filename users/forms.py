@@ -1,5 +1,5 @@
 from django import forms
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, validate_email
 
 class PhoneLoginForm(forms.Form):
     first_name = forms.CharField(
@@ -21,6 +21,21 @@ class PhoneLoginForm(forms.Form):
             'type': 'tel'
         })
     )
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-black focus:ring-0 text-gray-900',
+            'placeholder': 'Enter your email address',
+            'type': 'email',
+            'required': True,
+            'autocomplete': 'email',
+        })
+    )
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip()
+        validate_email(email)
+        return email
+
 
 class OTPVerifyForm(forms.Form):
     otp = forms.CharField(

@@ -313,7 +313,7 @@
         serviceForm.addEventListener('submit', function (e) {
             if (!isUserLoggedIn) {
                 e.preventDefault();
-                openLoginModal(function (name, phone) {
+                openLoginModal(function (name, phone, email) {
                     // Success callback: now submit the form
                     serviceForm.submit();
                 });

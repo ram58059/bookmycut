@@ -647,6 +647,8 @@
 </div>
 
 
+{% include 'includes/login_modal.html' %}
+
 <!-- Full Page Booking Confirmation Loader -->
 <div id="booking-loader"
     class="fixed inset-0 bg-white/90 backdrop-blur-md z-[99999] hidden flex flex-col justify-center items-center transition-opacity">
@@ -750,7 +752,6 @@
     let resendTimer = null;
     let timeLeft = 30;
     let hasConfirmedBookingIntent = false;
-    let isUserLoggedIn = {% if user.is_authenticated %}true{% else %} false{% endif %};
 
     function formatMoney(value) {
         const num = Number(value);
@@ -1375,25 +1376,36 @@
 
             // First: Ensure Login
             if (!isUserLoggedIn) {
-                openLoginModal(function (name, phone) {
+                openLoginModal(function (name, phone, email) {
                     document.getElementById('id_customer_name').value = name;
                     document.getElementById('id_customer_phone').value = phone;
+                    if (email) {
+                        document.getElementById('id_customer_email').value = email;
+                    }
                     form.dispatchEvent(new Event('submit'));
                 });
                 return;
             }
 
-            // Second, show the confirmation popup before doing anything else
-            if (!hasConfirmedBookingIntent) {
-                openConfirmBookingModal();
+            // Validate before confirm popup so missing email focuses immediately
+            const isEmailValid = validateEmailField();
+            const isPhoneValid = validatePhoneField();
+            const isNameValid = validateNameField();
+
+            if (!isEmailValid || !isPhoneValid || !isNameValid) {
+                if (!isNameValid) {
+                    focusBookingField(nameInput);
+                } else if (!isPhoneValid) {
+                    focusBookingField(phoneInput);
+                } else {
+                    focusBookingField(emailInput);
+                }
                 return;
             }
 
-            // Validate Inputs
-            const isEmailValid = validateEmailField();
-            const isPhoneValid = validatePhoneField();
-
-            if (!isEmailValid || !isPhoneValid) {
+            // Show the confirmation popup before booking
+            if (!hasConfirmedBookingIntent) {
+                openConfirmBookingModal();
                 return;
             }
 
@@ -1445,6 +1457,25 @@
         });
     });
 
+    function focusBookingField(inputEl) {
+        if (!inputEl) return;
+        try {
+            inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch (err) {
+            inputEl.scrollIntoView(true);
+        }
+        // Focus synchronously from the tap so mobile keyboards open
+        inputEl.focus({ preventScroll: true });
+        if (typeof inputEl.setSelectionRange === 'function') {
+            const len = (inputEl.value || '').length;
+            try {
+                inputEl.setSelectionRange(len, len);
+            } catch (err) {
+                // Some input types disallow selection range
+            }
+        }
+    }
+
     function openConfirmBookingModal() {
         document.getElementById('confirm-booking-modal').classList.remove('hidden');
         const bar = document.getElementById('sticky-confirm-bar');
@@ -1465,10 +1496,22 @@
         form.dispatchEvent(new Event('submit'));
     }
 
+    function validateNameField() {
+        const nameInput = document.getElementById('id_customer_name');
+        if (!nameInput) return true;
+        const name = (nameInput.value || '').trim();
+        if (name.length < 3) {
+            nameInput.classList.add('border-red-500', 'bg-red-50');
+            return false;
+        }
+        nameInput.classList.remove('border-red-500', 'bg-red-50');
+        return true;
+    }
+
     function validateEmailField() {
         const emailInput = document.getElementById('id_customer_email');
         const emailError = document.getElementById('email-error');
-        const email = emailInput.value;
+        const email = (emailInput.value || '').trim();
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
         // Add validation styles dynamically for inputs that might not have them yet

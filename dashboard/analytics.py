@@ -1,8 +1,9 @@
 from datetime import time as dt_time, timedelta, date
+from decimal import Decimal
 
 from django.db import models
 from django.db.models import Count, F, Q, Sum
-from django.db.models.functions import ExtractWeekDay, TruncDay, TruncMonth
+from django.db.models.functions import Coalesce, ExtractWeekDay, TruncDay, TruncMonth
 from django.utils import timezone
 
 from bookings.models import Booking, Service
@@ -14,6 +15,27 @@ REVENUE_STATUSES = ['completed', 'confirmed']
 
 def _revenue_bookings():
     return Booking.objects.filter(status__in=REVENUE_STATUSES)
+
+
+def _line_amount_expr():
+    """What the customer was charged for a line (combo price when set, else list price)."""
+    return Coalesce(F('charged_price'), F('service__price'))
+
+
+def _sum_charged_revenue(queryset):
+    """
+    Sum charged line prices and subtract coupon discount once per booking group.
+    Matches finance dashboard logic so combo deals are not counted at list price.
+    """
+    total = Decimal('0')
+    seen_discounts = set()
+    for booking in queryset.select_related('service'):
+        total += Decimal(str(booking.line_price))
+        group_key = str(booking.booking_group_id or f'single_{booking.id}')
+        if group_key not in seen_discounts and booking.discount_amount:
+            total -= Decimal(str(booking.discount_amount))
+            seen_discounts.add(group_key)
+    return total
 
 
 def get_upcoming_bookings():
@@ -116,12 +138,8 @@ def get_period_stats(start_date, end_date=None):
     else:
         qs = qs.filter(date__gte=start_date)
 
-    stats = qs.aggregate(
-        revenue=Sum('service__price'),
-        bookings=Count('id'),
-    )
-    booking_revenue = stats['revenue'] or 0
-    booking_count = stats['bookings'] or 0
+    booking_count = qs.count()
+    booking_revenue = _sum_charged_revenue(qs)
     manual_revenue = _manual_revenue_for_period(start_date, end_date)
     manual_sales = _manual_sales_count_for_period(start_date, end_date)
     return {
@@ -260,7 +278,7 @@ def get_status_booking_rows(status, start_date, end_date):
             'time': booking.time,
             'status': booking.status,
             'status_display': booking.get_status_display(),
-            'amount': booking.service.price,
+            'amount': booking.line_price,
         })
     return rows
 
@@ -394,7 +412,7 @@ def get_monthly_revenue_trend(months=6):
         .annotate(month=TruncMonth('date'))
         .values('month')
         .annotate(
-            revenue=Sum('service__price'),
+            revenue=Sum(_line_amount_expr()),
             bookings=Count('id'),
         )
         .order_by('month')
@@ -434,7 +452,7 @@ def get_daily_revenue_trend(days=30):
         .annotate(day=TruncDay('date'))
         .values('day')
         .annotate(
-            revenue=Sum('service__price'),
+            revenue=Sum(_line_amount_expr()),
             bookings=Count('id'),
         )
         .order_by('day')
@@ -471,7 +489,7 @@ def get_busiest_days():
         .values('weekday')
         .annotate(
             bookings=Count('id'),
-            revenue=Sum('service__price'),
+            revenue=Sum(_line_amount_expr()),
         )
     )
     row_map = {row['weekday']: row for row in rows}
@@ -601,7 +619,7 @@ def get_customers(query=None, sort='last_visit', direction='desc'):
         cancelled_visits=Count('id', filter=Q(status='cancelled')),
         no_show_visits=Count('id', filter=Q(status='no_show')),
         upcoming_bookings=Count('id', filter=upcoming_filter),
-        total_spent=Sum('service__price', filter=visit_filter),
+        total_spent=Sum(_line_amount_expr(), filter=visit_filter),
         first_booking=models.Min('date'),
         first_completed=models.Min('date', filter=visit_filter),
         last_visit=models.Max('date', filter=visit_filter),

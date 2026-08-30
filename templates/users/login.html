@@ -27,6 +27,10 @@
                         {{ form.phone_number }}
                     </div>
                 </div>
+                <div>
+                    <label for="{{ form.email.id_for_label }}" class="sr-only">Email Address</label>
+                    {{ form.email }}
+                </div>
             </div>
 
             {% if form.first_name.errors %}
@@ -37,6 +41,11 @@
             {% if form.phone_number.errors %}
             <div class="text-red-500 text-sm mt-2">
                 {{ form.phone_number.errors.0 }}
+            </div>
+            {% endif %}
+            {% if form.email.errors %}
+            <div class="text-red-500 text-sm mt-2">
+                {{ form.email.errors.0 }}
             </div>
             {% endif %}
 

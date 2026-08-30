@@ -127,6 +127,20 @@ class InitiateBookingView(View):
             # Trusted users: skip OTP for booking
             if request.user.is_authenticated:
                 is_trusted = True
+                # Keep profile in sync if customer updates details on confirm
+                try:
+                    user = request.user
+                    changed = False
+                    if customer_name and user.first_name != customer_name:
+                        user.first_name = customer_name
+                        changed = True
+                    if email and user.email != email:
+                        user.email = email
+                        changed = True
+                    if changed:
+                        user.save(update_fields=['first_name', 'email'])
+                except Exception as e:
+                    print(f"Profile sync skipped: {e}")
             else:
                 is_trusted = request.user.is_authenticated
                 
@@ -188,7 +202,11 @@ class InitiateBookingView(View):
                         user, created = User.objects.get_or_create(phone_number=phone)
                         if created:
                             user.username = phone
-                            user.save()
+                        if customer_name and user.first_name != customer_name:
+                            user.first_name = customer_name
+                        if email and user.email != email:
+                            user.email = email
+                        user.save()
                         login(request, user)
                     except Exception as e:
                         print(f"Auto-login failed after bypass: {e}")

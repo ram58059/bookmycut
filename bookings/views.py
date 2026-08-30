@@ -14,6 +14,7 @@ from . import utils
 from . import slots as slot_utils
 from . import addons as addon_utils
 from . import coupons as coupon_utils
+from . import booking_service
 import uuid
 import json
 from django.conf import settings
@@ -313,9 +314,9 @@ class BookingConfirmationView(View):
         
         initial_data = {}
         if request.user.is_authenticated:
-            initial_data['customer_name'] = getattr(request.user, 'first_name', '')
-            initial_data['customer_phone'] = getattr(request.user, 'phone_number', '')
-            initial_data['customer_email'] = getattr(request.user, 'email', '')
+            initial_data['customer_name'] = getattr(request.user, 'first_name', '') or ''
+            initial_data['customer_phone'] = getattr(request.user, 'phone_number', '') or ''
+            initial_data['customer_email'] = getattr(request.user, 'email', '') or ''
             
         form = GuestDetailsForm(initial=initial_data)
         
@@ -370,6 +371,9 @@ class BookingConfirmationView(View):
             unique_services = Service.objects.filter(id__in=set(selected_service_ids))
             service_dict = {str(s.id): s for s in unique_services}
             sequenced_services = [service_dict[str(sid)] for sid in selected_service_ids if str(sid) in service_dict]
+
+            overrides = addon_utils.sync_combo_overrides(selected_service_ids)
+            request.session['combo_price_overrides'] = overrides
             
             # Determine if trusted or logged in
             if request.user.is_authenticated:
@@ -379,8 +383,6 @@ class BookingConfirmationView(View):
                 
                 is_trusted_user = True
 
-            # Create Bookings Transactionally
-            group_id = uuid.uuid4()
             plain_otp = utils.generate_otp()
             hashed_otp = utils.hash_otp(plain_otp)
             now_time = timezone.now()
@@ -396,49 +398,43 @@ class BookingConfirmationView(View):
             except ValueError:
                 return render(request, 'bookings/error.html', {'message': 'Invalid date or time format.'})
 
-            # Re-verify slot availability one last time before creating bookings
-            total_duration_for_all_services = sum(s.duration_minutes for s in sequenced_services)
-            requested_start_dt = datetime.combine(booking_date_obj, booking_time_obj)
-            requested_end_dt = requested_start_dt + timedelta(minutes=total_duration_for_all_services)
-
-            if not slot_utils.is_interval_free(booking_date_obj, requested_start_dt, requested_end_dt):
-                return render(request, 'bookings/error.html', {'message': 'The selected time slot is no longer available. Please choose another time.'})
-
             try:
-                with transaction.atomic():
-            
-                    # Create bookings for each service sequentially
-                    current_start_time_dt = datetime.combine(booking_date_obj, booking_time_obj)
-                    
-                    for service in sequenced_services:
-                        # Compute end_time dynamically based on service duration
-                        current_end_time_dt = current_start_time_dt + timedelta(minutes=service.duration_minutes)
-                        
-                        booking = Booking(
-                            customer_name=name,
+                subtotal = addon_utils.cart_subtotal(selected_service_ids, overrides)
+                coupon_code = ''
+                discount_amount = Decimal('0.00')
+                session_coupon = request.session.get('applied_coupon_code')
+                if session_coupon:
+                    try:
+                        coupon, discount_amount = coupon_utils.validate_and_apply_coupon(
+                            session_coupon,
+                            subtotal,
                             customer_phone=phone,
-                            customer_email=email,
-                            customer_gender=request.session.get('selected_gender', 'Male'),
-                            service=service,
-                            booking_group_id=group_id,
-                            date=booking_date_obj,
-                            time=current_start_time_dt.time(),
-                            end_time=current_end_time_dt.time(), # Store end time
-                            status=initial_status,
-                            ip_address=ip,
-                            otp=hashed_otp if not is_trusted_user else None, # Store hash only if needed
-                            otp_created_at=now_time if not is_trusted_user else None,
-                            is_verified=is_initial_verified
                         )
-                        booking.save()
-                        
-                        # Set next service start time
-                        current_start_time_dt = current_end_time_dt
-                        
-            except IntegrityError:
-                return render(request, 'bookings/error.html', {
-                    'message': 'One of the selected time slots was just booked by another user. Please try again.'
-                })
+                        coupon_code = coupon.code
+                    except coupon_utils.CouponError as exc:
+                        request.session.pop('applied_coupon_code', None)
+                        return render(request, 'bookings/error.html', {'message': exc.message})
+
+                group_id, _bookings_created = booking_service.create_booking_group(
+                    sequenced_services=sequenced_services,
+                    booking_date=booking_date_obj,
+                    start_time=booking_time_obj,
+                    customer_name=name,
+                    customer_phone=phone,
+                    customer_email=email,
+                    customer_gender=request.session.get('selected_gender', 'Male'),
+                    booking_source='customer',
+                    status=initial_status,
+                    is_verified=is_initial_verified,
+                    ip_address=ip,
+                    otp=hashed_otp if not is_trusted_user else None,
+                    otp_created_at=now_time if not is_trusted_user else None,
+                    coupon_code=coupon_code,
+                    discount_amount=discount_amount,
+                    price_overrides=overrides,
+                )
+            except booking_service.BookingCreationError as exc:
+                return render(request, 'bookings/error.html', {'message': exc.message})
             except Exception as e:
                  return render(request, 'bookings/error.html', {'message': f'An error occurred: {str(e)}'})
 
