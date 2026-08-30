@@ -1,241 +1,332 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-12">
-    <div class="text-center mb-8 md:mb-10 animate-fade-in-down">
-        <h1 class="text-4xl font-bold text-brown mb-4">Confirm <span class="text-gold">Booking</span></h1>
-        <p class="text-gray-600">Please review your appointment details</p>
+<style>
+    .confirm-page {
+        --confirm-sticky-h: 88px;
+    }
+    .confirm-step {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #9ca3af;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 0.15rem;
+    }
+    .confirm-step .is-done { color: #9ca3af; }
+    .confirm-step .is-current {
+        color: #fff;
+        background: var(--primary-brown);
+        border-radius: 9999px;
+        padding: 0.2rem 0.55rem;
+        letter-spacing: 0.03em;
+    }
+    .confirm-step .sep { color: #d1d5db; margin: 0 0.2rem; }
+    .confirm-page-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-brown);
+        line-height: 1.25;
+        margin-bottom: 0.75rem;
+    }
+    .confirm-page-title span {
+        color: #c2410c;
+    }
+    .not-booked-banner {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 9999px;
+        padding: 0.55rem 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        text-align: center;
+    }
+    .not-booked-banner p {
+        margin: 0;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #9a3412;
+        line-height: 1.3;
+    }
+    .not-booked-banner strong {
+        color: var(--primary-brown);
+    }
+    .appointment-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 1rem;
+        padding: 1.15rem 1.2rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .details-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 1rem;
+        padding: 1.25rem 1.2rem 1.35rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .sticky-confirm-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 60;
+        background: #fff;
+        border-top: 1px solid #e5e7eb;
+        box-shadow: 0 -8px 24px rgba(74, 55, 40, 0.12);
+        padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+        display: block;
+    }
+    .desktop-confirm-wrap {
+        display: none;
+        padding-top: 0.5rem;
+    }
+    .mobile-finish-hint {
+        display: block;
+        text-align: center;
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin-bottom: 0.5rem;
+    }
+    @media (min-width: 768px) {
+        .sticky-confirm-bar { display: none !important; }
+        .desktop-confirm-wrap { display: block; }
+        .mobile-finish-hint { display: none; }
+        .confirm-page { padding-bottom: 3rem !important; }
+    }
+    .sticky-confirm-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        background: var(--primary-brown);
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.05rem;
+        border-radius: 9999px;
+        padding: 0.9rem 1.25rem;
+        box-shadow: 0 8px 20px rgba(74, 55, 40, 0.25);
+        transition: background-color 0.2s, transform 0.15s;
+    }
+    .sticky-confirm-btn:active { transform: scale(0.98); }
+    .sticky-confirm-btn:hover { background: var(--primary-gold); }
+    .desktop-confirm-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        background: var(--primary-brown);
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.1rem;
+        border-radius: 9999px;
+        padding: 1rem 1.5rem;
+        box-shadow: 0 8px 20px rgba(74, 55, 40, 0.22);
+    }
+    .desktop-confirm-btn:hover { background: var(--primary-gold); }
+    .combo-panel {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 1rem;
+        padding: 1rem 0.9rem 0.85rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    .combo-panel-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.15rem;
+        padding: 0 0.25rem;
+    }
+    #upsell-carousel { scrollbar-width: none; -ms-overflow-style: none; }
+    #upsell-carousel .combo-card {
+        flex: 0 0 auto;
+        flex-shrink: 0;
+        width: clamp(340px, 94vw, 460px);
+        min-width: 340px;
+        max-width: 460px;
+        overflow: visible;
+    }
+    @media (min-width: 640px) {
+        #upsell-carousel .combo-card {
+            width: 420px;
+            min-width: 420px;
+        }
+    }
+    .combo-card {
+        display: flex;
+        flex-direction: column;
+        min-height: 94px;
+        height: auto;
+        padding: 0.65rem 0.75rem !important;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        box-shadow: none;
+        box-sizing: border-box;
+    }
+    .combo-card:hover {
+        border-color: #d1d5db;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    .combo-card-layout {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        width: 100%;
+        flex: 1 1 auto;
+        min-height: 0;
+        position: relative;
+        z-index: 10;
+    }
+    .combo-card-media {
+        flex-shrink: 0;
+        width: 70px;
+        height: 70px;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        background: #f9fafb;
+        position: relative;
+    }
+    .combo-card-media img { width: 100%; height: 100%; object-fit: cover; }
+    .combo-card-media-fallback {
+        width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+        color: var(--primary-brown); background: #faf8f5;
+    }
+    .combo-card-content {
+        display: flex; flex-direction: column; flex: 1 1 0%; min-width: 0; min-height: 0; overflow: hidden;
+    }
+    .combo-s-title {
+        font-weight: 600; font-size: 0.875rem; line-height: 1.35; color: #374151;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden; margin: 0; word-break: break-word;
+    }
+    .combo-card-prices {
+        display: flex; align-items: baseline; gap: 0.35rem; margin-top: 0.15rem;
+        flex-wrap: nowrap; white-space: nowrap;
+    }
+    .combo-original-price {
+        font-size: 0.7rem; font-weight: 500; color: #9ca3af;
+        text-decoration: line-through; text-decoration-thickness: 1px;
+    }
+    .combo-current-price { font-size: 0.875rem; font-weight: 700; color: #111827; }
+    .combo-card-bottom {
+        margin-top: 0.2rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    }
+    .combo-savings-text {
+        font-size: 0.7rem; font-weight: 600; color: #15803d;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 0;
+    }
+    .combo-add-btn {
+        display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+        min-width: 3.25rem; padding: 0.25rem 0.65rem; border-radius: 9999px;
+        font-size: 0.75rem; font-weight: 700; line-height: 1.2;
+        border: 1.5px solid var(--primary-brown); background: #fff; color: var(--primary-brown);
+        transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .combo-add-btn:hover:not(:disabled) { background: var(--primary-brown); color: #fff; }
+    .combo-add-btn.is-added { border-color: #d1d5db; background: #f3f4f6; color: #4b5563; }
+    .combo-add-btn.is-added:hover:not(:disabled) { background: #e5e7eb; color: #374151; }
+    .combo-card-highlight.active {
+        border-color: var(--primary-gold); background-color: rgba(212, 175, 55, 0.04);
+    }
+    .combo-scroll-track {
+        height: 4px; background: #e5e7eb; border-radius: 9999px; margin-top: 0.85rem; overflow: hidden;
+    }
+    .combo-scroll-thumb {
+        height: 100%; background: var(--primary-brown); border-radius: 9999px; width: 30%;
+        transition: width 0.1s ease, margin-left 0.1s ease;
+    }
+    #comboServiceModalOverlay {
+        backdrop-filter: blur(8px); opacity: 0; visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    #comboServiceModalOverlay.active { opacity: 1; visibility: visible; }
+    #comboServiceModalContent {
+        transform: scale(0.9) translateY(20px); opacity: 0;
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+    }
+    #comboServiceModalOverlay.active #comboServiceModalContent {
+        transform: scale(1) translateY(0); opacity: 1;
+    }
+    #upsell-carousel::-webkit-scrollbar { display: none; }
+    .combo-modal-original {
+        margin-left: 0.35rem; font-size: 0.875rem; font-weight: 500; color: #9ca3af;
+        text-decoration: line-through; text-decoration-thickness: 1.5px;
+    }
+        .summary-original-price {
+        display: block; font-size: 0.75rem; font-weight: 500; color: #9ca3af;
+        text-decoration: line-through; text-decoration-thickness: 1.5px;
+    }
+    .coupon-input-wrap {
+        position: relative;
+    }
+    .coupon-input-wrap input {
+        width: 100%;
+        padding-right: 5.5rem;
+    }
+    .coupon-remove-link {
+        position: absolute;
+        right: 0.65rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        background: transparent;
+        border: none;
+        padding: 0.25rem 0.35rem;
+        cursor: pointer;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+    .coupon-remove-link:hover { color: #b91c1c; }
+    .coupon-auto-hint {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        margin-top: 0.35rem;
+    }
+</style>
+
+<div class="confirm-page max-w-2xl mx-auto px-4 pt-6 pb-28 md:pb-12">
+    <!-- Progress -->
+    <nav class="confirm-step mb-5" aria-label="Booking progress">
+        <span class="is-done">Services</span>
+        <span class="sep">›</span>
+        <span class="is-done">Date &amp; time</span>
+        <span class="sep">›</span>
+        <span class="is-current">Confirm now</span>
+    </nav>
+
+    <h1 class="confirm-page-title">Booking not complete</h1>
+
+    <!-- Short incomplete-state banner -->
+    <div class="not-booked-banner mb-6" role="status">
+        <i class="fas fa-exclamation-circle text-orange-500"></i>
+        <p>Tap <strong>Confirm &amp; Book</strong> to finish — slot not locked yet</p>
     </div>
 
-    {% if show_upsell_carousel %}
-    <style>
-        .combo-panel {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 1rem;
-            padding: 1.25rem 1rem 1rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-        }
-        .combo-panel-title {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: #111827;
-            margin-bottom: 1rem;
-            padding: 0 0.25rem;
-        }
-        #upsell-carousel {
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-        #upsell-carousel .combo-card {
-            flex: 0 0 auto;
-            flex-shrink: 0;
-            width: clamp(340px, 94vw, 460px);
-            min-width: 340px;
-            max-width: 460px;
-            overflow: visible;
-        }
-        @media (min-width: 640px) {
-            #upsell-carousel .combo-card {
-                width: 420px;
-                min-width: 420px;
-            }
-        }
-        .combo-card {
-            display: flex;
-            flex-direction: column;
-            min-height: 94px;
-            height: auto;
-            padding: 0.65rem 0.75rem !important;
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.75rem;
-            box-shadow: none;
-            box-sizing: border-box;
-        }
-        .combo-card:hover {
-            border-color: #d1d5db;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-        }
-        .combo-card-layout {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            width: 100%;
-            flex: 1 1 auto;
-            min-height: 0;
-            position: relative;
-            z-index: 10;
-        }
-        .combo-card-media {
-            flex-shrink: 0;
-            width: 70px;
-            height: 70px;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.5rem;
-            overflow: hidden;
-            background: #f9fafb;
-            position: relative;
-        }
-        .combo-card-media img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .combo-card-media-fallback {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--primary-brown);
-            background: #faf8f5;
-        }
-        .combo-card-content {
-            display: flex;
-            flex-direction: column;
-            flex: 1 1 0%;
-            min-width: 0;
-            min-height: 0;
-            overflow: hidden;
-        }
-        .combo-s-title {
-            font-weight: 600;
-            font-size: 0.875rem;
-            line-height: 1.35;
-            color: #374151;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            margin: 0;
-            word-break: break-word;
-        }
-        .combo-card-prices {
-            display: flex;
-            align-items: baseline;
-            gap: 0.35rem;
-            margin-top: 0.15rem;
-            flex-wrap: nowrap;
-            white-space: nowrap;
-        }
-        .combo-original-price {
-            font-size: 0.7rem;
-            font-weight: 500;
-            color: #9ca3af;
-            text-decoration: line-through;
-            text-decoration-thickness: 1px;
-        }
-        .combo-current-price {
-            font-size: 0.875rem;
-            font-weight: 700;
-            color: #111827;
-        }
-        .combo-card-bottom {
-            margin-top: 0.2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.5rem;
-        }
-        .combo-savings-text {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: #15803d;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            flex: 1 1 auto;
-            min-width: 0;
-        }
-        .combo-add-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            min-width: 3.25rem;
-            padding: 0.25rem 0.65rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            line-height: 1.2;
-            border: 1.5px solid var(--primary-brown);
-            background: #fff;
-            color: var(--primary-brown);
-            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-        }
-        .combo-add-btn:hover:not(:disabled) {
-            background: var(--primary-brown);
-            color: #fff;
-        }
-        .combo-add-btn.is-added {
-            border-color: #d1d5db;
-            background: #f3f4f6;
-            color: #4b5563;
-        }
-        .combo-add-btn.is-added:hover:not(:disabled) {
-            background: #e5e7eb;
-            color: #374151;
-        }
-        .combo-card-highlight.active {
-            border-color: var(--primary-gold);
-            background-color: rgba(212, 175, 55, 0.04);
-        }
-        .combo-scroll-track {
-            height: 4px;
-            background: #e5e7eb;
-            border-radius: 9999px;
-            margin-top: 0.85rem;
-            overflow: hidden;
-        }
-        .combo-scroll-thumb {
-            height: 100%;
-            background: var(--primary-brown);
-            border-radius: 9999px;
-            width: 30%;
-            transition: width 0.1s ease, margin-left 0.1s ease;
-        }
-        #comboServiceModalOverlay {
-            backdrop-filter: blur(8px);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        #comboServiceModalOverlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-        #comboServiceModalContent {
-            transform: scale(0.9) translateY(20px);
-            opacity: 0;
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
-        }
-        #comboServiceModalOverlay.active #comboServiceModalContent {
-            transform: scale(1) translateY(0);
-            opacity: 1;
-        }
-        #upsell-carousel::-webkit-scrollbar { display: none; }
-        .combo-modal-original {
-            margin-left: 0.35rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #9ca3af;
-            text-decoration: line-through;
-            text-decoration-thickness: 1.5px;
-        }
-        .summary-original-price {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: #9ca3af;
-            text-decoration: line-through;
-            text-decoration-thickness: 1.5px;
-        }
-    </style>
+    {% if error %}
+    <div class="bg-red-50 text-red-700 p-3 rounded-xl mb-5 border border-red-100 text-sm">
+        {{ error }}
+    </div>
+    {% endif %}
 
-    <section id="upsell-carousel-section" class="mb-10 combo-panel">
+    {% if show_upsell_carousel %}
+    <section id="upsell-carousel-section" class="mb-6 combo-panel">
+        <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold mb-1 px-1">Optional add-ons</p>
         <h2 class="combo-panel-title">Complete Your Look</h2>
-        <p class="text-xs text-gray-500 mb-3 px-1 -mt-2">Combo prices unlocked with your haircut</p>
+        <p class="text-xs text-gray-500 mb-3 px-1">Combo prices with your haircut</p>
 
         <div id="upsell-carousel"
             class="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-0.5 px-0.5 scroll-smooth items-stretch"
@@ -364,214 +455,193 @@
             </div>
         </div>
     </div>
+    {% else %}
+    <p id="upsell-message" class="hidden"></p>
     {% endif %}
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        <!-- Summary Card -->
-        <div class="lg:col-span-1">
-            <div class="glass-card rounded-2xl p-8 sticky top-24">
-                <h3 class="text-xl font-bold text-brown mb-6 border-b border-yellow-100 pb-2">Order Summary</h3>
-
-                <div class="space-y-4 mb-6">
-                    <div class="flex justify-between items-center text-gray-600">
-                        <span class="font-medium"><i class="far fa-calendar mr-2 text-gold"></i>Date</span>
-                        <span>{{ date }}</span>
-                    </div>
-                    <div class="flex justify-between items-center text-gray-600">
-                        <span class="font-medium"><i class="far fa-clock mr-2 text-gold"></i>Time</span>
-                        <span>{{ time }}</span>
-                    </div>
-                </div>
-
-                <div class="border-t border-yellow-100 pt-4 mb-6">
-                    <h4 class="font-bold text-brown mb-4">Services</h4>
-                    <div id="order-services-list" class="space-y-3">
-                        {% for row in priced_services %}
-                        <div class="flex justify-between text-sm gap-3">
-                            <span class="text-gray-600">
-                                {{ row.name }}
-                                {% if row.is_combo %}
-                                <span class="block text-[11px] text-green-700 font-medium">Combo price</span>
-                                {% endif %}
-                            </span>
-                            <span class="font-bold text-brown text-right whitespace-nowrap">
-                                {% if row.is_combo %}
-                                <span class="summary-original-price">₹{{ row.regular_price }}</span>
-                                {% endif %}
-                                ₹{{ row.price }}
-                            </span>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div class="border-t border-yellow-100 pt-4 mb-4" id="coupon-section">
-                    <label class="block text-sm font-medium text-brown mb-2">
-                        <i class="fas fa-tag mr-1 text-gold"></i> Coupons & Offers
-                    </label>
-
-                    <div id="eligible-coupons-wrap" class="mb-3">
-                        <p id="eligible-coupons-empty" class="text-xs text-gray-500 mb-2 {% if eligible_coupons %}hidden{% endif %}">
-                            Enter your mobile number to see personalized offers. General coupons appear below when available.
-                        </p>
-                        <div id="eligible-coupons-list" class="space-y-2 {% if not eligible_coupons %}hidden{% endif %}">
-                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Suggested for you</p>
-                            {% for coupon in eligible_coupons %}
-                            <button type="button"
-                                class="eligible-coupon-btn w-full text-left px-3 py-2.5 rounded-xl border transition {% if applied_coupon_code == coupon.code %}border-gold bg-yellow-50 ring-1 ring-gold/40{% else %}border-yellow-100 bg-white hover:border-gold/50{% endif %}"
-                                data-code="{{ coupon.code }}"
-                                onclick="selectSuggestedCoupon('{{ coupon.code }}')">
-                                <div class="flex items-center justify-between gap-2">
-                                    <div>
-                                        <p class="font-bold text-brown tracking-wide text-sm">{{ coupon.code }}</p>
-                                        <p class="text-xs text-gray-500 mt-0.5">
-                                            {{ coupon.discount_label }}
-                                            {% if coupon.customer_specific %} · Exclusive for you{% endif %}
-                                        </p>
-                                    </div>
-                                    <span class="text-xs font-bold text-green-700 whitespace-nowrap">Save ₹{{ coupon.discount_amount }}</span>
-                                </div>
-                            </button>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <p class="text-xs text-gray-500 mb-2">Or enter a coupon code</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="coupon-code-input" maxlength="40"
-                            value="{{ applied_coupon_code }}"
-                            placeholder="Enter code"
-                            class="flex-1 px-3 py-2 border border-yellow-100 rounded-lg text-sm uppercase focus:outline-none focus:ring-2 focus:ring-gold/40 bg-white"
-                            {% if applied_coupon_code %}readonly{% endif %}>
-                        <button type="button" id="coupon-apply-btn"
-                            class="px-4 py-2 rounded-lg text-sm font-bold {% if applied_coupon_code %}bg-gray-100 text-gray-700{% else %}bg-brown text-white hover:bg-gold{% endif %} transition whitespace-nowrap"
-                            onclick="{% if applied_coupon_code %}removeCoupon(){% else %}applyCoupon(){% endif %}">
-                            {% if applied_coupon_code %}Remove{% else %}Apply{% endif %}
-                        </button>
-                    </div>
-                    <p id="coupon-message" class="text-sm mt-2 {% if coupon_error %}text-red-600{% elif applied_coupon_code %}text-green-700{% else %}hidden{% endif %}">
-                        {% if coupon_error %}{{ coupon_error }}{% elif applied_coupon_code %}Coupon {{ applied_coupon_code }} applied{% endif %}
-                    </p>
-                </div>
-
-                <div class="border-t border-brown pt-4 space-y-2">
-                    <div class="flex justify-between items-center text-gray-600 text-sm">
-                        <span>Subtotal</span>
-                        <span id="order-subtotal">₹{{ subtotal }}</span>
-                    </div>
-                    <div id="order-discount-row" class="flex justify-between items-center text-green-700 text-sm {% if not discount_amount %}hidden{% endif %}">
-                        <span>Discount <span id="order-coupon-label">{% if applied_coupon_code %}({{ applied_coupon_code }}){% endif %}</span></span>
-                        <span id="order-discount">−₹{{ discount_amount|default:"0" }}</span>
-                    </div>
-                    <div class="flex justify-between items-center pt-2">
-                        <span class="font-bold text-lg text-brown">Total</span>
-                        <span id="order-total" class="font-bold text-2xl text-gold">₹{{ total_price }}</span>
-                    </div>
-                </div>
+    <!-- Appointment snapshot -->
+    <section class="appointment-card mb-6" aria-label="Appointment summary">
+        <div class="flex items-center justify-between gap-3 mb-4">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-gray-500">Your appointment</h2>
+            <a href="{% url 'date_time_selection' %}" class="text-xs font-semibold text-gold hover:text-brown">Change time</a>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="rounded-xl bg-soft-cream border border-yellow-100 px-3 py-3">
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5"><i class="far fa-calendar mr-1 text-gold"></i>Date</p>
+                <p class="font-bold text-brown text-sm">{{ date }}</p>
+            </div>
+            <div class="rounded-xl bg-soft-cream border border-yellow-100 px-3 py-3">
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5"><i class="far fa-clock mr-1 text-gold"></i>Time</p>
+                <p class="font-bold text-brown text-sm">{{ time }}</p>
             </div>
         </div>
 
-        <!-- Details Form -->
-        <div class="lg:col-span-2">
-            <div class="bg-white rounded-2xl p-8 shadow-sm border border-yellow-50">
-                <h3 class="text-xl font-bold text-brown mb-6">Your Details</h3>
-
-                {% if error %}
-                <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-6 border border-red-100">
-                    {{ error }}
+        <div class="border-t border-gray-100 pt-4 mb-4">
+            <h3 class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2.5">Services</h3>
+            <div id="order-services-list" class="space-y-2.5">
+                {% for row in priced_services %}
+                <div class="flex justify-between text-sm gap-3">
+                    <span class="text-gray-600">
+                        {{ row.name }}
+                        {% if row.is_combo %}
+                        <span class="block text-[11px] text-green-700 font-medium">Combo price</span>
+                        {% endif %}
+                    </span>
+                    <span class="font-bold text-brown text-right whitespace-nowrap">
+                        {% if row.is_combo %}
+                        <span class="summary-original-price">₹{{ row.regular_price }}</span>
+                        {% endif %}
+                        ₹{{ row.price }}
+                    </span>
                 </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="border-t border-gray-100 pt-4" id="coupon-section">
+            <label class="block text-sm font-medium text-brown mb-2">
+                <i class="fas fa-tag mr-1 text-gold"></i> Coupon
+            </label>
+
+            <div id="eligible-coupons-wrap" class="mb-3">
+                <p id="eligible-coupons-empty" class="text-xs text-gray-500 mb-2 {% if eligible_coupons %}hidden{% endif %}">
+                    Enter your mobile number to see offers.
+                </p>
+                <div id="eligible-coupons-list" class="space-y-2 {% if not eligible_coupons %}hidden{% endif %}">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Suggested for you</p>
+                    {% for coupon in eligible_coupons %}
+                    <button type="button"
+                        class="eligible-coupon-btn w-full text-left px-3 py-2.5 rounded-xl border transition {% if applied_coupon_code == coupon.code %}border-gold bg-yellow-50 ring-1 ring-gold/40{% else %}border-yellow-100 bg-white hover:border-gold/50{% endif %}"
+                        data-code="{{ coupon.code }}"
+                        onclick="selectSuggestedCoupon('{{ coupon.code }}')">
+                        <div class="flex items-center justify-between gap-2">
+                            <div>
+                                <p class="font-bold text-brown tracking-wide text-sm">{{ coupon.code }}</p>
+                                <p class="text-xs text-gray-500 mt-0.5">
+                                    {{ coupon.discount_label }}
+                                    {% if coupon.customer_specific %} · Exclusive for you{% endif %}
+                                </p>
+                            </div>
+                            <span class="text-xs font-bold text-green-700 whitespace-nowrap">Save ₹{{ coupon.discount_amount }}</span>
+                        </div>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="coupon-input-wrap">
+                <input type="text" id="coupon-code-input" maxlength="40"
+                    value="{{ applied_coupon_code }}"
+                    placeholder="Type coupon code"
+                    autocomplete="off"
+                    class="px-3 py-2 border border-yellow-100 rounded-lg text-sm uppercase focus:outline-none focus:ring-2 focus:ring-gold/40 bg-white"
+                    {% if applied_coupon_code %}readonly{% endif %}>
+                <button type="button" id="coupon-apply-btn"
+                    class="coupon-remove-link {% if not applied_coupon_code %}hidden{% endif %}"
+                    onclick="removeCoupon()"
+                    {% if not applied_coupon_code %}aria-hidden="true"{% endif %}>
+                    Remove
+                </button>
+            </div>
+            <p class="coupon-auto-hint {% if applied_coupon_code %}hidden{% endif %}" id="coupon-auto-hint">
+                Offer applies automatically when the code is correct.
+            </p>
+            <p id="coupon-message" class="text-sm mt-2 {% if coupon_error %}text-red-600{% elif applied_coupon_code %}text-green-700{% else %}hidden{% endif %}">
+                {% if coupon_error %}{{ coupon_error }}{% elif applied_coupon_code %}Coupon {{ applied_coupon_code }} applied{% endif %}
+            </p>
+        </div>
+
+        <div class="border-t border-brown/20 mt-5 pt-4 space-y-1.5">
+            <div class="flex justify-between items-center text-gray-600 text-sm">
+                <span>Subtotal</span>
+                <span id="order-subtotal">₹{{ subtotal }}</span>
+            </div>
+            <div id="order-discount-row" class="flex justify-between items-center text-green-700 text-sm {% if not discount_amount %}hidden{% endif %}">
+                <span>Discount <span id="order-coupon-label">{% if applied_coupon_code %}({{ applied_coupon_code }}){% endif %}</span></span>
+                <span id="order-discount">−₹{{ discount_amount|default:"0" }}</span>
+            </div>
+            <div class="flex justify-between items-center pt-1">
+                <span class="font-bold text-base text-brown">Total</span>
+                <span id="order-total" class="font-bold text-2xl text-gold">₹{{ total_price }}</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Guest details -->
+    <section class="details-card mb-6">
+        <h2 class="text-lg font-bold text-brown mb-4">Your details</h2>
+
+        <form method="post" class="space-y-5" id="booking-form">
+            {% csrf_token %}
+
+            <div>
+                <label for="{{ form.customer_name.id_for_label }}"
+                    class="block text-sm font-medium text-gray-700 mb-2">Full Name <span class="text-red-500">*</span></label>
+                {{ form.customer_name }}
+                {% if form.customer_name.errors %}
+                <p class="text-red-500 text-sm mt-1">{{ form.customer_name.errors.0 }}</p>
                 {% endif %}
-
-                <form method="post" class="space-y-6" id="booking-form">
-                    {% csrf_token %}
-
-                    <!-- Action Buttons (top — visible without scrolling on mobile) -->
-                    <div class="flex items-center justify-between pb-2 border-b border-yellow-50">
-                        <a href="{% url 'date_time_selection' %}"
-                            class="text-gray-500 hover:text-brown transition flex items-center">
-                            <i class="fas fa-arrow-left mr-2"></i> Back
-                        </a>
-                        <button type="submit"
-                            class="btn-primary px-8 py-3 rounded-full font-bold shadow-lg flex items-center">
-                            Confirm Booking <i class="fas fa-check ml-2"></i>
-                        </button>
-                    </div>
-
-                    <!-- Name Field -->
-                    <div>
-                        <label for="{{ form.customer_name.id_for_label }}"
-                            class="block text-sm font-medium text-gray-700 mb-2">Full Name <span
-                                class="text-red-500">*</span></label>
-                        {{ form.customer_name }}
-                        {% if form.customer_name.errors %}
-                        <p class="text-red-500 text-sm mt-1">{{ form.customer_name.errors.0 }}</p>
-                        {% endif %}
-                    </div>
-
-                    <!-- Phone Field -->
-                    <div>
-                        <label for="{{ form.customer_phone.id_for_label }}"
-                            class="block text-sm font-medium text-gray-700 mb-2">Mobile Number</label>
-                        {{ form.customer_phone }}
-                        {% if form.customer_phone.errors %}
-                        <p class="text-red-500 text-sm mt-1">{{ form.customer_phone.errors.0 }}</p>
-                        {% endif %}
-                    </div>
-
-                    <!-- Email Field -->
-                    <div>
-                        <label for="{{ form.customer_email.id_for_label }}"
-                            class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                        {{ form.customer_email }}
-                        <div id="email-error" class="hidden text-red-500 text-sm mt-1">Please enter a valid email
-                            address</div>
-                        <p class="text-xs text-gray-500 mt-2">We will send booking confirmation specifics to these
-                            contacts.</p>
-                    </div>
-
-                    <!-- Notice Block -->
-                    {% if is_otp_enabled %}
-                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-6 flex items-start">
-                        <i class="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
-                        <div>
-                            <p class="text-sm text-blue-800 font-medium">Verification Required</p>
-                            <p class="text-sm text-blue-700 mt-1">
-                                You will receive a 4-digit OTP via voice call to verify your booking.
-                                Booking confirmation details will also be sent to your email.
-                            </p>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Policy Block -->
-                    <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4 mt-4 flex items-start">
-                        <i class="fas fa-shield-alt text-yellow-600 mt-1 mr-3"></i>
-                        <div>
-                            <p class="text-sm text-yellow-800 font-medium">Booking Policy</p>
-                            <p class="text-sm text-yellow-700 mt-1">
-                                Bookings cannot be cancelled within 2 hours of the appointment time. You can cancel appointments only once per day.
-                                <br><br>
-                                <strong>Note:</strong> Any delay in your arrival may affect the time allocated and the quality of the service provided.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="flex items-center justify-between pt-6">
-                        <a href="{% url 'date_time_selection' %}"
-                            class="text-gray-500 hover:text-brown transition flex items-center">
-                            <i class="fas fa-arrow-left mr-2"></i> Back
-                        </a>
-                        <button type="submit"
-                            class="btn-primary px-8 py-3 rounded-full font-bold shadow-lg flex items-center">
-                            Confirm Booking <i class="fas fa-check ml-2"></i>
-                        </button>
-                    </div>
-                </form>
             </div>
+
+            <div>
+                <label for="{{ form.customer_phone.id_for_label }}"
+                    class="block text-sm font-medium text-gray-700 mb-2">Mobile Number <span class="text-red-500">*</span></label>
+                {{ form.customer_phone }}
+                {% if form.customer_phone.errors %}
+                <p class="text-red-500 text-sm mt-1">{{ form.customer_phone.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.customer_email.id_for_label }}"
+                    class="block text-sm font-medium text-gray-700 mb-2">Email Address <span class="text-red-500">*</span></label>
+                {{ form.customer_email }}
+                <div id="email-error" class="hidden text-red-500 text-sm mt-1">Please enter a valid email address</div>
+            </div>
+
+            {% if is_otp_enabled %}
+            <p class="text-xs text-gray-500">
+                <i class="fas fa-phone-alt text-gold mr-1"></i>
+                You may get a short OTP call after confirming.
+            </p>
+            {% endif %}
+
+            <p class="text-xs text-gray-500 leading-relaxed">
+                <i class="fas fa-shield-alt text-gold mr-1"></i>
+                No cancel within 2 hours of your slot. One cancel per day.
+            </p>
+
+            <!-- Desktop / tablet primary CTA (mobile uses sticky bar) -->
+            <div class="desktop-confirm-wrap">
+                <button type="submit" class="desktop-confirm-btn">
+                    Confirm &amp; Book Now <i class="fas fa-lock ml-1"></i>
+                </button>
+                <div class="text-center mt-3">
+                    <a href="{% url 'date_time_selection' %}" class="text-sm text-gray-500 hover:text-brown transition">
+                        <i class="fas fa-arrow-left mr-1"></i> Back
+                    </a>
+                </div>
+            </div>
+        </form>
+    </section>
+</div>
+
+<!-- Always-visible mobile confirm bar -->
+<div class="sticky-confirm-bar" id="sticky-confirm-bar">
+    <div class="max-w-2xl mx-auto">
+        <div class="flex items-center justify-between gap-3 mb-2 px-0.5">
+            <div>
+                <p class="text-[11px] font-semibold text-orange-600">Tap to finish booking</p>
+                <p class="text-sm text-gray-600">Total <span id="sticky-order-total" class="font-bold text-brown text-base">₹{{ total_price }}</span></p>
+            </div>
+            <a href="{% url 'date_time_selection' %}" class="text-xs text-gray-500 underline underline-offset-2">Back</a>
         </div>
+        <button type="submit" form="booking-form" class="sticky-confirm-btn" id="sticky-confirm-btn">
+            Confirm &amp; Book Now <i class="fas fa-lock"></i>
+        </button>
     </div>
 </div>
+
 
 <!-- Full Page Booking Confirmation Loader -->
 <div id="booking-loader"
@@ -588,9 +658,8 @@
             <i class="fas fa-check text-brown text-2xl"></i>
         </div>
     </div>
-    <h2 class="text-3xl font-bold text-brown mb-2 text-center">Confirming Slot...</h2>
-    <p class="text-gray-600 font-medium animate-pulse text-lg text-center">Please wait while we securely lock your
-        appointment.</p>
+    <h2 class="text-3xl font-bold text-brown mb-2 text-center">Booking your slot...</h2>
+    <p class="text-gray-600 font-medium animate-pulse text-lg text-center">Please wait — we are locking your appointment now.</p>
 </div>
 
 <!-- Booking Confirmation Modal (shown before starting booking) -->
@@ -598,19 +667,18 @@
     class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden flex items-center justify-center animate-fade-in"
     style="z-index: 9998;">
     <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative mx-4">
-        <h3 class="text-2xl font-bold text-brown mb-4 text-center">Confirm Booking?</h3>
+        <h3 class="text-2xl font-bold text-brown mb-2 text-center">Lock this slot?</h3>
         <p class="text-gray-600 mb-6 text-sm text-center">
-            Are you sure you want to confirm this booking?<br>
-            Please make sure you can attend the appointment.
+            Tap <strong>Yes, book now</strong> to finish. Your slot is not booked yet.
         </p>
         <div class="flex space-x-4 mt-4">
             <button type="button" onclick="closeConfirmBookingModal()"
                 class="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold transition">
-                Cancel
+                Not yet
             </button>
             <button type="button" onclick="proceedAfterConfirm()"
                 class="flex-1 px-6 py-3 bg-brown hover:bg-gold text-white rounded-xl font-bold shadow-lg transition">
-                Confirm
+                Yes, book now
             </button>
         </div>
     </div>
@@ -772,6 +840,7 @@
     function updateCouponUI({ code, subtotal, discountAmount, totalPrice, message, isError }) {
         const input = document.getElementById('coupon-code-input');
         const applyBtn = document.getElementById('coupon-apply-btn');
+        const hint = document.getElementById('coupon-auto-hint');
         const msg = document.getElementById('coupon-message');
         const discountRow = document.getElementById('order-discount-row');
         const discountEl = document.getElementById('order-discount');
@@ -781,6 +850,8 @@
 
         subtotalEl.textContent = '₹' + formatMoney(subtotal);
         totalEl.textContent = '₹' + formatMoney(totalPrice);
+        const stickyTotal = document.getElementById('sticky-order-total');
+        if (stickyTotal) stickyTotal.textContent = '₹' + formatMoney(totalPrice);
 
         const discount = Number(discountAmount || 0);
         if (discount > 0 && code) {
@@ -789,9 +860,14 @@
             couponLabel.textContent = '(' + code + ')';
             input.value = code;
             input.readOnly = true;
-            applyBtn.textContent = 'Remove';
-            applyBtn.setAttribute('onclick', 'removeCoupon()');
-            applyBtn.className = 'px-4 py-2 rounded-lg text-sm font-bold bg-gray-100 text-gray-700 transition whitespace-nowrap';
+            if (applyBtn) {
+                applyBtn.textContent = 'Remove';
+                applyBtn.className = 'coupon-remove-link';
+                applyBtn.setAttribute('onclick', 'removeCoupon()');
+                applyBtn.classList.remove('hidden');
+                applyBtn.removeAttribute('aria-hidden');
+            }
+            if (hint) hint.classList.add('hidden');
             msg.className = 'text-sm mt-2 text-green-700';
             msg.textContent = message || ('Coupon ' + code + ' applied');
             msg.classList.remove('hidden');
@@ -803,9 +879,12 @@
             if (!code) {
                 input.readOnly = false;
             }
-            applyBtn.textContent = 'Apply';
-            applyBtn.setAttribute('onclick', 'applyCoupon()');
-            applyBtn.className = 'px-4 py-2 rounded-lg text-sm font-bold bg-brown text-white hover:bg-gold transition whitespace-nowrap';
+            if (applyBtn) {
+                applyBtn.classList.add('hidden');
+                applyBtn.setAttribute('aria-hidden', 'true');
+                applyBtn.setAttribute('onclick', 'removeCoupon()');
+            }
+            if (hint) hint.classList.remove('hidden');
             highlightSelectedSuggestion('');
             if (message) {
                 msg.className = 'text-sm mt-2 ' + (isError ? 'text-red-600' : 'text-green-700');
@@ -1156,6 +1235,8 @@
             });
             if (data.services) updateOrderServicesList(data.services);
             refreshEligibleCoupons();
+            const couponInputEl = document.getElementById('coupon-code-input');
+            if (couponInputEl) couponInputEl.dispatchEvent(new Event('input'));
         } catch (err) {
             alert('Could not remove coupon. Please try again.');
         }
@@ -1170,11 +1251,43 @@
         const couponInput = document.getElementById('coupon-code-input');
 
         if (couponInput) {
+            let couponAutoTimer = null;
+            let lastTriedCoupon = '';
+
+            function tryAutoApplyCoupon() {
+                if (couponInput.readOnly) return;
+                const code = (couponInput.value || '').trim().toUpperCase();
+                if (code.length < 3) return;
+                if (code === lastTriedCoupon) return;
+                lastTriedCoupon = code;
+                applyCoupon();
+            }
+
             couponInput.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    if (!this.readOnly) applyCoupon();
+                    clearTimeout(couponAutoTimer);
+                    lastTriedCoupon = '';
+                    tryAutoApplyCoupon();
                 }
+            });
+
+            couponInput.addEventListener('input', function () {
+                this.value = this.value.toUpperCase();
+                clearTimeout(couponAutoTimer);
+                const code = (this.value || '').trim();
+                if (code.length < 3 || this.readOnly) {
+                    lastTriedCoupon = '';
+                    return;
+                }
+                couponAutoTimer = setTimeout(function () {
+                    tryAutoApplyCoupon();
+                }, 650);
+            });
+
+            couponInput.addEventListener('blur', function () {
+                clearTimeout(couponAutoTimer);
+                tryAutoApplyCoupon();
             });
         }
 
@@ -1248,6 +1361,8 @@
             // Show Full Page Loader
             const loaderOverlay = document.getElementById('booking-loader');
             loaderOverlay.classList.remove('hidden');
+            const stickyBar = document.getElementById('sticky-confirm-bar');
+            if (stickyBar) stickyBar.style.visibility = 'hidden';
 
             // API Call
             try {
@@ -1279,11 +1394,13 @@
                     }
                 } else {
                     loaderOverlay.classList.add('hidden');
+                    if (stickyBar) stickyBar.style.visibility = '';
                     alert(data.message || 'Something went wrong');
                 }
             } catch (err) {
                 console.error(err);
                 loaderOverlay.classList.add('hidden');
+                if (stickyBar) stickyBar.style.visibility = '';
                 alert('Network error. Please try again.');
             }
         });
@@ -1291,10 +1408,14 @@
 
     function openConfirmBookingModal() {
         document.getElementById('confirm-booking-modal').classList.remove('hidden');
+        const bar = document.getElementById('sticky-confirm-bar');
+        if (bar) bar.style.visibility = 'hidden';
     }
 
     function closeConfirmBookingModal() {
         document.getElementById('confirm-booking-modal').classList.add('hidden');
+        const bar = document.getElementById('sticky-confirm-bar');
+        if (bar) bar.style.visibility = '';
     }
 
     function proceedAfterConfirm() {

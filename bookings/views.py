@@ -519,6 +519,9 @@ class BookingConfirmationView(View):
         )
         upsell_addons = addon_utils.get_upsell_carousel_items(selected_service_ids or [], overrides)
 
+        shop_setting = ShopSetting.objects.first()
+        is_otp_enabled = shop_setting.is_otp_enabled if shop_setting else True
+
         return render(request, 'bookings/confirmation.html', {
             'services': services,
             'priced_services': priced_rows,
@@ -533,6 +536,7 @@ class BookingConfirmationView(View):
             'date': request.session.get('selected_date'),
             'time': request.session.get('selected_time'),
             'form': form,
+            'is_otp_enabled': is_otp_enabled,
             'error': 'Please correct the errors below.'
         })
 
