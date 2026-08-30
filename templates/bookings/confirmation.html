@@ -211,6 +211,25 @@
         display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
         overflow: hidden; margin: 0; word-break: break-word;
     }
+    .combo-badge {
+        display: inline-flex;
+        align-items: center;
+        max-width: 100%;
+        margin-bottom: 0.2rem;
+        padding: 0.12rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.625rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        line-height: 1.3;
+        color: var(--primary-brown);
+        background: linear-gradient(135deg, #fbf7eb 0%, #f5e8c4 100%);
+        border: 1px solid rgba(212, 175, 55, 0.4);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     .combo-card-prices {
         display: flex; align-items: baseline; gap: 0.35rem; margin-top: 0.15rem;
         flex-wrap: nowrap; white-space: nowrap;
@@ -360,6 +379,9 @@
                     </div>
 
                     <div class="combo-card-content">
+                        {% if addon.badge %}
+                        <span class="combo-badge" title="{{ addon.badge }}">{{ addon.badge }}</span>
+                        {% endif %}
                         <h3 class="combo-s-title" title="{{ addon.name }}">{{ addon.name }}</h3>
                         <div class="combo-card-prices">
                             <span class="combo-original-price">₹{{ addon.regular_price|floatformat:0 }}</span>
