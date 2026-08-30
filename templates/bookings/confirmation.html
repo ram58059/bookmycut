@@ -534,8 +534,12 @@
                     value="{{ applied_coupon_code }}"
                     placeholder="Type coupon code"
                     autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                    inputmode="{% if applied_coupon_code %}text{% else %}none{% endif %}"
                     class="px-3 py-2 border border-yellow-100 rounded-lg text-sm uppercase focus:outline-none focus:ring-2 focus:ring-gold/40 bg-white"
-                    {% if applied_coupon_code %}readonly{% endif %}>
+                    {% if applied_coupon_code %}readonly{% else %}readonly data-coupon-guard="1"{% endif %}>
                 <button type="button" id="coupon-apply-btn"
                     class="coupon-remove-link {% if not applied_coupon_code %}hidden{% endif %}"
                     onclick="removeCoupon()"
@@ -829,10 +833,12 @@
     function selectSuggestedCoupon(code) {
         const input = document.getElementById('coupon-code-input');
         if (!input) return;
-        if (input.readOnly && input.value.toUpperCase() === String(code || '').toUpperCase()) {
+        if (input.readOnly && !input.getAttribute('data-coupon-guard') && input.value.toUpperCase() === String(code || '').toUpperCase()) {
             return;
         }
-        input.readOnly = false;
+        input.removeAttribute('data-coupon-guard');
+        input.removeAttribute('readonly');
+        input.setAttribute('inputmode', 'text');
         input.value = code;
         applyCoupon();
     }
@@ -860,6 +866,8 @@
             couponLabel.textContent = '(' + code + ')';
             input.value = code;
             input.readOnly = true;
+            input.removeAttribute('data-coupon-guard');
+            input.setAttribute('inputmode', 'text');
             if (applyBtn) {
                 applyBtn.textContent = 'Remove';
                 applyBtn.className = 'coupon-remove-link';
@@ -877,7 +885,9 @@
             discountEl.textContent = '−₹0';
             couponLabel.textContent = '';
             if (!code) {
-                input.readOnly = false;
+                input.readOnly = true;
+                input.setAttribute('data-coupon-guard', '1');
+                input.setAttribute('inputmode', 'none');
             }
             if (applyBtn) {
                 applyBtn.classList.add('hidden');
@@ -1254,7 +1264,36 @@
             let couponAutoTimer = null;
             let lastTriedCoupon = '';
 
+            function unlockCouponInputForTyping() {
+                if (couponInput.getAttribute('data-coupon-guard') !== '1') return;
+                couponInput.removeAttribute('readonly');
+                couponInput.removeAttribute('data-coupon-guard');
+                couponInput.setAttribute('inputmode', 'text');
+            }
+
+            function blurCouponIfFocused() {
+                if (document.activeElement === couponInput) {
+                    couponInput.blur();
+                }
+            }
+
+            // Stop mobile keyboards from opening on page load / restore
+            blurCouponIfFocused();
+            window.addEventListener('pageshow', blurCouponIfFocused);
+            setTimeout(blurCouponIfFocused, 0);
+            setTimeout(blurCouponIfFocused, 300);
+
+            couponInput.addEventListener('pointerdown', unlockCouponInputForTyping);
+            couponInput.addEventListener('touchstart', unlockCouponInputForTyping, { passive: true });
+            couponInput.addEventListener('keydown', function (e) {
+                // Ignore accidental focus before unlock, except Tab navigation after unlock
+                if (couponInput.getAttribute('data-coupon-guard') === '1' && e.key !== 'Tab') {
+                    e.preventDefault();
+                }
+            });
+
             function tryAutoApplyCoupon() {
+                if (couponInput.getAttribute('data-coupon-guard') === '1') return;
                 if (couponInput.readOnly) return;
                 const code = (couponInput.value || '').trim().toUpperCase();
                 if (code.length < 3) return;
