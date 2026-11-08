@@ -33,7 +33,10 @@ def _pricing_payload(request, priced_rows, subtotal, discount_amount=None, coupo
                 if request.user.is_authenticated:
                     phone = getattr(request.user, 'phone_number', '') or ''
                 coupon, discount_amount = coupon_utils.validate_and_apply_coupon(
-                    coupon_code, subtotal, customer_phone=phone
+                    coupon_code,
+                    subtotal,
+                    customer_phone=phone,
+                    priced_rows=priced_rows,
                 )
                 coupon_code = coupon.code
                 request.session['applied_coupon_code'] = coupon.code
@@ -155,7 +158,8 @@ class InitiateBookingView(View):
             booking_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
             
             try:
-                subtotal = addon_utils.cart_subtotal(selected_service_ids, overrides)
+                priced_rows = addon_utils.build_priced_services(selected_service_ids, overrides)
+                subtotal = sum((row['price'] for row in priced_rows), Decimal('0.00'))
                 coupon_code = ''
                 discount_amount = Decimal('0.00')
                 session_coupon = request.session.get('applied_coupon_code')
@@ -165,6 +169,7 @@ class InitiateBookingView(View):
                             session_coupon,
                             subtotal,
                             customer_phone=phone,
+                            priced_rows=priced_rows,
                         )
                         coupon_code = coupon.code
                     except coupon_utils.CouponError as exc:
@@ -271,6 +276,7 @@ class ApplyCouponView(View):
                 code,
                 subtotal,
                 customer_phone=customer_phone,
+                priced_rows=priced_rows,
             )
         except coupon_utils.CouponError as exc:
             return JsonResponse({'success': False, 'message': exc.message})
@@ -287,11 +293,16 @@ class ApplyCouponView(View):
             'success': True,
             'code': coupon.code,
             'discount_label': (
-                f'{coupon.discount_value}% off'
-                if coupon.discount_type == coupon.DISCOUNT_PERCENTAGE
-                else f'₹{coupon.discount_value} off'
+                (
+                    f'{coupon.discount_value}% off'
+                    if coupon.discount_type == coupon.DISCOUNT_PERCENTAGE
+                    else f'₹{coupon.discount_value} off'
+                )
+                + (f' on {coupon.service.name}' if coupon.service_id and coupon.service else '')
             ),
             'customer_specific': bool(coupon.customer_phone),
+            'service_specific': bool(coupon.service_id),
+            'service_name': coupon.service.name if coupon.service_id and coupon.service else '',
         })
         return JsonResponse(payload)
 
@@ -324,6 +335,7 @@ class EligibleCouponsView(View):
         coupons = coupon_utils.get_eligible_coupons(
             customer_phone=customer_phone,
             subtotal=subtotal,
+            priced_rows=priced_rows,
         )
         return JsonResponse({
             'success': True,

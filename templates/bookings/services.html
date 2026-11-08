@@ -2,7 +2,11 @@
 {% block content %}
 <style>
     .s-title {
-        @apply font-bold text-lg transition-colors;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        line-height: 1.3;
+        letter-spacing: -0.01em;
+        transition: color 0.2s ease;
         color: var(--primary-brown);
     }
 
@@ -11,48 +15,55 @@
     }
 
     .s-meta {
-        @apply flex items-center text-sm text-gray-500 mt-2 space-x-3;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 0.25rem;
+        font-size: 0.75rem;
+        color: #6b7280;
     }
 
     .s-dur {
-        @apply flex items-center;
+        display: flex;
+        align-items: center;
     }
 
     .s-icon {
-        @apply far fa-clock mr-1.5;
+        margin-right: 0.3rem;
         color: var(--primary-gold);
     }
 
     .s-price {
-        @apply font-bold text-lg;
+        font-weight: 700;
+        font-size: 0.875rem;
         color: var(--primary-brown);
+        letter-spacing: -0.02em;
     }
 
-    /* Hidden check functionality removed, styling highlight handled via JS */
     .card-highlight.active {
         border-color: var(--primary-gold);
-        background-color: rgba(212, 175, 55, 0.05);
+        background-color: rgba(234, 179, 8, 0.06);
+        box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.2);
     }
-    
-    /* Modal styles */
+
     #serviceModalOverlay {
-        backdrop-filter: blur(8px);
+        backdrop-filter: blur(10px);
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.3s ease, visibility 0.3s ease;
     }
-    
+
     #serviceModalOverlay.active {
         opacity: 1;
         visibility: visible;
     }
 
     #serviceModalContent {
-        transform: scale(0.9) translateY(20px);
+        transform: scale(0.96) translateY(12px);
         opacity: 0;
-        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+        transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
     }
-    
+
     #serviceModalOverlay.active #serviceModalContent {
         transform: scale(1) translateY(0);
         opacity: 1;
@@ -61,46 +72,62 @@
     .service-card-interactive {
         cursor: pointer;
     }
-    
+
     .view-details-btn {
-        opacity: 0;
-        transform: translateY(10px);
-        transition: all 0.3s ease;
+        opacity: 0.55;
+        transition: opacity 0.2s ease, color 0.2s ease;
     }
-    
-    /* Show "View Details" on hover for desktop, always visible on touch devices if needed, but hover handles most */
+
     .glass-card:hover .view-details-btn {
         opacity: 1;
-        transform: translateY(0);
+        color: var(--primary-cta-hover);
     }
+
+    .services-page .glass-card {
+        border-radius: 0.75rem;
+        padding: 0.7rem 0.85rem;
+        box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+        border: 1px solid rgba(17, 24, 39, 0.06);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .services-page .glass-card:hover {
+        border-color: rgba(234, 179, 8, 0.45);
+        box-shadow: 0 8px 20px rgba(234, 179, 8, 0.1);
+        transform: translateY(-1px);
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
 
-<div class="max-w-7xl mx-auto px-4 py-8">
-    <div class="text-center mb-8">
-        <h1 class="text-4xl font-bold text-brown mb-4">Our <span class="text-gold">Services</span></h1>
-        <p class="text-gray-600">Select services for your appointment</p>
+<div class="services-page max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-5">
+    <div class="text-center mb-4">
+        <p class="text-[11px] uppercase tracking-[0.22em] text-gold font-semibold mb-1">Book your visit</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-brown tracking-tight">Our <span class="text-gold">Services</span></h1>
+        <p class="text-sm text-gray-500 mt-1">Choose what you need — you can add more than one</p>
     </div>
 
     <!-- Search & Filter Section -->
     <div
-        class="mb-10 sticky top-0 bg-soft-cream/95 backdrop-blur-md z-40 py-4 shadow-sm -mx-4 px-4 md:px-0 md:mx-0 transition-all border-b border-yellow-50">
-        <div class="max-w-4xl mx-auto space-y-4">
+        class="mb-5 sticky top-0 bg-white/90 backdrop-blur-md z-40 py-2.5 shadow-[0_1px_0_rgba(0,0,0,0.04)] -mx-3 px-3 sm:-mx-4 sm:px-4 md:mx-0 md:px-0 transition-all border-b border-yellow-100/80">
+        <div class="max-w-4xl mx-auto space-y-2.5">
             <!-- Search -->
             <div class="relative w-full">
-                <i class="fas fa-search absolute left-5 top-1/2 transform -translate-y-1/2 text-gold text-lg"></i>
-                <input type="text" id="serviceSearch" placeholder="Search for a service..."
-                    class="w-full pl-20 pr-6 py-4 rounded-2xl border border-yellow-100 bg-white focus:border-gold focus:ring-2 focus:ring-yellow-100 outline-none transition-all shadow-sm text-gray-700 placeholder-gray-400 text-lg">
+                <i class="fas fa-search absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gold text-sm"></i>
+                <input type="text" id="serviceSearch" placeholder="Search services..."
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200/80 bg-white focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all text-sm text-gray-700 placeholder-gray-400">
             </div>
 
             <!-- Category Filters -->
-            <div class="flex space-x-3 overflow-x-auto pb-2 px-1 md:px-0 no-scrollbar items-center">
+            <div class="flex space-x-2 overflow-x-auto pb-0.5 px-0.5 no-scrollbar items-center">
                 <button
-                    class="filter-btn bg-brown text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 whitespace-nowrap border border-transparent ring-2 ring-transparent focus:outline-none"
-                    data-category="all">All Services</button>
+                    class="filter-btn bg-brown text-white px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap border border-transparent focus:outline-none"
+                    data-category="all">All</button>
 
                 {% for category in grouped_services %}
                 <button
-                    class="filter-btn bg-white text-gray-600 border border-yellow-100 px-6 py-2.5 rounded-full text-sm font-medium transition-all shadow-sm hover:shadow-md hover:border-gold hover:text-brown transform hover:-translate-y-0.5 whitespace-nowrap focus:outline-none"
+                    class="filter-btn bg-white text-gray-600 border border-gray-200 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all hover:border-gold hover:text-brown whitespace-nowrap focus:outline-none"
                     data-category="{{ category }}">{{ category }}</button>
                 {% endfor %}
             </div>
@@ -108,86 +135,84 @@
     </div>
 
     {% if error %}
-    <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-8 mx-auto max-w-3xl" role="alert">
+    <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-3 mb-4 mx-auto max-w-3xl text-sm" role="alert">
         <p>{{ error }}</p>
     </div>
     {% endif %}
 
     {% if not grouped_services %}
-    <div class="text-center py-12">
-        <div class="text-6xl text-gray-200 mb-4"><i class="fas fa-cut"></i></div>
-        <p class="text-xl text-gray-500">No services available for the selected category yet.</p>
-        <a href="{% url 'gender_selection' %}" class="inline-block mt-4 text-gold hover:underline">Go Back</a>
+    <div class="text-center py-10">
+        <div class="text-4xl text-gray-200 mb-3"><i class="fas fa-cut"></i></div>
+        <p class="text-base text-gray-500">No services available yet.</p>
+        <a href="{% url 'home' %}" class="inline-block mt-3 text-sm text-gold hover:underline">Go Back</a>
     </div>
     {% else %}
 
     <form method="post" action="{% url 'service_list' %}">
         {% csrf_token %}
-        <div class="space-y-12">
+        <div class="space-y-6">
             {% for category, services in grouped_services.items %}
             <div class="service-category" data-category-name="{{ category }}">
-                <h2 class="text-2xl font-bold text-brown mb-6 border-b border-yellow-100 pb-2">{{ category }}</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <h2 class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400 mb-2.5">{{ category }}</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
                     {% for service in services %}
-                    <div class="glass-card relative rounded-xl p-4 sm:p-6 transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 select-none group service-card-interactive"
+                    <div class="glass-card relative select-none group service-card-interactive"
                         id="card-{{ service.id }}"
                         data-name="{{ service.name|escape }}"
                         data-price="{{ service.price }}"
                         data-duration="{{ service.duration_minutes }}"
                         data-desc="{{ service.description|default:''|escape }}"
                         data-img="{% if service.image %}{{ service.image.url }}{% endif %}"
-                        {% if service.price_increased_at %}
+                        {% if service.show_price_increase_notice %}
                         data-price-increased="true"
                         data-price-notice-key="priceNotice_{{ service.id }}_{{ service.price_increased_at|date:'U' }}"
+                        data-price-notice-until="{{ service.price_increased_at|date:'c' }}"
                         {% endif %}
                         onclick="openServiceModal(this)">
 
-                        <div class="card-highlight absolute inset-0 border-2 border-transparent rounded-xl transition-all duration-300 pointer-events-none"
+                        <div class="card-highlight absolute inset-0 border border-transparent rounded-[0.75rem] transition-all duration-200 pointer-events-none"
                             id="highlight-{{ service.id }}">
                         </div>
 
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between relative z-10 gap-5">
-                            <div class="flex items-start space-x-4 flex-grow">
+                        <div class="flex items-center justify-between relative z-10 gap-3">
+                            <div class="flex items-center space-x-3 flex-grow min-w-0">
                                 {% if service.image %}
                                 <img src="{{ service.image.url }}" alt="{{ service.name }}"
-                                    class="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0">
+                                    class="w-11 h-11 rounded-lg object-cover border border-gray-100 flex-shrink-0">
                                 {% else %}
                                 <div
-                                    class="w-16 h-16 rounded-full bg-soft-cream border border-yellow-100 flex items-center justify-center text-brown shadow-sm group-hover:border-gold transition-colors flex-shrink-0">
-                                    <i class="fas fa-spa text-xl"></i>
+                                    class="w-11 h-11 rounded-lg bg-yellow-50 border border-yellow-100 flex items-center justify-center text-gold group-hover:border-gold transition-colors flex-shrink-0">
+                                    <i class="fas fa-spa text-sm"></i>
                                 </div>
                                 {% endif %}
-                                <div class="flex-grow">
-                                    <h3 class="s-title">{{ service.name }}</h3>
-                                    <div class="s-meta mt-1">
-                                        <span class="s-dur"><i class="s-icon"></i>{{ service.duration_minutes }}
-                                            min</span>
+                                <div class="flex-grow min-w-0">
+                                    <h3 class="s-title truncate">{{ service.name }}</h3>
+                                    <div class="s-meta">
+                                        <span class="s-dur"><i class="far fa-clock s-icon text-[10px]"></i>{{ service.duration_minutes }} min</span>
                                         <span class="s-price">₹{{ service.price }}</span>
                                     </div>
-                                    <div class="view-details-btn mt-3 flex items-center text-xs font-bold text-gold">
-                                        <span>View Details</span> <i class="fas fa-arrow-right ml-1 text-[10px]"></i>
+                                    <div class="view-details-btn mt-1 flex items-center text-[10px] font-semibold uppercase tracking-wider text-gold">
+                                        <span>Details</span> <i class="fas fa-arrow-right ml-1 text-[8px]"></i>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="w-full sm:w-auto text-center sm:text-right mt-4 sm:mt-0" onclick="event.stopPropagation()">
+                            <div class="flex-shrink-0" onclick="event.stopPropagation()">
                                 <div
-                                    class="inline-block bg-white/95 rounded-full border border-gray-200 shadow-sm z-50 backdrop-blur-sm relative">
-                                    <div class="flex items-center justify-center">
-                                        <button type="button"
-                                            class="w-12 h-10 sm:h-12 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors rounded-l-full cursor-pointer touch-manipulation focus:outline-none"
-                                            onclick="changeQty('{{ service.id }}', -1)">
-                                            <i class="fas fa-minus text-sm sm:text-base pointer-events-none"></i>
-                                        </button>
-                                        <span
-                                            class="w-10 text-center text-lg sm:text-xl font-bold text-brown qty-display select-none"
-                                            id="qty-{{ service.id }}">0</span>
-                                        <button type="button"
-                                            class="w-12 h-10 sm:h-12 flex items-center justify-center text-gray-500 hover:bg-gold/10 hover:text-brown transition-colors rounded-r-full cursor-pointer touch-manipulation focus:outline-none"
-                                            onclick="changeQty('{{ service.id }}', 1)">
-                                            <i class="fas fa-plus text-sm sm:text-base pointer-events-none"></i>
-                                        </button>
-                                    </div>
+                                    class="inline-flex bg-gray-50 rounded-full border border-gray-200 z-50 relative">
+                                    <button type="button"
+                                        class="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-white transition-colors rounded-l-full cursor-pointer touch-manipulation focus:outline-none"
+                                        onclick="changeQty('{{ service.id }}', -1)">
+                                        <i class="fas fa-minus text-[10px] pointer-events-none"></i>
+                                    </button>
+                                    <span
+                                        class="w-7 text-center text-sm font-bold text-brown qty-display select-none leading-8"
+                                        id="qty-{{ service.id }}">0</span>
+                                    <button type="button"
+                                        class="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gold/15 hover:text-brown transition-colors rounded-r-full cursor-pointer touch-manipulation focus:outline-none"
+                                        onclick="changeQty('{{ service.id }}', 1)">
+                                        <i class="fas fa-plus text-[10px] pointer-events-none"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -205,17 +230,17 @@
         </div>
 
         <div
-            class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-yellow-100 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50">
-            <div class="max-w-7xl mx-auto flex justify-between items-center px-4">
-                <div class="text-gray-600 font-medium"><span id="selectedCount"
-                        class="text-gold font-bold text-xl">0</span> services selected</div>
+            class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] z-50">
+            <div class="max-w-6xl mx-auto flex justify-between items-center gap-3">
+                <div class="text-gray-500 text-sm"><span id="selectedCount"
+                        class="text-brown font-bold text-base">0</span> selected</div>
                 <button type="submit" id="continue-btn"
-                    class="bg-brown hover:bg-gold text-white px-8 py-3 rounded-full font-bold shadow-lg transform transition hover:-translate-y-1 hover:shadow-xl flex items-center">
-                    Continue <i class="fas fa-arrow-right ml-2"></i>
+                    class="bg-gold hover:bg-yellow-600 text-gray-900 px-6 py-2.5 rounded-full text-sm font-bold shadow-md transform transition hover:-translate-y-0.5 hover:shadow-lg flex items-center tracking-wide">
+                    Continue <i class="fas fa-arrow-right ml-2 text-xs"></i>
                 </button>
             </div>
         </div>
-        <div class="h-28"></div>
+        <div class="h-20"></div>
     </form>
 
     <!-- Service Details Modal -->
@@ -374,9 +399,19 @@
         // Initialize display state on load
         updateCountAndHighlights();
 
-        // Price increase notice — only when customer selects an affected service, once per price change
+        // Price increase notice: only within 30 days of admin price increase.
+        // Each browser remembers dismissal (localStorage) so it is not shown on every select.
+        const PRICE_NOTICE_DAYS = 30;
         const priceIncreaseOverlay = document.getElementById('priceIncreaseOverlay');
         let activePriceNoticeKey = null;
+
+        function isPriceNoticeStillActive(isoTimestamp) {
+            if (!isoTimestamp) return false;
+            const increasedAt = new Date(isoTimestamp);
+            if (Number.isNaN(increasedAt.getTime())) return false;
+            const expiresAt = new Date(increasedAt.getTime() + PRICE_NOTICE_DAYS * 24 * 60 * 60 * 1000);
+            return Date.now() <= expiresAt.getTime();
+        }
 
         function maybeShowPriceIncreaseNotice(serviceId) {
             const card = document.getElementById(`card-${serviceId}`);
@@ -384,8 +419,12 @@
                 return;
             }
 
+            if (!isPriceNoticeStillActive(card.dataset.priceNoticeUntil)) {
+                return;
+            }
+
             const noticeKey = card.dataset.priceNoticeKey;
-            if (!noticeKey || sessionStorage.getItem(noticeKey)) {
+            if (!noticeKey || localStorage.getItem(noticeKey)) {
                 return;
             }
 
@@ -398,7 +437,7 @@
 
         function closePriceIncreaseNotice() {
             if (activePriceNoticeKey) {
-                sessionStorage.setItem(activePriceNoticeKey, '1');
+                localStorage.setItem(activePriceNoticeKey, '1');
                 activePriceNoticeKey = null;
             }
             priceIncreaseOverlay.classList.add('hidden');

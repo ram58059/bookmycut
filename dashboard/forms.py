@@ -24,6 +24,7 @@ class CouponForm(forms.ModelForm):
             'code',
             'discount_type',
             'discount_value',
+            'service',
             'customer_phone',
             'is_active',
             'valid_from',
@@ -42,6 +43,9 @@ class CouponForm(forms.ModelForm):
                 'placeholder': 'Discount value',
                 'step': '0.01',
                 'min': '0',
+            }),
+            'service': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500',
             }),
             'customer_phone': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500',
@@ -66,6 +70,7 @@ class CouponForm(forms.ModelForm):
             'code': 'Coupon Code',
             'discount_type': 'Discount Type',
             'discount_value': 'Discount Value',
+            'service': 'Apply to Service (optional)',
             'customer_phone': 'Assign to Customer (optional)',
             'is_active': 'Active',
             'valid_from': 'Valid From (optional)',
@@ -73,6 +78,7 @@ class CouponForm(forms.ModelForm):
         }
         help_texts = {
             'discount_value': 'Enter percent (e.g. 10 for 10%) or fixed amount in ₹.',
+            'service': 'Leave blank for any service. If set, the coupon only works when that service is in the booking.',
             'customer_phone': 'Leave blank for all customers. Type to search existing customer mobile numbers.',
             'valid_from': 'Leave blank to make the coupon available immediately.',
             'valid_until': 'Leave blank if the coupon never expires.',
@@ -85,6 +91,13 @@ class CouponForm(forms.ModelForm):
         self.fields['valid_from'].required = False
         self.fields['valid_until'].required = False
         self.fields['customer_phone'].required = False
+        self.fields['service'].required = False
+        self.fields['service'].empty_label = 'All services'
+
+        bookable = Service.bookable().order_by('name')
+        if self.instance and self.instance.pk and self.instance.service_id:
+            bookable = (bookable | Service.objects.filter(pk=self.instance.service_id)).distinct().order_by('name')
+        self.fields['service'].queryset = bookable
 
     def clean_code(self):
         code = (self.cleaned_data.get('code') or '').strip().upper()

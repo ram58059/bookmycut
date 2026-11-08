@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="hero py-32 text-center bg-gradient-to-b from-white to-soft-cream">
+<section class="hero py-20 md:py-28 text-center bg-gradient-to-b from-white via-white to-yellow-50/70">
     <div class="container mx-auto px-4">
-        <h1 class="text-5xl md:text-6xl font-bold text-brown mb-6 font-serif">Experience the Art of <span
+        <p class="premium-eyebrow mb-4">Zion Salon & Spa</p>
+        <h1 class="text-4xl md:text-6xl font-bold text-brown mb-4 tracking-tight">Experience the Art of <span
                 class="text-gold">Grooming</span></h1>
-        <p class="text-xl text-gray-600 mb-10 max-w-2xl mx-auto font-light">Premium haircuts and styling for the modern
-            gentleman. Where tradition meets contemporary elegance.</p>
-        <a href="{% url 'gender_selection' %}"
-            class="inline-block bg-brown hover:bg-gold text-white font-bold py-4 px-10 rounded-full shadow-lg transform transition-all duration-300 hover:-translate-y-1 hover:shadow-xl text-lg tracking-wide uppercase">
-            Book Appointment <i class="fas fa-arrow-right ml-2 text-sm"></i>
+        <p class="text-base md:text-lg text-gray-500 mb-8 max-w-xl mx-auto font-light leading-relaxed">Precision cuts and spa care — refined, calm, and made for how you want to look.</p>
+        <a href="{% url 'service_list' %}"
+            class="inline-block bg-gold hover:bg-yellow-600 text-gray-900 font-semibold py-3.5 px-9 rounded-full shadow-md transform transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg text-sm tracking-[0.14em] uppercase">
+            Book Appointment <i class="fas fa-arrow-right ml-2 text-xs"></i>
         </a>
     </div>
 </section>
@@ -22,14 +22,14 @@
             {% if card.linked_service_id %}
             <a href="{% url 'quick_book' %}?service_id={{ card.linked_service_id }}" class="service-card block no-underline">
             {% else %}
-            <a href="{% url 'gender_selection' %}" class="service-card block no-underline">
+            <a href="{% url 'service_list' %}" class="service-card block no-underline">
             {% endif %}
                 <h3 class="service-name">{{ card.title }}</h3>
                 <p class="service-price">₹{{ card.price }}</p>
                 <p class="service-desc">{{ card.description }}</p>
             </a>
             {% empty %}
-            <a href="{% url 'gender_selection' %}" class="service-card block no-underline">
+            <a href="{% url 'service_list' %}" class="service-card block no-underline">
                 <h3 class="service-name">Book an Appointment</h3>
                 <p class="service-desc">Browse our full service menu and schedule your visit.</p>
             </a>
@@ -39,17 +39,17 @@
 </section>
 
 <!-- Connect Section -->
-<section class="connect-section py-24 relative overflow-hidden bg-white">
+<section class="connect-section py-16 relative overflow-hidden bg-white">
     <!-- Decorative elements -->
     <div class="absolute top-0 left-0 decorative-circle yellow-circle"></div>
     <div class="absolute bottom-0 right-0 decorative-circle orange-circle"></div>
 
     <div class="container mx-auto px-4 relative z-10 max-w-5xl">
-        <div class="text-center mb-16">
-            <h2 class="text-4xl md:text-5xl font-bold text-brown mb-4 font-serif" style="font-family: 'Outfit', serif;">
+        <div class="text-center mb-10">
+            <p class="premium-eyebrow mb-3">Stay connected</p>
+            <h2 class="text-3xl md:text-4xl font-bold text-brown mb-3 tracking-tight">
                 Join Our Community</h2>
-            <p class="text-gray-600 text-lg md:text-xl font-light max-w-2xl mx-auto">Follow our latest styles on
-                Instagram and see why our clients love us on Google.</p>
+            <p class="text-gray-500 text-base font-light max-w-xl mx-auto">Follow new styles on Instagram and see why clients choose us on Google.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 connect-cards-wrapper">
@@ -236,58 +236,61 @@
     }
 
     .services {
-        padding: 6rem 0;
-        background-color: var(--soft-cream);
+        padding: 3.5rem 0 4.5rem;
+        background-color: #FFFFFF;
     }
 
     .section-title {
-        font-family: 'Outfit', serif;
-        font-size: 2.5rem;
-        color: var(--primary-gold);
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.75rem;
+        color: var(--primary-brown);
         text-align: center;
-        margin-bottom: 4rem;
+        margin-bottom: 2rem;
         font-weight: 700;
+        letter-spacing: -0.03em;
     }
 
     .services-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 2rem;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem;
     }
 
     .service-card {
         background-color: white;
-        padding: 2rem;
-        border-radius: 12px;
-        border: 1px solid rgba(212, 175, 55, 0.1);
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        padding: 1.25rem 1.35rem;
+        border-radius: 0.875rem;
+        border: 1px solid rgba(17, 24, 39, 0.06);
+        transition: all 0.25s ease;
+        box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
     }
 
     .service-card:hover {
-        transform: translateY(-5px);
-        border-color: var(--primary-gold);
-        box-shadow: 0 10px 15px rgba(212, 175, 55, 0.1);
+        transform: translateY(-2px);
+        border-color: rgba(234, 179, 8, 0.45);
+        box-shadow: 0 12px 28px rgba(234, 179, 8, 0.12);
     }
 
     .service-name {
-        font-family: 'Outfit', serif;
-        font-size: 1.5rem;
-        margin-bottom: 0.5rem;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.05rem;
+        margin-bottom: 0.25rem;
         color: var(--primary-brown);
         font-weight: 600;
+        letter-spacing: -0.02em;
     }
 
     .service-price {
         color: var(--primary-gold);
-        font-weight: 600;
-        font-size: 1.2rem;
-        margin-bottom: 1rem;
+        font-weight: 700;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
     }
 
     .service-desc {
-        color: #666;
-        line-height: 1.6;
+        color: #6b7280;
+        line-height: 1.5;
+        font-size: 0.875rem;
     }
 </style>
 {% endblock %}

@@ -49,6 +49,7 @@ def overview(request):
         return redirect('dashboard_overview')
 
     business = analytics.get_business_overview()
+    growth = analytics.get_growth_insights()
     monthly_trend = analytics.get_monthly_revenue_trend(months=6)
     daily_trend = analytics.get_daily_revenue_trend(days=30)
     busiest_days = analytics.get_busiest_days()
@@ -60,6 +61,7 @@ def overview(request):
     context = {
         'page_title': 'Overview',
         'business': business,
+        'growth': growth,
         'upcoming_bookings': upcoming_bookings,
         'busiest_days': busiest_days,
         'monthly_labels': json.dumps([item['label'] for item in monthly_trend]),
@@ -68,6 +70,8 @@ def overview(request):
         'daily_revenue': json.dumps([float(item['revenue']) for item in daily_trend]),
         'busiest_day_labels': json.dumps([item['day'] for item in busiest_days]),
         'busiest_day_revenue': json.dumps([float(item['revenue']) for item in busiest_days]),
+        'peak_hour_labels': json.dumps([item['label'] for item in growth['peak_hours']]),
+        'peak_hour_bookings': json.dumps([item['bookings'] for item in growth['peak_hours']]),
         'otp_enabled': shop_settings.is_otp_enabled,
         'business_phone': shop_settings.business_phone,
     }
@@ -446,22 +450,36 @@ def edit_service(request, pk):
 @user_passes_test(is_barber_or_admin, login_url='dashboard_login')
 def delete_service(request, pk):
     service = get_object_or_404(Service, pk=pk)
-    
+    history_count = (
+        service.manual_entries.count()
+        + service.bookings.count()
+        + service.combo_offers.count()
+    )
+
     if request.method == 'POST':
-        service.delete()
-        messages.success(request, 'Service deleted successfully!')
+        # Soft-delete: ManualServiceEntry uses PROTECT, and hard delete
+        # would also cascade booking history. Archive instead.
+        service.is_active = False
+        service.save(update_fields=['is_active'])
+        messages.success(
+            request,
+            f'"{service.name}" was removed from the booking catalog. '
+            'Finance and booking history for this service were kept.',
+        )
         return redirect('dashboard_services')
-        
+
     context = {
         'page_title': 'Delete Service',
         'service': service,
+        'has_history': history_count > 0,
+        'history_count': history_count,
     }
     return render(request, 'dashboard/service_confirm_delete.html', context)
 
 
 @user_passes_test(is_barber_or_admin, login_url='dashboard_login')
 def offers_list(request):
-    coupons = Coupon.objects.all()
+    coupons = Coupon.objects.select_related('service').all()
     now = timezone.now()
     coupon_rows = []
     for coupon in coupons:

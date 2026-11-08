@@ -20,8 +20,8 @@
     }
     .confirm-step .is-done { color: #9ca3af; }
     .confirm-step .is-current {
-        color: #fff;
-        background: var(--primary-brown);
+        color: #111827;
+        background: var(--primary-cta, var(--primary-gold));
         border-radius: 9999px;
         padding: 0.2rem 0.55rem;
         letter-spacing: 0.03em;
@@ -80,7 +80,7 @@
         z-index: 60;
         background: #fff;
         border-top: 1px solid #e5e7eb;
-        box-shadow: 0 -8px 24px rgba(74, 55, 40, 0.12);
+        box-shadow: 0 -8px 24px rgba(234, 179, 8, 0.12);
         padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
         display: block;
     }
@@ -107,163 +107,312 @@
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        background: var(--primary-brown);
-        color: #fff;
+        background: var(--primary-cta, var(--primary-gold));
+        color: #111827;
         font-weight: 700;
         font-size: 1.05rem;
         border-radius: 9999px;
         padding: 0.9rem 1.25rem;
-        box-shadow: 0 8px 20px rgba(74, 55, 40, 0.25);
+        box-shadow: 0 8px 20px rgba(234, 179, 8, 0.28);
         transition: background-color 0.2s, transform 0.15s;
     }
     .sticky-confirm-btn:active { transform: scale(0.98); }
-    .sticky-confirm-btn:hover { background: var(--primary-gold); }
+    .sticky-confirm-btn:hover { background: var(--primary-cta-hover, #CA8A04); }
     .desktop-confirm-btn {
         width: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        background: var(--primary-brown);
-        color: #fff;
+        background: var(--primary-cta, var(--primary-gold));
+        color: #111827;
         font-weight: 700;
         font-size: 1.1rem;
         border-radius: 9999px;
         padding: 1rem 1.5rem;
-        box-shadow: 0 8px 20px rgba(74, 55, 40, 0.22);
+        box-shadow: 0 8px 20px rgba(234, 179, 8, 0.25);
     }
-    .desktop-confirm-btn:hover { background: var(--primary-gold); }
+    .desktop-confirm-btn:hover { background: var(--primary-cta-hover, #CA8A04); }
     .combo-panel {
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 1rem;
-        padding: 1rem 0.9rem 0.85rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(120% 90% at 0% 0%, rgba(250, 204, 21, 0.22) 0%, transparent 55%),
+            radial-gradient(100% 80% at 100% 100%, rgba(253, 224, 71, 0.18) 0%, transparent 50%),
+            linear-gradient(180deg, #FFFBEB 0%, #FFFFFF 48%, #FFFFFF 100%);
+        border: 1.5px solid rgba(234, 179, 8, 0.55);
+        border-radius: 1.25rem;
+        padding: 1.1rem 0.95rem 1rem;
+        box-shadow: 0 10px 28px rgba(202, 138, 4, 0.12);
+        animation: comboPanelIn 0.55s ease-out both;
+    }
+    .combo-panel::before {
+        content: '';
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: linear-gradient(90deg, #FACC15, #EAB308, #CA8A04);
+    }
+    @keyframes comboPanelIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .combo-panel-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-bottom: 0.35rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: 0.4rem;
+        font-size: 0.65rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #713F12;
+        background: #FDE047;
+        border: 1px solid rgba(202, 138, 4, 0.35);
     }
     .combo-panel-title {
-        font-size: 1.05rem;
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: var(--primary-brown, #4A3728);
+        margin-bottom: 0.2rem;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+    }
+    .combo-panel-sub {
+        font-size: 0.8125rem;
+        color: #6B7280;
+        margin-bottom: 0.95rem;
+        line-height: 1.4;
+    }
+    .combo-panel-sub strong {
+        color: #15803D;
         font-weight: 700;
-        color: #111827;
-        margin-bottom: 0.15rem;
-        padding: 0 0.25rem;
     }
     #upsell-carousel { scrollbar-width: none; -ms-overflow-style: none; }
     #upsell-carousel .combo-card {
         flex: 0 0 auto;
         flex-shrink: 0;
-        width: clamp(340px, 94vw, 460px);
-        min-width: 340px;
-        max-width: 460px;
-        overflow: visible;
+        width: clamp(248px, 72vw, 300px);
+        min-width: 248px;
+        max-width: 300px;
+        overflow: hidden;
+        animation: comboCardIn 0.5s ease-out both;
     }
-    @media (min-width: 640px) {
-        #upsell-carousel .combo-card {
-            width: 420px;
-            min-width: 420px;
-        }
+    #upsell-carousel .combo-card:nth-child(1) { animation-delay: 0.05s; }
+    #upsell-carousel .combo-card:nth-child(2) { animation-delay: 0.12s; }
+    #upsell-carousel .combo-card:nth-child(3) { animation-delay: 0.19s; }
+    #upsell-carousel .combo-card:nth-child(4) { animation-delay: 0.26s; }
+    #upsell-carousel .combo-card:nth-child(5) { animation-delay: 0.33s; }
+    @keyframes comboCardIn {
+        from { opacity: 0; transform: translateY(14px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
     }
     .combo-card {
         display: flex;
         flex-direction: column;
-        min-height: 94px;
         height: auto;
-        padding: 0.65rem 0.75rem !important;
+        padding: 0 !important;
         background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.75rem;
-        box-shadow: none;
+        border: 1px solid rgba(234, 179, 8, 0.35);
+        border-radius: 1rem;
+        box-shadow: 0 6px 18px rgba(74, 55, 40, 0.08);
         box-sizing: border-box;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
     .combo-card:hover {
-        border-color: #d1d5db;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border-color: #EAB308;
+        box-shadow: 0 12px 28px rgba(202, 138, 4, 0.18);
+        transform: translateY(-3px);
+    }
+    .combo-card.is-added-card {
+        border-color: #86EFAC;
+        box-shadow: 0 6px 18px rgba(22, 163, 74, 0.12);
     }
     .combo-card-layout {
         display: flex;
-        align-items: center;
-        gap: 0.75rem;
+        flex-direction: column;
         width: 100%;
         flex: 1 1 auto;
-        min-height: 0;
         position: relative;
         z-index: 10;
     }
     .combo-card-media {
-        flex-shrink: 0;
-        width: 70px;
-        height: 70px;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-        overflow: hidden;
-        background: #f9fafb;
         position: relative;
+        flex-shrink: 0;
+        width: 100%;
+        height: 148px;
+        border: none;
+        border-radius: 0;
+        overflow: hidden;
+        background: #FEF9C3;
     }
-    .combo-card-media img { width: 100%; height: 100%; object-fit: cover; }
+    .combo-card-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.35s ease;
+    }
+    .combo-card:hover .combo-card-media img {
+        transform: scale(1.05);
+    }
     .combo-card-media-fallback {
         width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-        color: var(--primary-brown); background: #faf8f5;
+        color: var(--primary-brown); background: linear-gradient(145deg, #FEFCE8, #FDE047);
+        font-size: 2rem;
+    }
+    .combo-save-chip {
+        position: absolute;
+        top: 0.65rem;
+        left: 0.65rem;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.28rem 0.55rem;
+        border-radius: 0.4rem;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        color: #fff;
+        background: #15803D;
+        box-shadow: 0 4px 12px rgba(21, 128, 61, 0.35);
+        animation: saveChipPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes saveChipPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.04); }
     }
     .combo-card-content {
-        display: flex; flex-direction: column; flex: 1 1 0%; min-width: 0; min-height: 0; overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 0.85rem 0.85rem 0.95rem;
+        gap: 0.35rem;
     }
     .combo-s-title {
-        font-weight: 600; font-size: 0.875rem; line-height: 1.35; color: #374151;
-        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-        overflow: hidden; margin: 0; word-break: break-word;
+        font-weight: 800;
+        font-size: 0.98rem;
+        line-height: 1.3;
+        color: #1F2937;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin: 0;
+        word-break: break-word;
+        min-height: 2.5em;
+    }
+    .combo-tagline {
+        font-size: 0.72rem;
+        line-height: 1.35;
+        color: #6B7280;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin: 0;
     }
     .combo-badge {
         display: inline-flex;
         align-items: center;
+        align-self: flex-start;
         max-width: 100%;
-        margin-bottom: 0.2rem;
-        padding: 0.12rem 0.5rem;
-        border-radius: 9999px;
+        padding: 0.15rem 0.5rem;
+        border-radius: 0.35rem;
         font-size: 0.625rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
+        font-weight: 800;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
         line-height: 1.3;
-        color: var(--primary-brown);
-        background: linear-gradient(135deg, #fbf7eb 0%, #f5e8c4 100%);
-        border: 1px solid rgba(212, 175, 55, 0.4);
+        color: #713F12;
+        background: #FEF08A;
+        border: 1px solid rgba(234, 179, 8, 0.5);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
     .combo-card-prices {
-        display: flex; align-items: baseline; gap: 0.35rem; margin-top: 0.15rem;
-        flex-wrap: nowrap; white-space: nowrap;
+        display: flex;
+        align-items: baseline;
+        gap: 0.45rem;
+        margin-top: 0.15rem;
+        flex-wrap: wrap;
     }
     .combo-original-price {
-        font-size: 0.7rem; font-weight: 500; color: #9ca3af;
-        text-decoration: line-through; text-decoration-thickness: 1px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #9CA3AF;
+        text-decoration: line-through;
+        text-decoration-thickness: 1.5px;
     }
-    .combo-current-price { font-size: 0.875rem; font-weight: 700; color: #111827; }
+    .combo-current-price {
+        font-size: 1.25rem;
+        font-weight: 900;
+        color: #111827;
+        letter-spacing: -0.02em;
+    }
     .combo-card-bottom {
-        margin-top: 0.2rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+        margin-top: 0.45rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
     }
     .combo-savings-text {
-        font-size: 0.7rem; font-weight: 600; color: #15803d;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 0;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #15803D;
     }
     .combo-add-btn {
-        display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
-        min-width: 3.25rem; padding: 0.25rem 0.65rem; border-radius: 9999px;
-        font-size: 0.75rem; font-weight: 700; line-height: 1.2;
-        border: 1.5px solid var(--primary-brown); background: #fff; color: var(--primary-brown);
-        transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        width: 100%;
+        padding: 0.7rem 0.85rem;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 800;
+        line-height: 1.2;
+        border: none;
+        background: var(--primary-cta, var(--primary-gold, #EAB308));
+        color: #111827;
+        box-shadow: 0 6px 14px rgba(234, 179, 8, 0.35);
+        transition: background-color 0.2s, transform 0.15s, box-shadow 0.2s;
     }
-    .combo-add-btn:hover:not(:disabled) { background: var(--primary-brown); color: #fff; }
-    .combo-add-btn.is-added { border-color: #d1d5db; background: #f3f4f6; color: #4b5563; }
-    .combo-add-btn.is-added:hover:not(:disabled) { background: #e5e7eb; color: #374151; }
+    .combo-add-btn:hover:not(:disabled) {
+        background: var(--primary-cta-hover, #CA8A04);
+        color: #111827;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(202, 138, 4, 0.4);
+    }
+    .combo-add-btn:active:not(:disabled) { transform: scale(0.98); }
+    .combo-add-btn.is-added {
+        border: 1.5px solid #BBF7D0;
+        background: #F0FDF4;
+        color: #166534;
+        box-shadow: none;
+    }
+    .combo-add-btn.is-added:hover:not(:disabled) {
+        background: #DCFCE7;
+        color: #14532D;
+        transform: none;
+        box-shadow: none;
+    }
+    .combo-card-highlight {
+        border-radius: 1rem;
+    }
     .combo-card-highlight.active {
-        border-color: var(--primary-gold); background-color: rgba(212, 175, 55, 0.04);
+        border-color: #22C55E;
+        background-color: transparent;
     }
     .combo-scroll-track {
-        height: 4px; background: #e5e7eb; border-radius: 9999px; margin-top: 0.85rem; overflow: hidden;
+        height: 4px; background: #F3F4F6; border-radius: 9999px; margin-top: 0.95rem; overflow: hidden;
     }
     .combo-scroll-thumb {
-        height: 100%; background: var(--primary-brown); border-radius: 9999px; width: 30%;
+        height: 100%; background: var(--primary-cta, var(--primary-gold)); border-radius: 9999px; width: 30%;
         transition: width 0.1s ease, margin-left 0.1s ease;
     }
     #comboServiceModalOverlay {
@@ -343,15 +492,22 @@
 
     {% if show_upsell_carousel %}
     <section id="upsell-carousel-section" class="mb-6 combo-panel">
-        <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-gold mb-1 px-1">Optional add-ons</p>
-        <h2 class="combo-panel-title">Complete Your Look</h2>
-        <p class="text-xs text-gray-500 mb-3 px-1">Combo prices with your haircut</p>
+        <span class="combo-panel-kicker">
+            <i class="fas fa-bolt"></i>
+            Combo unlocked
+        </span>
+        <h2 class="combo-panel-title">Add more. Pay less today.</h2>
+        <p class="combo-panel-sub">
+            Your booking unlocked exclusive combo rates.
+            <strong>Tap Add to lock in the savings before you confirm.</strong>
+        </p>
 
         <div id="upsell-carousel"
-            class="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-0.5 px-0.5 scroll-smooth items-stretch"
+            class="flex gap-3.5 overflow-x-auto snap-x snap-mandatory pb-1 -mx-0.5 px-0.5 scroll-smooth items-stretch"
             style="scrollbar-width: none; -ms-overflow-style: none;">
             {% for addon in upsell_addons %}
-            <div class="combo-card relative transform transition-all duration-200 select-none group snap-start shrink-0 cursor-pointer"
+            {% widthratio addon.savings addon.regular_price 100 as pct_off %}
+            <div class="combo-card relative select-none group snap-start shrink-0 cursor-pointer {% if addon.already_added %}is-added-card{% endif %}"
                 id="combo-card-{{ addon.service_id }}"
                 data-service-id="{{ addon.service_id }}"
                 data-name="{{ addon.name|escape }}"
@@ -364,16 +520,21 @@
                 data-added="{{ addon.already_added|yesno:'true,false' }}"
                 onclick="openComboServiceModal(this)">
 
-                <div class="combo-card-highlight absolute inset-0 border-2 {% if addon.already_added %}border-gold active{% else %}border-transparent{% endif %} rounded-xl transition-all duration-300 pointer-events-none"
+                <div class="combo-card-highlight absolute inset-0 border-2 {% if addon.already_added %}border-green-400 active{% else %}border-transparent{% endif %} transition-all duration-300 pointer-events-none"
                     id="combo-highlight-{{ addon.service_id }}"></div>
 
                 <div class="combo-card-layout">
                     <div class="combo-card-media">
+                        {% if addon.savings %}
+                        <span class="combo-save-chip">
+                            {% if pct_off %}{{ pct_off }}% OFF{% else %}SAVE ₹{{ addon.savings|floatformat:0 }}{% endif %}
+                        </span>
+                        {% endif %}
                         {% if addon.image_url %}
                         <img src="{{ addon.image_url }}" alt="{{ addon.name }}">
                         {% else %}
                         <div class="combo-card-media-fallback">
-                            <i class="fas fa-spa text-lg"></i>
+                            <i class="fas fa-spa"></i>
                         </div>
                         {% endif %}
                     </div>
@@ -383,23 +544,26 @@
                         <span class="combo-badge" title="{{ addon.badge }}">{{ addon.badge }}</span>
                         {% endif %}
                         <h3 class="combo-s-title" title="{{ addon.name }}">{{ addon.name }}</h3>
+                        {% if addon.tagline %}
+                        <p class="combo-tagline">{{ addon.tagline }}</p>
+                        {% endif %}
                         <div class="combo-card-prices">
-                            <span class="combo-original-price">₹{{ addon.regular_price|floatformat:0 }}</span>
                             <span class="combo-current-price">₹{{ addon.combo_price|floatformat:0 }}</span>
+                            <span class="combo-original-price">₹{{ addon.regular_price|floatformat:0 }}</span>
                         </div>
                         <div class="combo-card-bottom" onclick="event.stopPropagation()">
-                            {% if addon.regular_price %}
-                            {% widthratio addon.savings addon.regular_price 100 as pct_off %}
-                            <span class="combo-savings-text">{% if pct_off %}{{ pct_off }}% off{% else %}Save ₹{{ addon.savings|floatformat:0 }}{% endif %}</span>
-                            {% else %}
-                            <span class="combo-savings-text">Save ₹{{ addon.savings|floatformat:0 }}</span>
-                            {% endif %}
+                            <span class="combo-savings-text">You save ₹{{ addon.savings|floatformat:0 }} on this add-on</span>
                             <button type="button"
                                 class="upsell-cta combo-add-btn {% if addon.already_added %}is-added{% endif %}"
                                 data-service-id="{{ addon.service_id }}"
+                                data-savings="{{ addon.savings|floatformat:0 }}"
                                 data-added="{{ addon.already_added|yesno:'true,false' }}"
                                 onclick="toggleUpsellAddon({{ addon.service_id }})">
-                                {% if addon.already_added %}Added{% else %}Add{% endif %}
+                                {% if addon.already_added %}
+                                <i class="fas fa-check"></i> Added
+                                {% else %}
+                                <i class="fas fa-plus"></i> Add · Save ₹{{ addon.savings|floatformat:0 }}
+                                {% endif %}
                             </button>
                         </div>
                     </div>
@@ -830,7 +994,7 @@
                     '<div class="flex items-center justify-between gap-2">' +
                     '<div>' +
                     '<p class="font-bold text-brown tracking-wide text-sm">' + escapeHtml(coupon.code) + '</p>' +
-                    '<p class="text-xs text-gray-500 mt-0.5">' + escapeHtml(coupon.discount_label) + exclusive + '</p>' +
+                    '<p class="text-xs text-gray-500 mt-0.5">' + escapeHtml(coupon.discount_label || '') + exclusive + '</p>' +
                     '</div>' +
                     '<span class="text-xs font-bold text-green-700 whitespace-nowrap">Save ₹' + formatMoney(coupon.discount_amount) + '</span>' +
                     '</div>' +
@@ -954,27 +1118,42 @@
         }).join('');
     }
 
+    function upsellCtaLabel(added, savings) {
+        if (added) {
+            return '<i class="fas fa-check"></i> Added';
+        }
+        const saveText = savings ? (' · Save ₹' + formatMoney(savings)) : '';
+        return '<i class="fas fa-plus"></i> Add' + saveText;
+    }
+
     function updateUpsellButtons(addons) {
         (addons || []).forEach(function (addon) {
             const btn = document.querySelector('.upsell-cta[data-service-id="' + addon.service_id + '"]');
             const card = document.getElementById('combo-card-' + addon.service_id);
             const highlight = document.getElementById('combo-highlight-' + addon.service_id);
             const added = !!addon.already_added;
+            const savings = addon.savings != null
+                ? addon.savings
+                : (btn ? btn.getAttribute('data-savings') : '');
 
             if (btn) {
                 btn.setAttribute('data-added', added ? 'true' : 'false');
+                if (savings !== '' && savings != null) {
+                    btn.setAttribute('data-savings', String(savings).replace(/\.00$/, ''));
+                }
                 btn.className = 'upsell-cta combo-add-btn' + (added ? ' is-added' : '');
-                btn.textContent = added ? 'Added' : 'Add';
+                btn.innerHTML = upsellCtaLabel(added, btn.getAttribute('data-savings'));
             }
             if (card) {
                 card.setAttribute('data-added', added ? 'true' : 'false');
+                card.classList.toggle('is-added-card', added);
             }
             if (highlight) {
                 if (added) {
-                    highlight.classList.add('active', 'border-gold');
+                    highlight.classList.add('active', 'border-green-400');
                     highlight.classList.remove('border-transparent');
                 } else {
-                    highlight.classList.remove('active', 'border-gold');
+                    highlight.classList.remove('active', 'border-green-400');
                     highlight.classList.add('border-transparent');
                 }
             }
@@ -986,21 +1165,25 @@
                 return String(a.service_id) === String(modalBtn.dataset.serviceId);
             });
             if (current) {
-                syncComboModalAddButton(current.already_added, current.service_id);
+                syncComboModalAddButton(current.already_added, current.service_id, current.savings);
             }
         }
     }
 
-    function syncComboModalAddButton(added, serviceId) {
+    function syncComboModalAddButton(added, serviceId, savings) {
         const modalBtn = document.getElementById('comboModalAddBtn');
         if (!modalBtn) return;
         modalBtn.dataset.serviceId = serviceId;
+        if (savings != null && savings !== '') {
+            modalBtn.dataset.savings = String(savings).replace(/\.00$/, '');
+        }
         if (added) {
             modalBtn.textContent = 'Remove from Booking';
             modalBtn.className = 'px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold shadow-sm transition-colors';
         } else {
-            modalBtn.textContent = 'Add to Booking';
-            modalBtn.className = 'px-6 py-2.5 bg-brown hover:bg-gold text-white rounded-xl font-bold shadow-sm transition-colors';
+            const saveBit = modalBtn.dataset.savings ? (' · Save ₹' + formatMoney(modalBtn.dataset.savings)) : '';
+            modalBtn.textContent = 'Add to Booking' + saveBit;
+            modalBtn.className = 'px-6 py-2.5 bg-amber-400 hover:bg-amber-500 text-gray-900 rounded-xl font-extrabold shadow-md transition-colors';
         }
     }
 
@@ -1050,7 +1233,7 @@
             modalFallback.classList.remove('hidden');
         }
 
-        syncComboModalAddButton(added, serviceId);
+        syncComboModalAddButton(added, serviceId, savings);
         overlay.classList.add('active');
         document.body.style.overflow = 'hidden';
     }

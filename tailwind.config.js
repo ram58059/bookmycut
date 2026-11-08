@@ -7,11 +7,11 @@ module.exports = {
     theme: {
         extend: {
             colors: {
-                'primary-gold': '#D4AF37',
-                'primary-brown': '#4A3728',
-                'soft-cream': '#FDFBF7',
-                'gold': '#D4AF37',
-                'brown': '#4A3728',
+                'primary-gold': '#EAB308',
+                'primary-brown': '#1F2937',
+                'soft-cream': '#FFFFFF',
+                'gold': '#EAB308',
+                'brown': '#1F2937',
             },
             fontFamily: {
                 sans: ['Outfit', 'sans-serif'],

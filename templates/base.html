@@ -9,18 +9,18 @@
     <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
     <link href="{% static 'css/output.css' %}?v={% now 'U' %}" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- Google Fonts: Outfit for a premium look -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col bg-white text-brown">
     <!-- Custom Page Loader -->
     <div id="page-loader"
-        class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm transition-opacity duration-500">
-        <div class="relative mb-4">
-            <i class="fas fa-scissors text-6xl text-gold animate-snipping"></i>
+        class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/95 backdrop-blur-md transition-opacity duration-500">
+        <div class="relative mb-3">
+            <i class="fas fa-scissors text-5xl text-gold animate-snipping"></i>
         </div>
-        <p class="text-brown font-medium text-lg tracking-widest uppercase animate-pulse">Polishing your look...</p>
+        <p class="text-brown font-medium text-xs tracking-[0.28em] uppercase">Polishing your look</p>
     </div>
 
     <style>
@@ -91,26 +91,26 @@
         });
     </script>
     <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b border-yellow-100">
+    <nav class="site-nav sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-20">
+            <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <a href="{% url 'home' %}" class="flex items-center space-x-3">
-                        <i class="fas fa-scissors text-3xl text-brown"></i>
-                        <span class="font-bold text-2xl tracking-wider text-brown">ZION<span
+                    <a href="{% url 'home' %}" class="flex items-center space-x-2.5">
+                        <i class="fas fa-scissors text-2xl text-gold"></i>
+                        <span class="font-bold text-xl tracking-[0.14em] text-brown">ZION<span
                                 class="text-gold font-light">SALON</span></span>
                     </a>
                 </div>
 
                 <!-- Desktop CTA Button & Mobile Menu -->
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-3">
 
                     <a href="{% url 'hairstyle_gallery' %}"
-                        class="hidden md:inline-flex items-center text-brown hover:text-gold font-bold px-4 py-2.5 transition-all duration-300 hover:-translate-y-0.5 text-sm uppercase tracking-wider">
+                        class="hidden md:inline-flex items-center text-brown/80 hover:text-gold font-semibold px-3 py-2 transition-colors text-xs uppercase tracking-[0.16em]">
                         <span>Hairstyles</span>
                     </a>
-                    <a href="{% url 'gender_selection' %}"
-                        class="hidden md:inline-flex items-center bg-brown hover:bg-gold text-white font-medium px-6 py-2.5 rounded-full shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg text-sm uppercase tracking-wider">
+                    <a href="{% url 'service_list' %}"
+                        class="hidden md:inline-flex items-center bg-gold hover:bg-yellow-600 text-gray-900 font-semibold px-5 py-2 rounded-full shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md text-xs uppercase tracking-[0.14em]">
                         <span>Book Now</span>
                     </a>
 
@@ -134,7 +134,7 @@
                                     class="block md:hidden px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-brown">
                                     <i class="fas fa-cut mr-2 text-gold"></i> Hairstyles
                                 </a>
-                                <a href="{% url 'gender_selection' %}"
+                                <a href="{% url 'service_list' %}"
                                     class="block md:hidden px-4 py-2 text-sm text-brown font-bold bg-yellow-50 hover:bg-yellow-100 mb-1">
                                     <i class="fas fa-calendar-alt mr-2"></i> Book Now
                                 </a>
@@ -203,7 +203,7 @@
         <div class="mt-4">
             {% for message in messages %}
             <div
-                class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
+                class="p-3 rounded-xl text-sm {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
                 {{ message }}
             </div>
             {% endfor %}
@@ -215,21 +215,22 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-yellow-100 mt-12 py-12">
+    <footer class="site-footer mt-10 py-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Brand -->
                 <div>
-                    <h3 class="font-bold text-xl text-brown mb-4">ZION SALON & SPA</h3>
-                    <p class="text-gray-600">Experience premium grooming and spa services in a luxurious ambiance.</p>
+                    <p class="premium-eyebrow mb-2">Zion Salon & Spa</p>
+                    <h3 class="font-bold text-lg text-brown mb-2 tracking-tight">Crafted grooming</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">Premium cuts and spa care in a calm, polished space.</p>
                 </div>
 
                 <!-- Contact -->
                 <div>
-                    <h3 class="font-bold text-lg text-brown mb-4">Contact Us</h3>
+                    <h3 class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400 mb-3">Visit</h3>
                     <div class="space-y-3">
                         <a href="https://maps.app.goo.gl/xwdnTFCNmfCiYs6CA" target="_blank"
-                            class="flex items-start text-gray-600 hover:text-gold transition">
+                            class="flex items-start text-sm text-gray-600 hover:text-gold transition">
                             <i class="fas fa-map-marker-alt mt-1 mr-3 text-gold"></i>
                             <span>Upstair, SS PLAZA, A4, Cheranmahadevi Rd,<br>near HP Petrol Bunk, Kodeeswaran
                                 Nagar,<br>Tirunelveli, Tamil Nadu 627006</span>
@@ -239,18 +240,18 @@
 
                 <!-- Hours -->
                 <div>
-                    <h3 class="font-bold text-lg text-brown mb-4">Opening Hours</h3>
-                    <p class="text-gray-600"><i class="far fa-clock mr-2 text-gold"></i> Mon - Sat: 10:00 AM - 10:00 PM
+                    <h3 class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400 mb-3">Hours</h3>
+                    <p class="text-sm text-gray-600"><i class="far fa-clock mr-2 text-gold"></i> Mon - Sat: 10:00 AM - 10:00 PM
                     </p>
                 </div>
             </div>
-            <div class="mt-8 pt-8 border-t border-yellow-50 text-center text-gray-500 text-sm">
-                <div class="flex flex-wrap justify-center gap-4 mb-4">
-                    <a href="{% url 'terms' %}" class="hover:text-brown transition-colors">Terms & Conditions</a>
-                    <span class="text-gray-300">|</span>
-                    <a href="{% url 'privacy' %}" class="hover:text-brown transition-colors">Privacy Policy</a>
+            <div class="mt-8 pt-6 border-t border-gray-100 text-center text-gray-400 text-xs tracking-wide">
+                <div class="flex flex-wrap justify-center gap-4 mb-3">
+                    <a href="{% url 'terms' %}" class="hover:text-brown transition-colors">Terms</a>
+                    <span class="text-gray-200">·</span>
+                    <a href="{% url 'privacy' %}" class="hover:text-brown transition-colors">Privacy</a>
                 </div>
-                <p>&copy; 2025 Zion Salon & Spa. All rights reserved.</p>
+                <p>&copy; 2025 Zion Salon & Spa</p>
             </div>
         </div>
     </footer>

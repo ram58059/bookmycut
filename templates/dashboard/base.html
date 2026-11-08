@@ -17,6 +17,63 @@
         body {
             font-family: 'Outfit', sans-serif;
         }
+
+        #sidebar {
+            transition: transform 0.3s ease;
+        }
+
+        #main-shell {
+            transition: margin-left 0.3s ease;
+        }
+
+        @media (min-width: 768px) {
+            #main-shell {
+                margin-left: 16rem;
+            }
+
+            body.sidebar-hidden #main-shell {
+                margin-left: 0;
+            }
+        }
+
+        body.sidebar-hidden #sidebar {
+            transform: translateX(-100%);
+        }
+
+        body.sidebar-hidden #mobile-overlay {
+            display: none !important;
+        }
+
+        #sidebar-reopen {
+            display: none;
+        }
+
+        body.sidebar-hidden #sidebar-reopen {
+            display: inline-flex;
+        }
+
+        body.sidebar-hidden #desktop-hide-btn {
+            display: none !important;
+        }
+    </style>
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('zion-admin-sidebar-hidden');
+                var hidden = stored === '1' || (stored !== '0' && window.innerWidth < 768);
+                if (hidden) document.documentElement.classList.add('sidebar-pending-hidden');
+            } catch (e) { }
+        })();
+    </script>
+    <style>
+        html.sidebar-pending-hidden #sidebar {
+            transform: translateX(-100%);
+        }
+        @media (min-width: 768px) {
+            html.sidebar-pending-hidden #main-shell {
+                margin-left: 0;
+            }
+        }
     </style>
 </head>
 
@@ -36,19 +93,24 @@
         <!-- Mobile Overlay -->
         <div id="mobile-overlay"
             class="fixed inset-0 bg-black/50 z-20 hidden md:hidden transition-opacity duration-300 opacity-0"
-            onclick="toggleSidebar()"></div>
+            onclick="setSidebarHidden(true)"></div>
 
         <!-- Sidebar -->
         <aside id="sidebar"
-            class="fixed inset-y-0 left-0 z-30 w-64 bg-gray-900 text-white shadow-xl transform -translate-x-full md:translate-x-0 md:static md:inset-0 transition-transform duration-300 ease-in-out flex flex-col">
-            <div class="flex items-center justify-center h-20 border-b border-gray-800">
+            class="fixed inset-y-0 left-0 z-30 w-64 bg-gray-900 text-white shadow-xl flex flex-col">
+            <div class="flex items-center justify-between h-16 px-4 border-b border-gray-800">
                 <div class="flex items-center space-x-2">
                     <i class="fas fa-scissors text-amber-500 text-2xl"></i>
                     <span class="text-xl font-bold tracking-wider">ZION<span class="text-amber-500">ADMIN</span></span>
                 </div>
+                <button type="button" onclick="setSidebarHidden(true)"
+                    class="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-800 transition-colors"
+                    title="Hide menu" aria-label="Hide sidebar">
+                    <i class="fas fa-angles-left"></i>
+                </button>
             </div>
 
-            <nav class="flex-grow py-6 px-4 space-y-2">
+            <nav class="flex-grow py-6 px-4 space-y-2 overflow-y-auto">
                 <a href="{% url 'dashboard_overview' %}"
                     class="flex items-center p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors {% if request.resolver_match.url_name == 'dashboard_overview' %}bg-gray-800 text-white border-l-4 border-amber-500{% endif %}">
                     <i class="fas fa-tachometer-alt w-6"></i>
@@ -117,28 +179,32 @@
         </aside>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <!-- Header for Mobile -->
-            <header class="md:hidden flex items-center justify-between p-4 bg-white shadow-sm">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-scissors text-amber-500 text-xl"></i>
-                    <span class="text-lg font-bold">ZION ADMIN</span>
+        <div id="main-shell" class="flex-1 flex flex-col overflow-hidden min-w-0 w-full">
+            <!-- Top bar -->
+            <header class="flex items-center justify-between gap-3 px-4 md:px-6 py-3 bg-white border-b border-gray-100 shadow-sm">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button type="button" id="sidebar-reopen" onclick="setSidebarHidden(false)"
+                        class="items-center justify-center w-10 h-10 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                        title="Show menu" aria-label="Show sidebar">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="min-w-0">
+                        <h1 class="text-xl md:text-2xl font-bold text-gray-800 truncate">{% block header %}Dashboard{% endblock %}</h1>
+                        <p class="text-gray-500 text-xs md:text-sm truncate">
+                            {% block subheader %}Welcome back to your analytics overview{% endblock %}
+                        </p>
+                    </div>
                 </div>
-                <button id="mobile-menu-btn" class="text-gray-600 focus:outline-none" onclick="toggleSidebar()">
-                    <i class="fas fa-bars text-2xl"></i>
+                <button type="button" id="desktop-hide-btn" onclick="setSidebarHidden(true)"
+                    class="hidden md:inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                    title="Hide menu">
+                    <i class="fas fa-angles-left"></i>
+                    <span>Hide menu</span>
                 </button>
             </header>
 
             <!-- Main Scrollable Area -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
-                <!-- Page Header -->
-                <div class="mb-8">
-                    <h1 class="text-2xl font-bold text-gray-800">{% block header %}Dashboard{% endblock %}</h1>
-                    <p class="text-gray-500 text-sm">
-                        {% block subheader %}Welcome back to your analytics overview{% endblock %}
-                    </p>
-                </div>
-
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 md:p-6">
                 {% if messages %}
                 <div class="mb-6 space-y-2">
                     {% for message in messages %}
@@ -157,6 +223,34 @@
     </div>
 
     <script>
+        const SIDEBAR_KEY = 'zion-admin-sidebar-hidden';
+
+        function setSidebarHidden(hidden) {
+            const overlay = document.getElementById('mobile-overlay');
+            document.body.classList.toggle('sidebar-hidden', hidden);
+            document.documentElement.classList.remove('sidebar-pending-hidden');
+
+            try {
+                localStorage.setItem(SIDEBAR_KEY, hidden ? '1' : '0');
+            } catch (e) { }
+
+            if (window.innerWidth < 768) {
+                if (hidden) {
+                    overlay.classList.add('opacity-0');
+                    setTimeout(() => overlay.classList.add('hidden'), 300);
+                } else {
+                    overlay.classList.remove('hidden');
+                    setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+                }
+            } else {
+                overlay.classList.add('hidden', 'opacity-0');
+            }
+        }
+
+        function toggleSidebar() {
+            setSidebarHidden(!document.body.classList.contains('sidebar-hidden'));
+        }
+
         function toggleProfileMenu() {
             const menu = document.getElementById('profile-menu');
             const chevron = document.getElementById('profile-menu-chevron');
@@ -176,37 +270,22 @@
             }
         });
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobile-overlay');
-
-            // Toggle sidebar position
-            if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-            }
-
-            // Toggle overlay
-            if (overlay.classList.contains('hidden')) {
-                overlay.classList.remove('hidden');
-                // Small delay to allow transition to work (display:none to block needs a tick before opacity)
-                setTimeout(() => {
-                    overlay.classList.remove('opacity-0');
-                }, 10);
-            } else {
-                overlay.classList.add('opacity-0');
-                setTimeout(() => {
-                    overlay.classList.add('hidden');
-                }, 300); // Wait for fade out
-            }
-        }
-
         // Loader Logic
         document.addEventListener("DOMContentLoaded", () => {
+            // Restore sidebar preference (default: visible on desktop, hidden on mobile)
+            let hidden = false;
+            try {
+                const stored = localStorage.getItem(SIDEBAR_KEY);
+                if (stored === '1') hidden = true;
+                else if (stored === '0') hidden = false;
+                else hidden = window.innerWidth < 768;
+            } catch (e) {
+                hidden = window.innerWidth < 768;
+            }
+            setSidebarHidden(hidden);
+
             const loader = document.getElementById('page-loader');
 
-            // Hide loader when page is fully loaded
             window.addEventListener('load', () => {
                 loader.classList.add('opacity-0');
                 setTimeout(() => {
@@ -214,7 +293,6 @@
                 }, 300);
             });
 
-            // Show loader when navigating or submitting forms
             document.querySelectorAll('a[href]').forEach(link => {
                 link.addEventListener('click', (e) => {
                     const href = (link.getAttribute('href') || '').trim();

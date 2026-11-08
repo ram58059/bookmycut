@@ -662,3 +662,270 @@ def enrich_customer_row(customer):
         ),
     }
 
+
+
+def get_growth_insights():
+    """Actionable business metrics to help grow salon income."""
+    today = timezone.localtime(timezone.now()).date()
+    month_start = get_month_start(today)
+    last_month_end = month_start - timedelta(days=1)
+    last_month_start = get_month_start(last_month_end)
+    lookback_start = today - timedelta(days=90)
+    winback_cutoff = today - timedelta(days=45)
+
+    this_month = get_period_stats(month_start, today)
+    last_month = get_period_stats(last_month_start, last_month_end)
+
+    avg_ticket_month = 0
+    if this_month['bookings']:
+        avg_ticket_month = round(this_month['revenue'] / this_month['bookings'], 0)
+    avg_ticket_last_month = 0
+    if last_month['bookings']:
+        avg_ticket_last_month = round(last_month['revenue'] / last_month['bookings'], 0)
+
+    # Top services by revenue this month (bookings + manual)
+    booking_service_rows = list(
+        _revenue_bookings()
+        .filter(date__gte=month_start, date__lte=today)
+        .values('service_id', 'service__name')
+        .annotate(
+            revenue=Sum(_line_amount_expr()),
+            sales=Count('id'),
+        )
+    )
+    service_map = {}
+    for row in booking_service_rows:
+        sid = row['service_id']
+        service_map[sid] = {
+            'id': sid,
+            'name': row['service__name'],
+            'revenue': row['revenue'] or 0,
+            'sales': row['sales'] or 0,
+        }
+
+    manual_rows = (
+        ManualServiceEntry.objects.filter(date__gte=month_start, date__lte=today)
+        .values('service_id', 'service__name')
+        .annotate(
+            revenue=Sum(F('unit_price') * F('quantity')),
+            sales=Sum('quantity'),
+        )
+    )
+    for row in manual_rows:
+        sid = row['service_id']
+        if sid in service_map:
+            service_map[sid]['revenue'] += row['revenue'] or 0
+            service_map[sid]['sales'] += row['sales'] or 0
+        else:
+            service_map[sid] = {
+                'id': sid,
+                'name': row['service__name'],
+                'revenue': row['revenue'] or 0,
+                'sales': row['sales'] or 0,
+            }
+
+    top_services = sorted(service_map.values(), key=lambda x: x['revenue'], reverse=True)[:5]
+    for item in top_services:
+        item['share'] = (
+            round((item['revenue'] / this_month['revenue']) * 100, 1)
+            if this_month['revenue']
+            else 0
+        )
+
+    # Services with little/no sales this month (promotion candidates)
+    sold_ids = set(service_map.keys())
+    quiet_services = list(
+        Service.bookable()
+        .exclude(id__in=sold_ids)
+        .order_by('name')
+        .values('id', 'name', 'price')[:5]
+    )
+
+    # Peak booking hours (confirmed/completed in last 90 days)
+    hour_counts = {h: 0 for h in range(10, 22)}
+    hour_rows = (
+        Booking.objects.filter(
+            status__in=['confirmed', 'completed'],
+            date__gte=lookback_start,
+            date__lte=today,
+        )
+        .values_list('time', flat=True)
+    )
+    for t in hour_rows:
+        if t is None:
+            continue
+        hour = t.hour
+        if 10 <= hour <= 21:
+            hour_counts[hour] += 1
+    peak_hours = sorted(
+        (
+            {
+                'hour': h,
+                'label': f'{h % 12 or 12} {"AM" if h < 12 else "PM"}',
+                'bookings': hour_counts[h],
+            }
+            for h in hour_counts
+        ),
+        key=lambda x: x['bookings'],
+        reverse=True,
+    )
+    busiest_hours = [h for h in peak_hours if h['bookings'] > 0][:3]
+    quiet_hours = sorted(
+        [h for h in peak_hours if h['hour'] >= 10],
+        key=lambda x: x['bookings'],
+    )[:3]
+
+    # New vs returning customers this month
+    first_visits = {
+        row['customer_phone']: row['first_date']
+        for row in Booking.objects.values('customer_phone').annotate(first_date=models.Min('date'))
+    }
+    month_phones = set(
+        Booking.objects.filter(date__gte=month_start, date__lte=today)
+        .exclude(customer_phone='')
+        .values_list('customer_phone', flat=True)
+        .distinct()
+    )
+    new_customers = 0
+    returning_customers = 0
+    for phone in month_phones:
+        first = first_visits.get(phone)
+        if first and first >= month_start:
+            new_customers += 1
+        else:
+            returning_customers += 1
+    active_customers = new_customers + returning_customers or 1
+    returning_rate = round((returning_customers / active_customers) * 100, 1)
+
+    # Online (customer) vs admin/walk-in bookings this month
+    month_source = (
+        Booking.objects.filter(date__gte=month_start, date__lte=today)
+        .exclude(status__in=['cancelled', 'pending_otp'])
+        .values('booking_source')
+        .annotate(count=Count('id'))
+    )
+    source_map = {row['booking_source']: row['count'] for row in month_source}
+    online_bookings = source_map.get('customer', 0)
+    admin_bookings = source_map.get('admin', 0)
+    source_total = online_bookings + admin_bookings or 1
+    online_share = round((online_bookings / source_total) * 100, 1)
+
+    # Win-back: customers with past visits, last visit 45–180 days ago
+    upcoming_filter, visit_filter = _booking_status_filters()
+    last_visits = (
+        Booking.objects.filter(visit_filter)
+        .values('customer_phone')
+        .annotate(
+            last_visit=models.Max('date'),
+            visits=Count('id'),
+            customer_name=models.Max('customer_name'),
+        )
+        .filter(
+            last_visit__lte=winback_cutoff,
+            last_visit__gte=today - timedelta(days=180),
+            visits__gte=1,
+        )
+        .order_by('-visits', 'last_visit')[:8]
+    )
+    winback_customers = []
+    for row in last_visits:
+        days_away = (today - row['last_visit']).days
+        winback_customers.append({
+            'name': row['customer_name'] or 'Customer',
+            'phone': row['customer_phone'],
+            'visits': row['visits'],
+            'last_visit': row['last_visit'],
+            'days_away': days_away,
+        })
+
+    # Simple actionable tips from the numbers
+    tips = []
+    if top_services:
+        tips.append({
+            'title': f'Push add-ons with {top_services[0]["name"]}',
+            'detail': (
+                f'This is your top earner this month (₹{int(top_services[0]["revenue"])}). '
+                'Train staff to suggest a complementary service at checkout.'
+            ),
+            'icon': 'fa-hand-holding-usd',
+            'tone': 'amber',
+        })
+    if quiet_services:
+        tips.append({
+            'title': f'Promote {quiet_services[0]["name"]}',
+            'detail': (
+                'No sales this month yet. Feature it on the home page, Instagram, '
+                'or offer a limited combo to create demand.'
+            ),
+            'icon': 'fa-bullhorn',
+            'tone': 'blue',
+        })
+    if busiest_hours:
+        tips.append({
+            'title': f'Protect {busiest_hours[0]["label"]} slots',
+            'detail': (
+                'This is a peak hour. Keep chairs fully staffed then, and move flexible '
+                'walk-ins to quieter hours when possible.'
+            ),
+            'icon': 'fa-clock',
+            'tone': 'green',
+        })
+    if quiet_hours and quiet_hours[0]['bookings'] < (busiest_hours[0]['bookings'] if busiest_hours else 1):
+        tips.append({
+            'title': f'Fill {quiet_hours[0]["label"]} with offers',
+            'detail': (
+                'Quiet hour opportunity: run a mid-day package or WhatsApp blast '
+                'to regulars who can visit off-peak.'
+            ),
+            'icon': 'fa-tags',
+            'tone': 'purple',
+        })
+    if winback_customers:
+        tips.append({
+            'title': f'Reactivate {len(winback_customers)} quiet customers',
+            'detail': (
+                'These guests have not visited in 45+ days. A personal WhatsApp or '
+                'coupon often brings them back.'
+            ),
+            'icon': 'fa-user-clock',
+            'tone': 'orange',
+        })
+    if returning_rate < 40 and active_customers > 5:
+        tips.append({
+            'title': 'Improve repeat visits',
+            'detail': (
+                f'Only {returning_rate}% of this month\'s customers are returning guests. '
+                'Ask every client to rebook before they leave.'
+            ),
+            'icon': 'fa-redo',
+            'tone': 'red',
+        })
+    if online_share < 50 and source_total > 5:
+        tips.append({
+            'title': 'Grow online bookings',
+            'detail': (
+                f'Only {online_share}% of bookings came through the website this month. '
+                'Share the booking link on Instagram and Google Business.'
+            ),
+            'icon': 'fa-globe',
+            'tone': 'indigo',
+        })
+
+    return {
+        'avg_ticket_month': avg_ticket_month,
+        'avg_ticket_last_month': avg_ticket_last_month,
+        'new_customers': new_customers,
+        'returning_customers': returning_customers,
+        'returning_rate': returning_rate,
+        'online_bookings': online_bookings,
+        'admin_bookings': admin_bookings,
+        'online_share': online_share,
+        'top_services': top_services,
+        'quiet_services': quiet_services,
+        'busiest_hours': busiest_hours,
+        'quiet_hours': quiet_hours,
+        'peak_hours': peak_hours,
+        'winback_customers': winback_customers,
+        'tips': tips[:6],
+        'month_label': today.strftime('%B %Y'),
+    }

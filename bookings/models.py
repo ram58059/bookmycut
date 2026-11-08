@@ -14,11 +14,23 @@ class Service(models.Model):
     description = models.TextField(blank=True)
     category = models.CharField(max_length=100, default='General')
     gender = models.CharField(max_length=10, choices=[('Boy', 'Boy'), ('Girl', 'Girl')], default='Boy')
+    is_active = models.BooleanField(
+        default=True,
+        help_text='Inactive services are hidden from booking but kept for finance/booking history.',
+    )
     price_increased_at = models.DateTimeField(null=True, blank=True)
+    PRICE_INCREASE_NOTICE_DAYS = 30
 
     @classmethod
     def bookable(cls):
-        return cls.objects.exclude(category=cls.FINANCE_MANUAL_CATEGORY)
+        return cls.objects.filter(is_active=True).exclude(category=cls.FINANCE_MANUAL_CATEGORY)
+
+    @property
+    def show_price_increase_notice(self):
+        """True only for 30 days after an admin price increase."""
+        if not self.price_increased_at:
+            return False
+        return timezone.now() <= self.price_increased_at + timedelta(days=self.PRICE_INCREASE_NOTICE_DAYS)
 
     def save(self, *args, **kwargs):
         if self.pk:
@@ -26,8 +38,9 @@ class Service(models.Model):
                 old = Service.objects.get(pk=self.pk)
                 if self.price > old.price:
                     self.price_increased_at = timezone.now()
-                elif self.price <= old.price:
+                elif self.price < old.price:
                     self.price_increased_at = None
+                # Same price: keep existing price_increased_at (notice window continues)
             except Service.DoesNotExist:
                 pass
 
@@ -65,6 +78,14 @@ class Coupon(models.Model):
     code = models.CharField(max_length=40, unique=True)
     discount_type = models.CharField(max_length=20, choices=DISCOUNT_TYPE_CHOICES)
     discount_value = models.DecimalField(max_digits=8, decimal_places=2)
+    service = models.ForeignKey(
+        'Service',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='coupons',
+        help_text='Optional. Leave blank for all services, or pick one service this coupon can be used on.',
+    )
     customer_phone = models.CharField(
         max_length=15,
         blank=True,

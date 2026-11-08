@@ -27,30 +27,20 @@ from dashboard.models import ShopSetting
 
 # New Wizard Views
 class GenderSelectionView(View):
+    """Temporarily hidden: skip straight to the services list."""
+
     def get(self, request):
-        return render(request, 'bookings/gender_selection.html')
+        return redirect('service_list')
 
     def post(self, request):
-        gender = request.POST.get('gender')
-        if gender not in ['Boy', 'Girl']:
-            return redirect('gender_selection')
-        
-        request.session['selected_gender'] = gender
-        if 'selected_service_ids' in request.session:
-            del request.session['selected_service_ids']
-        if gender == 'Girl':
-            # Option to redirect to an empty page or valid page with no services
-            pass
-            
         return redirect('service_list')
 
 class ServiceListView(View):
     def get(self, request):
-        selected_gender = request.session.get('selected_gender')
-        if not selected_gender:
-            return redirect('gender_selection')
-
-        services = Service.bookable().filter(gender=selected_gender)
+        # Gender selection is temporarily hidden — show all bookable services.
+        request.session.pop('selected_gender', None)
+        selected_gender = None
+        services = Service.bookable()
 
         # Always start with a clean selection on the services page
         if 'selected_service_ids' in request.session:
@@ -87,15 +77,14 @@ class ServiceListView(View):
     def post(self, request):
         service_ids = request.POST.getlist('services')
         if not service_ids:
-            selected_gender = request.session.get('selected_gender')
-            services = Service.bookable().filter(gender=selected_gender)
+            selected_gender = None
+            services = Service.bookable()
             grouped_services = {}
             for service in services:
                 if service.category not in grouped_services:
                     grouped_services[service.category] = []
                 grouped_services[service.category].append(service)
 
-            price_increased_services = list(services.filter(price_increased_at__isnull=False))
             selected_service_ids = [int(s) for s in service_ids if str(s).isdigit()]
 
             return render(request, 'bookings/services.html', {
@@ -103,8 +92,12 @@ class ServiceListView(View):
                 'selected_gender': selected_gender,
                 'selected_service_ids': selected_service_ids,
                 'error': 'Please select at least one service.',
-                'price_increased_services': price_increased_services,
             })
+
+        # Infer session gender from first selected service (gender page is hidden).
+        first_service = Service.objects.filter(id__in=[s for s in service_ids if str(s).isdigit()]).first()
+        if first_service and first_service.gender in ('Boy', 'Girl'):
+            request.session['selected_gender'] = first_service.gender
         
         # Implement service merging logic (e.g., Haircut + Beard Trim -> Haircut trim)
         haircut_id = '214'
@@ -302,6 +295,7 @@ class BookingConfirmationView(View):
                     applied_coupon_code,
                     subtotal,
                     customer_phone=customer_phone_for_coupon,
+                    priced_rows=priced_rows,
                 )
                 request.session['applied_coupon_code'] = coupon.code
                 payable_total = subtotal - discount_amount
@@ -326,6 +320,7 @@ class BookingConfirmationView(View):
         eligible_coupons = coupon_utils.get_eligible_coupons(
             customer_phone=customer_phone_for_coupon,
             subtotal=subtotal,
+            priced_rows=priced_rows,
         )
         upsell_addons = addon_utils.get_upsell_carousel_items(selected_service_ids, overrides)
         
@@ -399,7 +394,8 @@ class BookingConfirmationView(View):
                 return render(request, 'bookings/error.html', {'message': 'Invalid date or time format.'})
 
             try:
-                subtotal = addon_utils.cart_subtotal(selected_service_ids, overrides)
+                priced_rows = addon_utils.build_priced_services(selected_service_ids, overrides)
+                subtotal = sum((row['price'] for row in priced_rows), Decimal('0.00'))
                 coupon_code = ''
                 discount_amount = Decimal('0.00')
                 session_coupon = request.session.get('applied_coupon_code')
@@ -409,6 +405,7 @@ class BookingConfirmationView(View):
                             session_coupon,
                             subtotal,
                             customer_phone=phone,
+                            priced_rows=priced_rows,
                         )
                         coupon_code = coupon.code
                     except coupon_utils.CouponError as exc:
@@ -500,6 +497,7 @@ class BookingConfirmationView(View):
                     applied_coupon_code,
                     subtotal,
                     customer_phone=form.data.get('customer_phone', ''),
+                    priced_rows=priced_rows,
                 )
                 applied_coupon_code = coupon.code
                 payable_total = subtotal - discount_amount
@@ -512,6 +510,7 @@ class BookingConfirmationView(View):
         eligible_coupons = coupon_utils.get_eligible_coupons(
             customer_phone=form.data.get('customer_phone', ''),
             subtotal=subtotal,
+            priced_rows=priced_rows,
         )
         upsell_addons = addon_utils.get_upsell_carousel_items(selected_service_ids or [], overrides)
 
