@@ -29,6 +29,9 @@
                 <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
                     {{ field.label }}
                 </label>
+                {% if field.name == 'image' and service.image %}
+                <img src="{{ service.image.url }}" alt="{{ service.name }}" class="mb-3 w-24 h-24 rounded-lg object-cover border border-gray-200">
+                {% endif %}
                 {{ field }}
                 {% if field.help_text %}
                 <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>

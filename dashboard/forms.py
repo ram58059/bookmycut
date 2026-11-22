@@ -1,12 +1,13 @@
 from django import forms
 from bookings.models import Service, Coupon, ComboOffer
 from bookings.coupons import normalize_phone
+from bookings.images import validate_uploaded_image
 
 
 class ServiceForm(forms.ModelForm):
     class Meta:
         model = Service
-        fields = ['name', 'category', 'price', 'duration_minutes', 'gender', 'description']
+        fields = ['name', 'category', 'price', 'duration_minutes', 'gender', 'description', 'image']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500', 'placeholder': 'Service Name'}),
             'category': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500', 'placeholder': 'Category', 'list': 'category-list'}),
@@ -14,7 +15,32 @@ class ServiceForm(forms.ModelForm):
             'duration_minutes': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500', 'placeholder': 'Duration (min)'}),
             'gender': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'}),
             'description': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500', 'rows': 4, 'placeholder': 'Optional description'}),
+            'image': forms.ClearableFileInput(attrs={
+                'class': 'w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700',
+                'accept': 'image/jpeg,image/png,image/webp,image/gif',
+            }),
         }
+        labels = {
+            'image': 'Photo',
+        }
+        help_texts = {
+            'image': 'Uploading a new photo replaces the current one in storage. JPG, PNG, WEBP, or GIF, up to 5 MB.',
+        }
+
+    def clean_image(self):
+        return validate_uploaded_image(self.cleaned_data.get('image'))
+
+
+class ServiceImageForm(forms.Form):
+    image = forms.ImageField(
+        label='Photo',
+        widget=forms.ClearableFileInput(attrs={
+            'accept': 'image/jpeg,image/png,image/webp,image/gif',
+        }),
+    )
+
+    def clean_image(self):
+        return validate_uploaded_image(self.cleaned_data.get('image'))
 
 
 class CouponForm(forms.ModelForm):
@@ -213,6 +239,7 @@ class ComboOfferForm(forms.ModelForm):
             'sort_order': 'Display Order',
         }
         help_texts = {
+            'image': 'Uploading a new photo replaces the current one in storage.',
             'linked_service': 'The actual service added to the booking when customers tap Add.',
             'trigger_services': 'Hold Ctrl/Cmd to select multiple main services (Haircut, Haircut Shave, etc.).',
             'combo_price': 'Discounted price applied only as a combo with a trigger service.',
@@ -225,6 +252,9 @@ class ComboOfferForm(forms.ModelForm):
         self.fields['linked_service'].queryset = bookable
         self.fields['trigger_services'].queryset = bookable
         self.fields['trigger_services'].required = True
+
+    def clean_image(self):
+        return validate_uploaded_image(self.cleaned_data.get('image'))
 
     def clean(self):
         cleaned = super().clean()

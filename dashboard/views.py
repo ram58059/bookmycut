@@ -97,6 +97,23 @@ def service_performance(request):
     from core.models import HomepageServiceCard
     from decimal import Decimal, InvalidOperation
 
+    if request.method == 'POST' and request.POST.get('action') == 'upload_service_image':
+        from .forms import ServiceImageForm
+
+        service = get_object_or_404(Service, pk=request.POST.get('service_id'))
+        form = ServiceImageForm(request.POST, request.FILES)
+        if form.is_valid():
+            service.image = form.cleaned_data['image']
+            service.save()
+            messages.success(request, f'Photo for "{service.name}" was replaced.')
+        else:
+            error = form.errors.get('image')
+            messages.error(request, error[0] if error else 'Could not upload that photo.')
+        next_url = request.POST.get('next') or ''
+        if not next_url.startswith('/') or next_url.startswith('//'):
+            next_url = reverse('dashboard_services')
+        return redirect(next_url)
+
     if request.method == 'POST' and request.POST.get('action') == 'update_homepage_cards':
         errors = []
         for card in HomepageServiceCard.objects.all():

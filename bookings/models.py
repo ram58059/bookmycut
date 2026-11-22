@@ -2,6 +2,12 @@ from django.db import models
 from django.utils import timezone
 from datetime import timedelta, datetime
 
+from bookings.images import (
+    combo_image_upload_to,
+    delete_replaced_cloudinary_image,
+    service_image_upload_to,
+)
+
 class Service(models.Model):
     # Used for custom Finance "additional service" names without a schema change.
     # Excluded from customer/admin bookable service lists.
@@ -10,7 +16,7 @@ class Service(models.Model):
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=6, decimal_places=2)
     duration_minutes = models.IntegerField()
-    image = models.ImageField(upload_to='services/', blank=True, null=True)
+    image = models.ImageField(upload_to=service_image_upload_to, blank=True, null=True)
     description = models.TextField(blank=True)
     category = models.CharField(max_length=100, default='General')
     gender = models.CharField(max_length=10, choices=[('Boy', 'Boy'), ('Girl', 'Girl')], default='Boy')
@@ -33,6 +39,7 @@ class Service(models.Model):
         return timezone.now() <= self.price_increased_at + timedelta(days=self.PRICE_INCREASE_NOTICE_DAYS)
 
     def save(self, *args, **kwargs):
+        old_image_name = ''
         if self.pk:
             try:
                 old = Service.objects.get(pk=self.pk)
@@ -41,27 +48,25 @@ class Service(models.Model):
                 elif self.price < old.price:
                     self.price_increased_at = None
                 # Same price: keep existing price_increased_at (notice window continues)
+                old_image_name = old.image.name if old.image else ''
             except Service.DoesNotExist:
                 pass
 
-        if not self.image:
-            name_lower = self.name.lower()
-            target_category = self.category
-            
-            if 'beard' in name_lower or 'shave' in name_lower:
-                target_category = 'General'
-            elif 'haircut' in name_lower and self.category == 'General':
-                target_category = 'Hair Services'
-                
-            existing_service = Service.objects.filter(category=target_category).exclude(image='').first()
-            if existing_service:
-                self.image = existing_service.image.name
-            else:
-                fallback = Service.objects.exclude(image='').first()
-                if fallback:
-                    self.image = fallback.image.name
-                
+        # New rows have no id yet. Save once so the photo is stored as services/service_<id>.
+        pending_upload = None
+        if self.pk is None and self.image and not getattr(self.image, '_committed', True):
+            pending_upload = self.image
+            self.image = None
+
         super().save(*args, **kwargs)
+
+        if pending_upload is not None:
+            self.image = pending_upload
+            super().save(update_fields=['image'])
+
+        new_image_name = self.image.name if self.image else ''
+        if old_image_name and old_image_name != new_image_name:
+            delete_replaced_cloudinary_image(old_image_name)
 
     def __str__(self):
         return self.name
@@ -276,7 +281,7 @@ class ComboOffer(models.Model):
     duration_minutes = models.PositiveIntegerField(default=30)
     original_price = models.DecimalField(max_digits=8, decimal_places=2)
     combo_price = models.DecimalField(max_digits=8, decimal_places=2)
-    image = models.ImageField(upload_to='combo_offers/', blank=True, null=True)
+    image = models.ImageField(upload_to=combo_image_upload_to, blank=True, null=True)
     badge_text = models.CharField(max_length=40, blank=True, default='Combo Deal')
     linked_service = models.ForeignKey(
         Service,
@@ -310,6 +315,30 @@ class ComboOffer(models.Model):
         if self.linked_service_id and self.linked_service.image:
             return self.linked_service.image.url
         return ''
+
+    def save(self, *args, **kwargs):
+        old_image_name = ''
+        if self.pk:
+            try:
+                old = ComboOffer.objects.get(pk=self.pk)
+                old_image_name = old.image.name if old.image else ''
+            except ComboOffer.DoesNotExist:
+                pass
+
+        pending_upload = None
+        if self.pk is None and self.image and not getattr(self.image, '_committed', True):
+            pending_upload = self.image
+            self.image = None
+
+        super().save(*args, **kwargs)
+
+        if pending_upload is not None:
+            self.image = pending_upload
+            super().save(update_fields=['image'])
+
+        new_image_name = self.image.name if self.image else ''
+        if old_image_name and old_image_name != new_image_name:
+            delete_replaced_cloudinary_image(old_image_name)
 
     def __str__(self):
         return self.name

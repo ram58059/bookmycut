@@ -67,7 +67,7 @@
     <div class="p-6 border-b border-gray-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
             <h3 class="text-lg font-bold text-gray-800">All Services</h3>
-            <p class="text-sm text-gray-500 mt-1">{{ services|length }} service{{ services|length|pluralize }} listed</p>
+            <p class="text-sm text-gray-500 mt-1">{{ services|length }} service{{ services|length|pluralize }} listed. Uploading a photo replaces that service's stored image.</p>
         </div>
         <div class="flex flex-col sm:flex-row gap-3">
             <form method="get" class="flex items-center gap-2">
@@ -125,8 +125,30 @@
                 {% for service in services %}
                 <tr class="hover:bg-gray-50/80 transition-colors">
                     <td class="px-6 py-4">
-                        <p class="font-semibold text-gray-900">{{ service.name }}</p>
-                        <p class="text-xs text-gray-400 mt-0.5">{{ service.duration_minutes }} min · {{ service.gender }}</p>
+                        <div class="flex items-center gap-3">
+                            {% if service.image %}
+                            <img src="{{ service.image.url }}" alt="" class="w-12 h-12 rounded-lg object-cover border border-gray-100 flex-shrink-0">
+                            {% else %}
+                            <div class="w-12 h-12 rounded-lg bg-gray-100 border border-gray-100 flex items-center justify-center text-gray-400 flex-shrink-0">
+                                <i class="fas fa-image text-sm"></i>
+                            </div>
+                            {% endif %}
+                            <div class="min-w-0">
+                                <p class="font-semibold text-gray-900">{{ service.name }}</p>
+                                <p class="text-xs text-gray-400 mt-0.5">{{ service.duration_minutes }} min · {{ service.gender }}</p>
+                                <form method="post" enctype="multipart/form-data" class="mt-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="upload_service_image">
+                                    <input type="hidden" name="service_id" value="{{ service.id }}">
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <label class="inline-flex items-center text-xs font-medium text-amber-700 cursor-pointer">
+                                        <span class="px-2.5 py-1 rounded-md bg-amber-50 border border-amber-100 hover:bg-amber-100">{% if service.image %}Replace photo{% else %}Upload photo{% endif %}</span>
+                                        <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif"
+                                            class="sr-only" onchange="this.form.submit()">
+                                    </label>
+                                </form>
+                            </div>
+                        </div>
                     </td>
                     <td class="px-6 py-4">
                         <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">

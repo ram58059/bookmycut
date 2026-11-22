@@ -19,11 +19,11 @@ def quick_book(request):
 def hairstyle_gallery(request):
     import os
     from django.conf import settings
-    import cloudinary.utils
+    from django.templatetags.static import static
 
     directory = os.path.join(settings.BASE_DIR, 'static/img/hairstyles')
     images = []
-    
+
     # Get all style*.jpg files
     try:
         all_files = [f for f in os.listdir(directory) if f.startswith('style') and f.endswith('.jpg')]
@@ -33,8 +33,9 @@ def hairstyle_gallery(request):
         all_files = []
 
     for i, filename in enumerate(all_files):
-        public_id = f"hairstyles/{filename.replace('.jpg', '')}"
-        url, _ = cloudinary.utils.cloudinary_url(public_id, format="jpg", secure=True)
+        url = static(f'img/hairstyles/{filename}')
+        if not url.startswith(('/', 'http://', 'https://')):
+            url = f'/{url}'
         images.append({
             'id': i + 1,
             'url': url,
