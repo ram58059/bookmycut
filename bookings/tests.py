@@ -20,7 +20,10 @@ def tiny_png(name='cut.png'):
 class ServiceImageReplaceTests(TestCase):
     def fake_upload(self, content, **options):
         self.uploaded.append(options)
-        return {'public_id': options['public_id']}
+        return {
+            'public_id': options['public_id'],
+            'version': 1000 + len(self.uploaded),
+        }
 
     def fake_destroy(self, public_id, **options):
         self.destroyed.append(public_id)
@@ -60,6 +63,8 @@ class ServiceImageReplaceTests(TestCase):
         self.assertEqual(len(self.uploaded), 2)
         self.assertEqual(self.uploaded[1]['public_id'], self.uploaded[0]['public_id'])
         self.assertFalse(self.destroyed)
+        self.assertIn(f'/v{1000 + len(self.uploaded)}/', service.image.url)
+        self.assertNotIn('/v1/', service.image.url)
 
     def test_replacing_a_legacy_file_deletes_the_old_asset(self):
         service = Service.objects.create(
