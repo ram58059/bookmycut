@@ -16,6 +16,7 @@ class OverwriteCloudinaryStorage(MediaCloudinaryStorage):
         return cloudinary.uploader.upload(
             content,
             public_id=public_id,
+            asset_folder=os.path.dirname(public_id),
             overwrite=True,
             invalidate=True,
             unique_filename=False,
