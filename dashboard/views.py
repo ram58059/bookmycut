@@ -249,6 +249,7 @@ def manage_bookings(request):
         
         if action == 'block_day':
             date_str = request.POST.get('date')
+            reason = (request.POST.get('reason') or '').strip()[:255]
             try:
                 block_date = datetime.strptime(date_str, '%Y-%m-%d').date()
                 if block_date < today:
@@ -262,7 +263,13 @@ def manage_bookings(request):
                     if active_bookings.exists():
                         messages.error(request, f"Cannot block {date_str}. There are {active_bookings.count()} active bookings. Please cancel them first.")
                     else:
-                        BlockedDay.objects.get_or_create(date=block_date)
+                        blocked, created = BlockedDay.objects.get_or_create(
+                            date=block_date,
+                            defaults={'reason': reason},
+                        )
+                        if not created and reason and blocked.reason != reason:
+                            blocked.reason = reason
+                            blocked.save(update_fields=['reason'])
                         messages.success(request, f"Blocked {date_str} successfully.")
             except ValueError:
                 messages.error(request, "Invalid date format.")

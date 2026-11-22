@@ -65,13 +65,6 @@
         padding: 1.15rem 1.2rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
-    .details-card {
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 1rem;
-        padding: 1.25rem 1.2rem 1.35rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
     .sticky-confirm-bar {
         position: fixed;
         left: 0;
@@ -134,287 +127,327 @@
     }
     .desktop-confirm-btn:hover { background: var(--primary-cta-hover, #CA8A04); }
     .combo-panel {
-        position: relative;
-        overflow: hidden;
-        background:
-            radial-gradient(120% 90% at 0% 0%, rgba(250, 204, 21, 0.22) 0%, transparent 55%),
-            radial-gradient(100% 80% at 100% 100%, rgba(253, 224, 71, 0.18) 0%, transparent 50%),
-            linear-gradient(180deg, #FFFBEB 0%, #FFFFFF 48%, #FFFFFF 100%);
-        border: 1.5px solid rgba(234, 179, 8, 0.55);
-        border-radius: 1.25rem;
-        padding: 1.1rem 0.95rem 1rem;
-        box-shadow: 0 10px 28px rgba(202, 138, 4, 0.12);
-        animation: comboPanelIn 0.55s ease-out both;
-    }
-    .combo-panel::before {
-        content: '';
-        position: absolute;
-        inset: 0 0 auto 0;
-        height: 4px;
-        background: linear-gradient(90deg, #FACC15, #EAB308, #CA8A04);
-    }
-    @keyframes comboPanelIn {
-        from { opacity: 0; transform: translateY(12px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .combo-panel-kicker {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        margin-bottom: 0.35rem;
-        padding: 0.2rem 0.55rem;
-        border-radius: 0.4rem;
-        font-size: 0.65rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #713F12;
-        background: #FDE047;
-        border: 1px solid rgba(202, 138, 4, 0.35);
+        margin-bottom: 1.5rem;
     }
     .combo-panel-title {
-        font-size: 1.35rem;
-        font-weight: 800;
+        font-size: 1rem;
+        font-weight: 700;
         color: var(--primary-brown, #4A3728);
-        margin-bottom: 0.2rem;
-        line-height: 1.2;
-        letter-spacing: -0.02em;
+        margin: 0 0 0.15rem;
+        line-height: 1.25;
     }
     .combo-panel-sub {
-        font-size: 0.8125rem;
+        font-size: 0.75rem;
         color: #6B7280;
-        margin-bottom: 0.95rem;
-        line-height: 1.4;
+        margin: 0 0 0.75rem;
+        line-height: 1.35;
     }
-    .combo-panel-sub strong {
-        color: #15803D;
-        font-weight: 700;
+    #upsell-carousel {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
     }
-    #upsell-carousel { scrollbar-width: none; -ms-overflow-style: none; }
     #upsell-carousel .combo-card {
         flex: 0 0 auto;
-        flex-shrink: 0;
-        width: clamp(248px, 72vw, 300px);
-        min-width: 248px;
-        max-width: 300px;
-        overflow: hidden;
-        animation: comboCardIn 0.5s ease-out both;
-    }
-    #upsell-carousel .combo-card:nth-child(1) { animation-delay: 0.05s; }
-    #upsell-carousel .combo-card:nth-child(2) { animation-delay: 0.12s; }
-    #upsell-carousel .combo-card:nth-child(3) { animation-delay: 0.19s; }
-    #upsell-carousel .combo-card:nth-child(4) { animation-delay: 0.26s; }
-    #upsell-carousel .combo-card:nth-child(5) { animation-delay: 0.33s; }
-    @keyframes comboCardIn {
-        from { opacity: 0; transform: translateY(14px) scale(0.98); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
+        width: 132px;
+        min-width: 132px;
     }
     .combo-card {
         display: flex;
         flex-direction: column;
-        height: auto;
-        padding: 0 !important;
-        background: #fff;
-        border: 1px solid rgba(234, 179, 8, 0.35);
-        border-radius: 1rem;
-        box-shadow: 0 6px 18px rgba(74, 55, 40, 0.08);
-        box-sizing: border-box;
-        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        cursor: pointer;
+        user-select: none;
     }
-    .combo-card:hover {
-        border-color: #EAB308;
-        box-shadow: 0 12px 28px rgba(202, 138, 4, 0.18);
-        transform: translateY(-3px);
-    }
-    .combo-card.is-added-card {
-        border-color: #86EFAC;
-        box-shadow: 0 6px 18px rgba(22, 163, 74, 0.12);
-    }
-    .combo-card-layout {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        flex: 1 1 auto;
-        position: relative;
-        z-index: 10;
+    .combo-card.is-added-card .combo-card-media {
+        box-shadow: 0 0 0 2px #22C55E;
     }
     .combo-card-media {
         position: relative;
-        flex-shrink: 0;
         width: 100%;
-        height: 148px;
-        border: none;
-        border-radius: 0;
+        aspect-ratio: 1 / 1;
+        border-radius: 0.75rem;
         overflow: hidden;
-        background: #FEF9C3;
+        background: #F3F4F6;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     }
     .combo-card-media img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        transition: transform 0.35s ease;
-    }
-    .combo-card:hover .combo-card-media img {
-        transform: scale(1.05);
+        display: block;
     }
     .combo-card-media-fallback {
-        width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-        color: var(--primary-brown); background: linear-gradient(145deg, #FEFCE8, #FDE047);
-        font-size: 2rem;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary-brown, #4A3728);
+        background: linear-gradient(145deg, #FEFCE8, #FDE68A);
+        font-size: 1.5rem;
     }
-    .combo-save-chip {
+    .combo-add-btn {
         position: absolute;
-        top: 0.65rem;
-        left: 0.65rem;
+        top: 0.4rem;
+        right: 0.4rem;
         z-index: 2;
+        width: 1.75rem;
+        height: 1.75rem;
+        padding: 0;
+        border-radius: 0.45rem;
+        border: 1.5px solid #E5E7EB;
+        background: #fff;
+        color: var(--primary-brown, #4A3728);
         display: inline-flex;
         align-items: center;
-        gap: 0.25rem;
-        padding: 0.28rem 0.55rem;
-        border-radius: 0.4rem;
+        justify-content: center;
         font-size: 0.7rem;
-        font-weight: 800;
-        letter-spacing: 0.02em;
-        color: #fff;
-        background: #15803D;
-        box-shadow: 0 4px 12px rgba(21, 128, 61, 0.35);
-        animation: saveChipPulse 2.4s ease-in-out infinite;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        transition: background-color 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
     }
-    @keyframes saveChipPulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.04); }
+    .combo-add-btn:hover:not(:disabled) {
+        background: var(--primary-cta, #EAB308);
+        border-color: var(--primary-cta, #EAB308);
+        color: #111827;
+    }
+    .combo-add-btn:active:not(:disabled) { transform: scale(0.94); }
+    .combo-add-btn.is-added {
+        background: #15803D;
+        border-color: #15803D;
+        color: #fff;
+    }
+    .combo-add-btn.is-added:hover:not(:disabled) {
+        background: #166534;
+        border-color: #166534;
+        color: #fff;
     }
     .combo-card-content {
         display: flex;
         flex-direction: column;
-        flex: 1 1 auto;
+        gap: 0.15rem;
+        padding: 0.45rem 0.1rem 0;
         min-width: 0;
-        padding: 0.85rem 0.85rem 0.95rem;
-        gap: 0.35rem;
+    }
+    .combo-duration {
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #9CA3AF;
+        margin: 0;
+        line-height: 1.2;
     }
     .combo-s-title {
-        font-weight: 800;
-        font-size: 0.98rem;
-        line-height: 1.3;
-        color: #1F2937;
+        font-weight: 700;
+        font-size: 0.8rem;
+        line-height: 1.25;
+        color: #111827;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
         margin: 0;
+        min-height: 2em;
         word-break: break-word;
-        min-height: 2.5em;
     }
-    .combo-tagline {
-        font-size: 0.72rem;
-        line-height: 1.35;
-        color: #6B7280;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        margin: 0;
-    }
-    .combo-badge {
-        display: inline-flex;
-        align-items: center;
-        align-self: flex-start;
-        max-width: 100%;
-        padding: 0.15rem 0.5rem;
-        border-radius: 0.35rem;
-        font-size: 0.625rem;
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        line-height: 1.3;
-        color: #713F12;
-        background: #FEF08A;
-        border: 1px solid rgba(234, 179, 8, 0.5);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    .combo-off {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #15803D;
+        margin: 0.1rem 0 0;
+        line-height: 1.2;
     }
     .combo-card-prices {
         display: flex;
         align-items: baseline;
-        gap: 0.45rem;
-        margin-top: 0.15rem;
+        gap: 0.3rem;
         flex-wrap: wrap;
-    }
-    .combo-original-price {
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: #9CA3AF;
-        text-decoration: line-through;
-        text-decoration-thickness: 1.5px;
+        margin-top: 0.05rem;
     }
     .combo-current-price {
-        font-size: 1.25rem;
-        font-weight: 900;
+        font-size: 0.875rem;
+        font-weight: 800;
         color: #111827;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.01em;
     }
-    .combo-card-bottom {
-        margin-top: 0.45rem;
+    .combo-original-price {
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: #9CA3AF;
+        text-decoration: line-through;
+    }
+    .combo-scroll-track {
+        height: 3px;
+        background: #F3F4F6;
+        border-radius: 9999px;
+        margin-top: 0.65rem;
+        overflow: hidden;
+    }
+    .combo-scroll-thumb {
+        height: 100%;
+        background: #D1D5DB;
+        border-radius: 9999px;
+        width: 30%;
+        transition: width 0.1s ease, margin-left 0.1s ease;
+    }
+
+    /* Combo offer bottom sheet + confetti */
+    #combo-offer-sheet {
+        position: fixed;
+        inset: 0;
+        z-index: 90;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        pointer-events: none;
+        visibility: hidden;
+    }
+    #combo-offer-sheet.is-open {
+        pointer-events: auto;
+        visibility: visible;
+    }
+    .combo-sheet-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(17, 24, 39, 0.55);
+        opacity: 0;
+        transition: opacity 0.28s ease;
+    }
+    #combo-offer-sheet.is-open .combo-sheet-backdrop { opacity: 1; }
+    .combo-sheet-panel {
+        position: relative;
+        width: 100%;
+        max-width: 32rem;
+        max-height: min(78vh, 640px);
+        background: #fff;
+        border-radius: 1.25rem 1.25rem 0 0;
+        box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.18);
+        transform: translateY(110%);
+        transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
         display: flex;
         flex-direction: column;
-        gap: 0.45rem;
+        overflow: hidden;
     }
-    .combo-savings-text {
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: #15803D;
+    #combo-offer-sheet.is-open .combo-sheet-panel { transform: translateY(0); }
+    .combo-sheet-confetti {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 5;
     }
-    .combo-add-btn {
+    .combo-sheet-header {
+        position: relative;
+        z-index: 6;
+        padding: 1.1rem 1.5rem 0.55rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    .combo-sheet-close {
+        margin-left: auto;
+        flex-shrink: 0;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 9999px;
+        border: 1px solid #E5E7EB;
+        background: #F9FAFB;
+        color: #4B5563;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 0.35rem;
-        width: 100%;
-        padding: 0.7rem 0.85rem;
-        border-radius: 0.75rem;
-        font-size: 0.875rem;
+        transition: background-color 0.15s, color 0.15s;
+    }
+    .combo-sheet-close:hover { background: #F3F4F6; color: #111827; }
+    .combo-sheet-title {
+        font-size: 1.15rem;
         font-weight: 800;
+        color: var(--primary-brown, #4A3728);
+        line-height: 1.25;
+        margin: 0.15rem 0 0;
+        letter-spacing: -0.02em;
+    }
+    .combo-sheet-title span { color: #B45309; }
+    .combo-sheet-sub {
+        font-size: 0.75rem;
+        color: #6B7280;
+        margin: 0.25rem 0 0;
+    }
+    .combo-sheet-body {
+        position: relative;
+        z-index: 6;
+        padding: 0.35rem 0 0.75rem;
+        overflow-x: hidden;
+        overflow-y: auto;
+        flex: 1 1 auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .combo-sheet-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #9CA3AF;
+        padding: 0 1.5rem 0.55rem;
+        margin: 0;
+    }
+    #combo-sheet-carousel {
+        display: flex;
+        gap: 0.85rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding: 0.1rem 1.5rem 0.45rem;
+        scroll-padding-inline: 1.5rem;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        box-sizing: border-box;
+    }
+    #combo-sheet-carousel::-webkit-scrollbar { display: none; }
+    #combo-sheet-carousel .combo-card {
+        width: 140px;
+        min-width: 140px;
+        scroll-snap-align: start;
+        flex-shrink: 0;
+    }
+    .combo-sheet-footer {
+        position: relative;
+        z-index: 6;
+        padding: 0.75rem 1.5rem calc(0.85rem + env(safe-area-inset-bottom, 0px));
+        border-top: 1px solid #F3F4F6;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .combo-sheet-skip {
+        flex: 0 0 auto;
+        padding: 0.55rem 1.1rem;
+        border-radius: 9999px;
+        border: 1px solid #E5E7EB;
+        background: #fff;
+        color: #6B7280;
+        font-weight: 600;
+        font-size: 0.8rem;
         line-height: 1.2;
+    }
+    .combo-sheet-skip:hover { color: #374151; background: #F9FAFB; }
+    .combo-sheet-continue {
+        flex: 1 1 auto;
+        padding: 0.8rem 0.75rem;
+        border-radius: 9999px;
         border: none;
         background: var(--primary-cta, var(--primary-gold, #EAB308));
         color: #111827;
-        box-shadow: 0 6px 14px rgba(234, 179, 8, 0.35);
-        transition: background-color 0.2s, transform 0.15s, box-shadow 0.2s;
+        font-weight: 800;
+        font-size: 0.9rem;
+        box-shadow: 0 6px 16px rgba(234, 179, 8, 0.28);
     }
-    .combo-add-btn:hover:not(:disabled) {
-        background: var(--primary-cta-hover, #CA8A04);
-        color: #111827;
-        transform: translateY(-1px);
-        box-shadow: 0 8px 18px rgba(202, 138, 4, 0.4);
-    }
-    .combo-add-btn:active:not(:disabled) { transform: scale(0.98); }
-    .combo-add-btn.is-added {
-        border: 1.5px solid #BBF7D0;
-        background: #F0FDF4;
-        color: #166534;
-        box-shadow: none;
-    }
-    .combo-add-btn.is-added:hover:not(:disabled) {
-        background: #DCFCE7;
-        color: #14532D;
-        transform: none;
-        box-shadow: none;
-    }
-    .combo-card-highlight {
-        border-radius: 1rem;
-    }
-    .combo-card-highlight.active {
-        border-color: #22C55E;
-        background-color: transparent;
-    }
-    .combo-scroll-track {
-        height: 4px; background: #F3F4F6; border-radius: 9999px; margin-top: 0.95rem; overflow: hidden;
-    }
-    .combo-scroll-thumb {
-        height: 100%; background: var(--primary-cta, var(--primary-gold)); border-radius: 9999px; width: 30%;
-        transition: width 0.1s ease, margin-left 0.1s ease;
-    }
+    .combo-sheet-continue:hover { background: var(--primary-cta-hover, #CA8A04); }
+
     #comboServiceModalOverlay {
         backdrop-filter: blur(8px); opacity: 0; visibility: hidden;
         transition: opacity 0.3s ease, visibility 0.3s ease;
@@ -491,23 +524,16 @@
     {% endif %}
 
     {% if show_upsell_carousel %}
-    <section id="upsell-carousel-section" class="mb-6 combo-panel">
-        <span class="combo-panel-kicker">
-            <i class="fas fa-bolt"></i>
-            Combo unlocked
-        </span>
-        <h2 class="combo-panel-title">Add more. Pay less today.</h2>
-        <p class="combo-panel-sub">
-            Your booking unlocked exclusive combo rates.
-            <strong>Tap Add to lock in the savings before you confirm.</strong>
-        </p>
+    <section id="upsell-carousel-section" class="combo-panel">
+        <h2 class="combo-panel-title">Combo deals for you</h2>
+        <p class="combo-panel-sub">Add any add-on at a combo price before you confirm.</p>
 
         <div id="upsell-carousel"
-            class="flex gap-3.5 overflow-x-auto snap-x snap-mandatory pb-1 -mx-0.5 px-0.5 scroll-smooth items-stretch"
+            class="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-0.5 scroll-smooth"
             style="scrollbar-width: none; -ms-overflow-style: none;">
             {% for addon in upsell_addons %}
             {% widthratio addon.savings addon.regular_price 100 as pct_off %}
-            <div class="combo-card relative select-none group snap-start shrink-0 cursor-pointer {% if addon.already_added %}is-added-card{% endif %}"
+            <div class="combo-card snap-start {% if addon.already_added %}is-added-card{% endif %}"
                 id="combo-card-{{ addon.service_id }}"
                 data-service-id="{{ addon.service_id }}"
                 data-name="{{ addon.name|escape }}"
@@ -520,52 +546,42 @@
                 data-added="{{ addon.already_added|yesno:'true,false' }}"
                 onclick="openComboServiceModal(this)">
 
-                <div class="combo-card-highlight absolute inset-0 border-2 {% if addon.already_added %}border-green-400 active{% else %}border-transparent{% endif %} transition-all duration-300 pointer-events-none"
-                    id="combo-highlight-{{ addon.service_id }}"></div>
-
-                <div class="combo-card-layout">
-                    <div class="combo-card-media">
-                        {% if addon.savings %}
-                        <span class="combo-save-chip">
-                            {% if pct_off %}{{ pct_off }}% OFF{% else %}SAVE ₹{{ addon.savings|floatformat:0 }}{% endif %}
-                        </span>
-                        {% endif %}
-                        {% if addon.image_url %}
-                        <img src="{{ addon.image_url }}" alt="{{ addon.name }}">
-                        {% else %}
-                        <div class="combo-card-media-fallback">
-                            <i class="fas fa-spa"></i>
-                        </div>
-                        {% endif %}
+                <div class="combo-card-media">
+                    {% if addon.image_url %}
+                    <img src="{{ addon.image_url }}" alt="{{ addon.name }}" loading="lazy">
+                    {% else %}
+                    <div class="combo-card-media-fallback">
+                        <i class="fas fa-spa"></i>
                     </div>
+                    {% endif %}
+                    <button type="button"
+                        class="upsell-cta combo-add-btn {% if addon.already_added %}is-added{% endif %}"
+                        data-service-id="{{ addon.service_id }}"
+                        data-savings="{{ addon.savings|floatformat:0 }}"
+                        data-added="{{ addon.already_added|yesno:'true,false' }}"
+                        aria-label="{% if addon.already_added %}Remove{% else %}Add{% endif %} {{ addon.name }}"
+                        onclick="event.stopPropagation(); toggleUpsellAddon({{ addon.service_id }})">
+                        {% if addon.already_added %}
+                        <i class="fas fa-check"></i>
+                        {% else %}
+                        <i class="fas fa-plus"></i>
+                        {% endif %}
+                    </button>
+                </div>
 
-                    <div class="combo-card-content">
-                        {% if addon.badge %}
-                        <span class="combo-badge" title="{{ addon.badge }}">{{ addon.badge }}</span>
-                        {% endif %}
-                        <h3 class="combo-s-title" title="{{ addon.name }}">{{ addon.name }}</h3>
-                        {% if addon.tagline %}
-                        <p class="combo-tagline">{{ addon.tagline }}</p>
-                        {% endif %}
-                        <div class="combo-card-prices">
-                            <span class="combo-current-price">₹{{ addon.combo_price|floatformat:0 }}</span>
-                            <span class="combo-original-price">₹{{ addon.regular_price|floatformat:0 }}</span>
-                        </div>
-                        <div class="combo-card-bottom" onclick="event.stopPropagation()">
-                            <span class="combo-savings-text">You save ₹{{ addon.savings|floatformat:0 }} on this add-on</span>
-                            <button type="button"
-                                class="upsell-cta combo-add-btn {% if addon.already_added %}is-added{% endif %}"
-                                data-service-id="{{ addon.service_id }}"
-                                data-savings="{{ addon.savings|floatformat:0 }}"
-                                data-added="{{ addon.already_added|yesno:'true,false' }}"
-                                onclick="toggleUpsellAddon({{ addon.service_id }})">
-                                {% if addon.already_added %}
-                                <i class="fas fa-check"></i> Added
-                                {% else %}
-                                <i class="fas fa-plus"></i> Add · Save ₹{{ addon.savings|floatformat:0 }}
-                                {% endif %}
-                            </button>
-                        </div>
+                <div class="combo-card-content">
+                    {% if addon.duration_minutes %}
+                    <p class="combo-duration">{{ addon.duration_minutes }} mins</p>
+                    {% endif %}
+                    <h3 class="combo-s-title" title="{{ addon.name }}">{{ addon.name }}</h3>
+                    {% if addon.savings %}
+                    <p class="combo-off">
+                        {% if pct_off %}{{ pct_off }}% OFF{% else %}SAVE ₹{{ addon.savings|floatformat:0 }}{% endif %}
+                    </p>
+                    {% endif %}
+                    <div class="combo-card-prices">
+                        <span class="combo-current-price">₹{{ addon.combo_price|floatformat:0 }}</span>
+                        <span class="combo-original-price">₹{{ addon.regular_price|floatformat:0 }}</span>
                     </div>
                 </div>
             </div>
@@ -575,7 +591,7 @@
         <div class="combo-scroll-track" aria-hidden="true">
             <div id="combo-scroll-thumb" class="combo-scroll-thumb"></div>
         </div>
-        <p id="upsell-message" class="hidden text-sm mt-3 px-1"></p>
+        <p id="upsell-message" class="hidden text-sm mt-2 px-0.5"></p>
     </section>
 
     <!-- Combo Service Details Modal -->
@@ -638,6 +654,87 @@
                     class="px-6 py-2.5 bg-brown hover:bg-gold text-white rounded-xl font-bold shadow-sm transition-colors">
                     Add to Booking
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Combo deals celebrate sheet (slides up with colour paper shower) -->
+    <div id="combo-offer-sheet" aria-hidden="true" role="dialog" aria-labelledby="combo-sheet-title">
+        <div class="combo-sheet-backdrop" onclick="closeComboOfferSheet()"></div>
+        <div class="combo-sheet-panel">
+            <canvas id="combo-sheet-confetti" class="combo-sheet-confetti" aria-hidden="true"></canvas>
+
+            <div class="combo-sheet-header">
+                <div>
+                    <h2 id="combo-sheet-title" class="combo-sheet-title">
+                        Combo deals <span>unlocked!</span>
+                    </h2>
+                    <p class="combo-sheet-sub">Add any add-on at a combo price before you confirm.</p>
+                </div>
+                <button type="button" class="combo-sheet-close" onclick="closeComboOfferSheet()" aria-label="Close combo deals">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="combo-sheet-body">
+                <p class="combo-sheet-label">Available for your booking</p>
+                <div id="combo-sheet-carousel">
+                    {% for addon in upsell_addons %}
+                    {% widthratio addon.savings addon.regular_price 100 as sheet_pct_off %}
+                    <div class="combo-card snap-start {% if addon.already_added %}is-added-card{% endif %}"
+                        data-service-id="{{ addon.service_id }}"
+                        data-name="{{ addon.name|escape }}"
+                        data-price="{{ addon.combo_price }}"
+                        data-regular-price="{{ addon.regular_price }}"
+                        data-savings="{{ addon.savings }}"
+                        data-duration="{{ addon.duration_minutes }}"
+                        data-desc="{{ addon.description|default:addon.tagline|escape }}"
+                        data-img="{{ addon.image_url }}"
+                        data-added="{{ addon.already_added|yesno:'true,false' }}"
+                        onclick="openComboServiceModal(this)">
+                        <div class="combo-card-media">
+                            {% if addon.image_url %}
+                            <img src="{{ addon.image_url }}" alt="{{ addon.name }}" loading="lazy">
+                            {% else %}
+                            <div class="combo-card-media-fallback"><i class="fas fa-spa"></i></div>
+                            {% endif %}
+                            <button type="button"
+                                class="upsell-cta combo-add-btn {% if addon.already_added %}is-added{% endif %}"
+                                data-service-id="{{ addon.service_id }}"
+                                data-savings="{{ addon.savings|floatformat:0 }}"
+                                data-added="{{ addon.already_added|yesno:'true,false' }}"
+                                aria-label="{% if addon.already_added %}Remove{% else %}Add{% endif %} {{ addon.name }}"
+                                onclick="event.stopPropagation(); toggleUpsellAddon({{ addon.service_id }})">
+                                {% if addon.already_added %}
+                                <i class="fas fa-check"></i>
+                                {% else %}
+                                <i class="fas fa-plus"></i>
+                                {% endif %}
+                            </button>
+                        </div>
+                        <div class="combo-card-content">
+                            {% if addon.duration_minutes %}
+                            <p class="combo-duration">{{ addon.duration_minutes }} mins</p>
+                            {% endif %}
+                            <h3 class="combo-s-title" title="{{ addon.name }}">{{ addon.name }}</h3>
+                            {% if addon.savings %}
+                            <p class="combo-off">
+                                {% if sheet_pct_off %}{{ sheet_pct_off }}% OFF{% else %}SAVE ₹{{ addon.savings|floatformat:0 }}{% endif %}
+                            </p>
+                            {% endif %}
+                            <div class="combo-card-prices">
+                                <span class="combo-current-price">₹{{ addon.combo_price|floatformat:0 }}</span>
+                                <span class="combo-original-price">₹{{ addon.regular_price|floatformat:0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="combo-sheet-footer">
+                <button type="button" class="combo-sheet-skip" onclick="closeComboOfferSheet()">Skip</button>
+                <button type="button" class="combo-sheet-continue" onclick="closeComboOfferSheet()">Continue</button>
             </div>
         </div>
     </div>
@@ -757,46 +854,15 @@
         </div>
     </section>
 
-    <!-- Guest details -->
-    <section class="details-card mb-6">
-        <h2 class="text-lg font-bold text-brown mb-4">Your details</h2>
-
-        <form method="post" class="space-y-5" id="booking-form">
+    <!-- Confirm (details come from logged-in profile) -->
+    <section class="mb-6">
+        <form method="post" id="booking-form">
             {% csrf_token %}
+            <input type="hidden" name="customer_name" id="id_customer_name" value="{{ user.first_name|default:'' }}">
+            <input type="hidden" name="customer_phone" id="id_customer_phone" value="{{ user.phone_number|default:'' }}">
+            <input type="hidden" name="customer_email" id="id_customer_email" value="{{ user.email|default:'' }}">
 
-            <div>
-                <label for="{{ form.customer_name.id_for_label }}"
-                    class="block text-sm font-medium text-gray-700 mb-2">Full Name <span class="text-red-500">*</span></label>
-                {{ form.customer_name }}
-                {% if form.customer_name.errors %}
-                <p class="text-red-500 text-sm mt-1">{{ form.customer_name.errors.0 }}</p>
-                {% endif %}
-            </div>
-
-            <div>
-                <label for="{{ form.customer_phone.id_for_label }}"
-                    class="block text-sm font-medium text-gray-700 mb-2">Mobile Number <span class="text-red-500">*</span></label>
-                {{ form.customer_phone }}
-                {% if form.customer_phone.errors %}
-                <p class="text-red-500 text-sm mt-1">{{ form.customer_phone.errors.0 }}</p>
-                {% endif %}
-            </div>
-
-            <div>
-                <label for="{{ form.customer_email.id_for_label }}"
-                    class="block text-sm font-medium text-gray-700 mb-2">Email Address <span class="text-red-500">*</span></label>
-                {{ form.customer_email }}
-                <div id="email-error" class="hidden text-red-500 text-sm mt-1">Please enter a valid email address</div>
-            </div>
-
-            {% if is_otp_enabled %}
-            <p class="text-xs text-gray-500">
-                <i class="fas fa-phone-alt text-gold mr-1"></i>
-                You may get a short OTP call after confirming.
-            </p>
-            {% endif %}
-
-            <p class="text-xs text-gray-500 leading-relaxed">
+            <p class="text-xs text-gray-500 leading-relaxed mb-4">
                 <i class="fas fa-shield-alt text-gold mr-1"></i>
                 No cancel within 2 hours of your slot. One cancel per day.
             </p>
@@ -977,7 +1043,7 @@
             empty.classList.remove('hidden');
             empty.textContent = getCustomerPhone().length >= 10
                 ? 'No eligible coupons right now.'
-                : 'Enter your mobile number to see personalized offers. General coupons appear below when available.';
+                : 'Log in to see personalized offers. General coupons appear below when available.';
             return;
         }
 
@@ -1118,45 +1184,34 @@
         }).join('');
     }
 
-    function upsellCtaLabel(added, savings) {
-        if (added) {
-            return '<i class="fas fa-check"></i> Added';
-        }
-        const saveText = savings ? (' · Save ₹' + formatMoney(savings)) : '';
-        return '<i class="fas fa-plus"></i> Add' + saveText;
+    function upsellCtaLabel(added) {
+        return added ? '<i class="fas fa-check"></i>' : '<i class="fas fa-plus"></i>';
     }
 
     function updateUpsellButtons(addons) {
         (addons || []).forEach(function (addon) {
-            const btn = document.querySelector('.upsell-cta[data-service-id="' + addon.service_id + '"]');
-            const card = document.getElementById('combo-card-' + addon.service_id);
-            const highlight = document.getElementById('combo-highlight-' + addon.service_id);
+            const buttons = document.querySelectorAll('.upsell-cta[data-service-id="' + addon.service_id + '"]');
+            const cards = document.querySelectorAll('.combo-card[data-service-id="' + addon.service_id + '"]');
             const added = !!addon.already_added;
+            const firstBtn = buttons[0];
             const savings = addon.savings != null
                 ? addon.savings
-                : (btn ? btn.getAttribute('data-savings') : '');
+                : (firstBtn ? firstBtn.getAttribute('data-savings') : '');
+            const name = cards[0] ? (cards[0].getAttribute('data-name') || 'service') : 'service';
 
-            if (btn) {
+            buttons.forEach(function (btn) {
                 btn.setAttribute('data-added', added ? 'true' : 'false');
                 if (savings !== '' && savings != null) {
                     btn.setAttribute('data-savings', String(savings).replace(/\.00$/, ''));
                 }
                 btn.className = 'upsell-cta combo-add-btn' + (added ? ' is-added' : '');
-                btn.innerHTML = upsellCtaLabel(added, btn.getAttribute('data-savings'));
-            }
-            if (card) {
+                btn.innerHTML = upsellCtaLabel(added);
+                btn.setAttribute('aria-label', (added ? 'Remove ' : 'Add ') + name);
+            });
+            cards.forEach(function (card) {
                 card.setAttribute('data-added', added ? 'true' : 'false');
                 card.classList.toggle('is-added-card', added);
-            }
-            if (highlight) {
-                if (added) {
-                    highlight.classList.add('active', 'border-green-400');
-                    highlight.classList.remove('border-transparent');
-                } else {
-                    highlight.classList.remove('active', 'border-green-400');
-                    highlight.classList.add('border-transparent');
-                }
-            }
+            });
         });
 
         const modalBtn = document.getElementById('comboModalAddBtn');
@@ -1242,7 +1297,8 @@
         const overlay = document.getElementById('comboServiceModalOverlay');
         if (!overlay) return;
         overlay.classList.remove('active');
-        document.body.style.overflow = '';
+        const sheetOpen = document.getElementById('combo-offer-sheet')?.classList.contains('is-open');
+        document.body.style.overflow = sheetOpen ? 'hidden' : '';
     }
 
     function applyPricingPayload(data, options) {
@@ -1276,13 +1332,14 @@
     }
 
     async function toggleUpsellAddon(serviceId) {
-        const btn = document.querySelector('.upsell-cta[data-service-id="' + serviceId + '"]');
-        const currentlyAdded = btn && btn.getAttribute('data-added') === 'true';
+        const buttons = document.querySelectorAll('.upsell-cta[data-service-id="' + serviceId + '"]');
+        const firstBtn = buttons[0];
+        const currentlyAdded = firstBtn && firstBtn.getAttribute('data-added') === 'true';
         const action = currentlyAdded ? 'remove' : 'add';
-        if (btn) {
+        buttons.forEach(function (btn) {
             btn.disabled = true;
             btn.classList.add('opacity-70');
-        }
+        });
         try {
             const response = await fetch('{% url "api_toggle_addon" %}', {
                 method: 'POST',
@@ -1299,7 +1356,7 @@
             } else {
                 const msg = document.getElementById('upsell-message');
                 if (msg) {
-                    msg.className = 'text-sm mt-3 px-1 text-red-600';
+                    msg.className = 'text-sm mt-2 px-0.5 text-red-600';
                     msg.textContent = data.message || 'Could not update add-on.';
                     msg.classList.remove('hidden');
                 }
@@ -1307,15 +1364,15 @@
         } catch (err) {
             const msg = document.getElementById('upsell-message');
             if (msg) {
-                msg.className = 'text-sm mt-3 px-1 text-red-600';
+                msg.className = 'text-sm mt-2 px-0.5 text-red-600';
                 msg.textContent = 'Network error. Please try again.';
                 msg.classList.remove('hidden');
             }
         } finally {
-            if (btn) {
+            buttons.forEach(function (btn) {
                 btn.disabled = false;
                 btn.classList.remove('opacity-70');
-            }
+            });
         }
     }
 
@@ -1358,8 +1415,141 @@
             });
         }
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') closeComboServiceModal();
+            if (e.key === 'Escape') {
+                closeComboServiceModal();
+                closeComboOfferSheet();
+            }
         });
+    }
+
+    let comboConfettiRaf = null;
+    let comboConfettiStopAt = 0;
+
+    function resizeComboConfettiCanvas(canvas) {
+        if (!canvas) return null;
+        const panel = canvas.parentElement;
+        const rect = panel ? panel.getBoundingClientRect() : { width: window.innerWidth, height: 400 };
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+        canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+        canvas.style.width = rect.width + 'px';
+        canvas.style.height = rect.height + 'px';
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx: ctx, width: rect.width, height: rect.height };
+    }
+
+    function startComboPaperShower(durationMs) {
+        const canvas = document.getElementById('combo-sheet-confetti');
+        if (!canvas) return;
+        if (comboConfettiRaf) {
+            cancelAnimationFrame(comboConfettiRaf);
+            comboConfettiRaf = null;
+        }
+
+        const size = resizeComboConfettiCanvas(canvas);
+        if (!size) return;
+        const ctx = size.ctx;
+        const colors = ['#EF4444', '#F59E0B', '#EAB308', '#22C55E', '#06B6D4', '#3B82F6', '#EC4899', '#A855F7'];
+        const pieces = [];
+        const count = Math.min(120, Math.floor(size.width / 3.2));
+
+        for (let i = 0; i < count; i++) {
+            pieces.push({
+                x: Math.random() * size.width,
+                y: -20 - Math.random() * size.height * 0.55,
+                w: 5 + Math.random() * 7,
+                h: 3 + Math.random() * 5,
+                color: colors[i % colors.length],
+                vy: 1.6 + Math.random() * 2.8,
+                vx: -1.2 + Math.random() * 2.4,
+                rot: Math.random() * Math.PI * 2,
+                vr: -0.18 + Math.random() * 0.36,
+                shape: i % 3, // 0 rect, 1 circle, 2 diamond
+            });
+        }
+
+        comboConfettiStopAt = performance.now() + (durationMs || 2600);
+
+        function frame(now) {
+            ctx.clearRect(0, 0, size.width, size.height);
+            const stillActive = now < comboConfettiStopAt;
+
+            pieces.forEach(function (p) {
+                if (stillActive || p.y < size.height + 20) {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.rot += p.vr;
+                    if (stillActive && p.y > size.height + 12) {
+                        p.y = -12;
+                        p.x = Math.random() * size.width;
+                    }
+                }
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rot);
+                ctx.fillStyle = p.color;
+                if (p.shape === 1) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, p.w * 0.45, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.shape === 2) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, -p.h);
+                    ctx.lineTo(p.w * 0.6, 0);
+                    ctx.lineTo(0, p.h);
+                    ctx.lineTo(-p.w * 0.6, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                }
+                ctx.restore();
+            });
+
+            if (stillActive || pieces.some(function (p) { return p.y < size.height + 20; })) {
+                comboConfettiRaf = requestAnimationFrame(frame);
+            } else {
+                ctx.clearRect(0, 0, size.width, size.height);
+                comboConfettiRaf = null;
+            }
+        }
+
+        comboConfettiRaf = requestAnimationFrame(frame);
+    }
+
+    function openComboOfferSheet() {
+        const sheet = document.getElementById('combo-offer-sheet');
+        if (!sheet || sheet.classList.contains('is-open')) return;
+        sheet.classList.add('is-open');
+        sheet.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        const stickyBar = document.getElementById('sticky-confirm-bar');
+        if (stickyBar) stickyBar.style.visibility = 'hidden';
+        // Let the slide-up start, then shower colour paper for ~2.5s
+        requestAnimationFrame(function () {
+            startComboPaperShower(2600);
+        });
+    }
+
+    function closeComboOfferSheet() {
+        const sheet = document.getElementById('combo-offer-sheet');
+        if (!sheet || !sheet.classList.contains('is-open')) return;
+        sheet.classList.remove('is-open');
+        sheet.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        const stickyBar = document.getElementById('sticky-confirm-bar');
+        if (stickyBar) stickyBar.style.visibility = '';
+        if (comboConfettiRaf) {
+            cancelAnimationFrame(comboConfettiRaf);
+            comboConfettiRaf = null;
+        }
+        const canvas = document.getElementById('combo-sheet-confetti');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
     }
 
     async function applyCoupon() {
@@ -1463,7 +1653,6 @@
         const emailInput = document.getElementById('id_customer_email');
         const phoneInput = document.getElementById('id_customer_phone');
         const nameInput = document.getElementById('id_customer_name');
-        const emailError = document.getElementById('email-error');
         const couponInput = document.getElementById('coupon-code-input');
 
         if (couponInput) {
@@ -1536,39 +1725,6 @@
             });
         }
 
-        // Real-time Email Validation
-        emailInput.addEventListener('input', function () {
-            validateEmailField();
-        });
-
-        // Real-time Phone Validation (Basic)
-        phoneInput.addEventListener('input', function () {
-            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
-            if (this.value.length >= 10) {
-                this.classList.remove('input-error');
-            }
-        });
-
-        // Re-check customer-specific coupons when mobile number changes
-        let phoneCouponTimer = null;
-        function onPhoneUpdatedForCoupons() {
-            clearTimeout(phoneCouponTimer);
-            phoneCouponTimer = setTimeout(async function () {
-                await refreshEligibleCoupons();
-                const couponInput = document.getElementById('coupon-code-input');
-                if (couponInput && couponInput.readOnly && couponInput.value) {
-                    await applyCoupon();
-                }
-            }, 200);
-        }
-        phoneInput.addEventListener('change', onPhoneUpdatedForCoupons);
-        phoneInput.addEventListener('blur', onPhoneUpdatedForCoupons);
-        phoneInput.addEventListener('input', function () {
-            if (this.value.replace(/[^0-9]/g, '').length === 10) {
-                onPhoneUpdatedForCoupons();
-            }
-        });
-
         // Initial suggestions refresh if phone already present
         if (getCustomerPhone()) {
             refreshEligibleCoupons();
@@ -1576,35 +1732,42 @@
 
         initUpsellCarousel();
 
+        // Celebrate combo deals with a bottom sheet + colour paper shower
+        if (document.getElementById('combo-offer-sheet')) {
+            const revealComboSheet = function () {
+                setTimeout(openComboOfferSheet, 280);
+            };
+            if (document.readyState === 'complete') {
+                revealComboSheet();
+            } else {
+                window.addEventListener('load', revealComboSheet, { once: true });
+            }
+        }
+
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            // First: Ensure Login
+            // Ensure login (normally already required before this page)
             if (!isUserLoggedIn) {
                 openLoginModal(function (name, phone, email) {
-                    document.getElementById('id_customer_name').value = name;
-                    document.getElementById('id_customer_phone').value = phone;
-                    if (email) {
-                        document.getElementById('id_customer_email').value = email;
-                    }
+                    nameInput.value = name;
+                    phoneInput.value = phone;
+                    if (email) emailInput.value = email;
                     form.dispatchEvent(new Event('submit'));
                 });
                 return;
             }
 
-            // Validate before confirm popup so missing email focuses immediately
-            const isEmailValid = validateEmailField();
-            const isPhoneValid = validatePhoneField();
-            const isNameValid = validateNameField();
-
-            if (!isEmailValid || !isPhoneValid || !isNameValid) {
-                if (!isNameValid) {
-                    focusBookingField(nameInput);
-                } else if (!isPhoneValid) {
-                    focusBookingField(phoneInput);
-                } else {
-                    focusBookingField(emailInput);
-                }
+            const name = (nameInput.value || '').trim();
+            const phone = (phoneInput.value || '').trim();
+            const email = (emailInput.value || '').trim();
+            if (!name || phone.length < 10 || !email) {
+                openLoginModal(function (n, p, em) {
+                    nameInput.value = n;
+                    phoneInput.value = p;
+                    if (em) emailInput.value = em;
+                    form.dispatchEvent(new Event('submit'));
+                });
                 return;
             }
 
@@ -1629,9 +1792,9 @@
                         'X-CSRFToken': '{{ csrf_token }}'
                     },
                     body: JSON.stringify({
-                        customer_name: nameInput.value,
-                        customer_phone: phoneInput.value,
-                        customer_email: emailInput.value
+                        customer_name: name,
+                        customer_phone: phone,
+                        customer_email: email
                     })
                 });
 
@@ -1662,25 +1825,6 @@
         });
     });
 
-    function focusBookingField(inputEl) {
-        if (!inputEl) return;
-        try {
-            inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } catch (err) {
-            inputEl.scrollIntoView(true);
-        }
-        // Focus synchronously from the tap so mobile keyboards open
-        inputEl.focus({ preventScroll: true });
-        if (typeof inputEl.setSelectionRange === 'function') {
-            const len = (inputEl.value || '').length;
-            try {
-                inputEl.setSelectionRange(len, len);
-            } catch (err) {
-                // Some input types disallow selection range
-            }
-        }
-    }
-
     function openConfirmBookingModal() {
         document.getElementById('confirm-booking-modal').classList.remove('hidden');
         const bar = document.getElementById('sticky-confirm-bar');
@@ -1699,48 +1843,6 @@
         // Manually trigger form submit to run the listener from start
         const form = document.getElementById('booking-form');
         form.dispatchEvent(new Event('submit'));
-    }
-
-    function validateNameField() {
-        const nameInput = document.getElementById('id_customer_name');
-        if (!nameInput) return true;
-        const name = (nameInput.value || '').trim();
-        if (name.length < 3) {
-            nameInput.classList.add('border-red-500', 'bg-red-50');
-            return false;
-        }
-        nameInput.classList.remove('border-red-500', 'bg-red-50');
-        return true;
-    }
-
-    function validateEmailField() {
-        const emailInput = document.getElementById('id_customer_email');
-        const emailError = document.getElementById('email-error');
-        const email = (emailInput.value || '').trim();
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        // Add validation styles dynamically for inputs that might not have them yet
-        if (!emailRegex.test(email)) {
-            emailInput.classList.add('border-red-500', 'bg-red-50');
-            emailInput.classList.remove('border-gray-200', 'bg-gray-50');
-            emailError.classList.remove('hidden');
-            return false;
-        } else {
-            emailInput.classList.remove('border-red-500', 'bg-red-50');
-            emailInput.classList.add('border-gray-200', 'bg-gray-50');
-            emailError.classList.add('hidden');
-            return true;
-        }
-    }
-
-    function validatePhoneField() {
-        const phoneInput = document.getElementById('id_customer_phone');
-        if (phoneInput.value.length < 10) {
-            phoneInput.classList.add('border-red-500', 'bg-red-50');
-            return false;
-        }
-        phoneInput.classList.remove('border-red-500', 'bg-red-50');
-        return true;
     }
 
     function showModal() {

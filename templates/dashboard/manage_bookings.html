@@ -6,18 +6,28 @@
     <!-- Block Day Section -->
     <div class="bg-white p-6 rounded-lg shadow-md">
         <h2 class="text-xl font-bold mb-4">Block a Date</h2>
-        <form method="POST" class="flex gap-4 items-end">
+        <form method="POST" class="space-y-4">
             {% csrf_token %}
             <input type="hidden" name="action" value="block_day">
             <input type="hidden" name="slot_date" value="{{ slot_date|date:'Y-m-d' }}">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Select Date</label>
-                <input type="date" name="date" required min="{{ today|date:'Y-m-d' }}"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            <div class="flex flex-col sm:flex-row gap-4 sm:items-end">
+                <div>
+                    <label for="block-day-date" class="block text-sm font-medium text-gray-700">Select Date</label>
+                    <input id="block-day-date" type="date" name="date" required min="{{ today|date:'Y-m-d' }}"
+                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                </div>
+                <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                    Block Date
+                </button>
             </div>
-            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                Block Date
-            </button>
+            <div>
+                <label for="block-day-reason" class="block text-sm font-medium text-gray-700">
+                    Reason <span class="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input id="block-day-reason" type="text" name="reason" maxlength="255"
+                    placeholder="e.g. Festival holiday, staff leave"
+                    class="mt-1 block w-full max-w-xl rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
         </form>
         <p class="text-sm text-gray-500 mt-2">
             Note: You cannot block a date if there are active bookings. Cancel them first.
@@ -194,9 +204,16 @@
                 {% if blocked_days %}
                 <ul class="divide-y divide-gray-200">
                     {% for blocked in blocked_days %}
-                    <li class="py-4 flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-900">{{ blocked.date }}</span>
-                        <form method="POST">
+                    <li class="py-4 flex justify-between items-start gap-3">
+                        <div class="min-w-0">
+                            <span class="text-sm font-medium text-gray-900">{{ blocked.date|date:"d M Y" }}</span>
+                            {% if blocked.reason %}
+                            <p class="text-xs text-gray-500 mt-1 break-words">{{ blocked.reason }}</p>
+                            {% else %}
+                            <p class="text-xs text-gray-400 mt-1">No reason given</p>
+                            {% endif %}
+                        </div>
+                        <form method="POST" class="flex-shrink-0">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="unblock_day">
                             <input type="hidden" name="date" value="{{ blocked.date|date:'Y-m-d' }}">

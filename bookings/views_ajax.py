@@ -90,20 +90,24 @@ def _pricing_payload(request, priced_rows, subtotal, discount_amount=None, coupo
 class InitiateBookingView(View):
     def post(self, request):
         try:
-            try:
-                data = json.loads(request.body)
-                customer_name = data.get('customer_name')
-                phone = data.get('customer_phone')
-                email = data.get('customer_email')
-            except json.JSONDecodeError:
-                return JsonResponse({'success': False, 'message': 'Invalid data'})
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Please log in to continue.',
+                    'redirect': reverse('service_list'),
+                })
 
-            if not phone or not customer_name or not customer_name.strip():
-                 return JsonResponse({'success': False, 'message': 'Name and phone number are required.'})
+            # Details come from the logged-in profile (confirm page no longer collects them)
+            customer_name = (getattr(request.user, 'first_name', '') or '').strip()
+            phone = (getattr(request.user, 'phone_number', '') or '').strip()
+            email = (getattr(request.user, 'email', '') or '').strip()
+
+            if not phone or not customer_name:
+                 return JsonResponse({'success': False, 'message': 'Your profile is missing a name or phone number. Please log in again.'})
 
             # Basic Validation
             if len(phone) < 10:
-                 return JsonResponse({'success': False, 'message': 'Invalid phone number.'})
+                 return JsonResponse({'success': False, 'message': 'Invalid phone number on your profile.'})
                  
             # Rate Limiting
             ip = utils.get_client_ip(request)
@@ -127,25 +131,8 @@ class InitiateBookingView(View):
             service_dict = {str(s.id): s for s in unique_services}
             sequenced_services = [service_dict[str(sid)] for sid in selected_service_ids if str(sid) in service_dict]
             
-            # Trusted users: skip OTP for booking
-            if request.user.is_authenticated:
-                is_trusted = True
-                # Keep profile in sync if customer updates details on confirm
-                try:
-                    user = request.user
-                    changed = False
-                    if customer_name and user.first_name != customer_name:
-                        user.first_name = customer_name
-                        changed = True
-                    if email and user.email != email:
-                        user.email = email
-                        changed = True
-                    if changed:
-                        user.save(update_fields=['first_name', 'email'])
-                except Exception as e:
-                    print(f"Profile sync skipped: {e}")
-            else:
-                is_trusted = request.user.is_authenticated
+            # Logged-in users skip OTP
+            is_trusted = True
                 
             plain_otp = utils.generate_otp()
             hashed_otp = utils.hash_otp(plain_otp)
@@ -197,60 +184,27 @@ class InitiateBookingView(View):
             except booking_service.BookingCreationError as exc:
                 return JsonResponse({'success': False, 'message': exc.message})
             
-            # Response Handling
-            if is_trusted:
-                # Provide auto-login if they bypassed OTP via setting or trust but were not logged in
-                if not request.user.is_authenticated and phone and len(phone) > 5:
-                    from django.contrib.auth import login
-                    from users.models import User
-                    try:
-                        user, created = User.objects.get_or_create(phone_number=phone)
-                        if created:
-                            user.username = phone
-                        if customer_name and user.first_name != customer_name:
-                            user.first_name = customer_name
-                        if email and user.email != email:
-                            user.email = email
-                        user.save()
-                        login(request, user)
-                    except Exception as e:
-                        print(f"Auto-login failed after bypass: {e}")
+            # Logged-in users are confirmed immediately (no OTP)
+            bookings = Booking.objects.filter(booking_group_id=group_id)
+            first_booking = bookings.first()
+            if first_booking:
+                if first_booking.customer_email:
+                    utils.send_booking_emails_async(first_booking, request)
+                utils.send_confirmation_sms(first_booking.customer_phone, f"Confirmed! Date: {first_booking.date} Time: {first_booking.time}")
 
-                # Immediately confirm and notify
-                bookings = Booking.objects.filter(booking_group_id=group_id)
-                first_booking = bookings.first()
-                if first_booking:
-                    if first_booking.customer_email:
-                        utils.send_booking_emails_async(first_booking, request)
-                    utils.send_confirmation_sms(first_booking.customer_phone, f"Confirmed! Date: {first_booking.date} Time: {first_booking.time}")
+            request.session['last_booking_group_id'] = str(group_id)
 
-                request.session['last_booking_group_id'] = str(group_id)
+            # Clear session
+            for key in ('selected_service_ids', 'selected_date', 'selected_time', 'applied_coupon_code', 'combo_price_overrides'):
+                if key in request.session:
+                    del request.session[key]
 
-                # Clear session
-                for key in ('selected_service_ids', 'selected_date', 'selected_time', 'applied_coupon_code', 'combo_price_overrides'):
-                    if key in request.session:
-                        del request.session[key]
-
-                return JsonResponse({
-                    'success': True,
-                    'trusted': True,
-                    'booking_source': 'customer',
-                    'redirect': reverse('booking_success'),
-                })
-            else:
-                 # Send Voice OTP
-                 sent = utils.send_voice_otp_2factor(phone, plain_otp)
-                 if not sent:
-                     return JsonResponse({'success': False, 'message': 'Failed to send OTP. Please try again.'})
-                 
-                 request.session['pending_group_id'] = str(group_id)
-                 return JsonResponse({
-                     'success': True, 
-                     'trusted': False,
-                     'booking_source': 'customer',
-                     'group_id': str(group_id),
-                     'otp_expiry': 300 # 5 mins
-                 })
+            return JsonResponse({
+                'success': True,
+                'trusted': True,
+                'booking_source': 'customer',
+                'redirect': reverse('booking_success'),
+            })
                  
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'Server error: {str(e)}'})

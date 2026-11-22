@@ -9,7 +9,6 @@ from django.contrib import messages
 from datetime import datetime, time, timedelta
 from decimal import Decimal
 from .models import Service, Booking, CustomerTrust
-from .forms import GuestDetailsForm
 from . import utils
 from . import slots as slot_utils
 from . import addons as addon_utils
@@ -23,7 +22,6 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import login
 from users.models import User
-from dashboard.models import ShopSetting
 
 # New Wizard Views
 class GenderSelectionView(View):
@@ -265,6 +263,10 @@ class DateTimeSelectionView(View):
 
 class BookingConfirmationView(View):
     def get(self, request):
+        # Login is required before confirm (enforced on services page; re-check here)
+        if not request.user.is_authenticated:
+            return redirect('service_list')
+
         selected_service_ids = request.session.get('selected_service_ids')
         date_str = request.session.get('selected_date')
         time_str = request.session.get('selected_time')
@@ -285,9 +287,7 @@ class BookingConfirmationView(View):
         payable_total = subtotal
         coupon_error = ''
 
-        customer_phone_for_coupon = ''
-        if request.user.is_authenticated:
-            customer_phone_for_coupon = getattr(request.user, 'phone_number', '') or ''
+        customer_phone_for_coupon = getattr(request.user, 'phone_number', '') or ''
 
         if applied_coupon_code:
             try:
@@ -305,17 +305,6 @@ class BookingConfirmationView(View):
                 coupon_error = exc.message
                 discount_amount = 0
                 payable_total = subtotal
-        
-        initial_data = {}
-        if request.user.is_authenticated:
-            initial_data['customer_name'] = getattr(request.user, 'first_name', '') or ''
-            initial_data['customer_phone'] = getattr(request.user, 'phone_number', '') or ''
-            initial_data['customer_email'] = getattr(request.user, 'email', '') or ''
-            
-        form = GuestDetailsForm(initial=initial_data)
-        
-        shop_setting = ShopSetting.objects.first()
-        is_otp_enabled = shop_setting.is_otp_enabled if shop_setting else True
 
         eligible_coupons = coupon_utils.get_eligible_coupons(
             customer_phone=customer_phone_for_coupon,
@@ -337,203 +326,13 @@ class BookingConfirmationView(View):
             'show_upsell_carousel': bool(upsell_addons),
             'date': date_str,
             'time': time_str,
-            'form': form,
-            'is_otp_enabled': is_otp_enabled,
         })
 
     def post(self, request):
-        form = GuestDetailsForm(request.POST)
-        if form.is_valid():
-            # Source all details from the form ALWAYS (independent of login info)
-            phone = form.cleaned_data['customer_phone']
-            name = form.cleaned_data['customer_name']
-            email = form.cleaned_data['customer_email']
-            
-            ip = utils.get_client_ip(request)
-            
-            allowed, message = utils.check_rate_limits(phone, ip)
-            if not allowed:
-                return render(request, 'bookings/error.html', {'message': message})
-            
-            # Retrieve session data
-            selected_service_ids = request.session.get('selected_service_ids')
-            date_str = request.session.get('selected_date')
-            time_str = request.session.get('selected_time')
-            
-            if not (selected_service_ids and date_str and time_str):
-                return redirect('service_list')
-            
-            unique_services = Service.objects.filter(id__in=set(selected_service_ids))
-            service_dict = {str(s.id): s for s in unique_services}
-            sequenced_services = [service_dict[str(sid)] for sid in selected_service_ids if str(sid) in service_dict]
-
-            overrides = addon_utils.sync_combo_overrides(selected_service_ids)
-            request.session['combo_price_overrides'] = overrides
-            
-            # Determine if trusted or logged in
-            if request.user.is_authenticated:
-                is_trusted_user = True
-            else:
-                is_trusted_user = False
-                
-                is_trusted_user = True
-
-            plain_otp = utils.generate_otp()
-            hashed_otp = utils.hash_otp(plain_otp)
-            now_time = timezone.now()
-            
-            # Determine initial status
-            # Trusted/logged-in users get immediate confirmation without OTP
-            initial_status = 'confirmed' if is_trusted_user else 'pending_otp'
-            is_initial_verified = True if is_trusted_user else False
-            
-            try:
-                booking_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-                booking_time_obj = datetime.strptime(time_str, '%H:%M:%S').time()
-            except ValueError:
-                return render(request, 'bookings/error.html', {'message': 'Invalid date or time format.'})
-
-            try:
-                priced_rows = addon_utils.build_priced_services(selected_service_ids, overrides)
-                subtotal = sum((row['price'] for row in priced_rows), Decimal('0.00'))
-                coupon_code = ''
-                discount_amount = Decimal('0.00')
-                session_coupon = request.session.get('applied_coupon_code')
-                if session_coupon:
-                    try:
-                        coupon, discount_amount = coupon_utils.validate_and_apply_coupon(
-                            session_coupon,
-                            subtotal,
-                            customer_phone=phone,
-                            priced_rows=priced_rows,
-                        )
-                        coupon_code = coupon.code
-                    except coupon_utils.CouponError as exc:
-                        request.session.pop('applied_coupon_code', None)
-                        return render(request, 'bookings/error.html', {'message': exc.message})
-
-                group_id, _bookings_created = booking_service.create_booking_group(
-                    sequenced_services=sequenced_services,
-                    booking_date=booking_date_obj,
-                    start_time=booking_time_obj,
-                    customer_name=name,
-                    customer_phone=phone,
-                    customer_email=email,
-                    customer_gender=request.session.get('selected_gender', 'Male'),
-                    booking_source='customer',
-                    status=initial_status,
-                    is_verified=is_initial_verified,
-                    ip_address=ip,
-                    otp=hashed_otp if not is_trusted_user else None,
-                    otp_created_at=now_time if not is_trusted_user else None,
-                    coupon_code=coupon_code,
-                    discount_amount=discount_amount,
-                    price_overrides=overrides,
-                )
-            except booking_service.BookingCreationError as exc:
-                return render(request, 'bookings/error.html', {'message': exc.message})
-            except Exception as e:
-                 return render(request, 'bookings/error.html', {'message': f'An error occurred: {str(e)}'})
-
-            if is_trusted_user:
-                # Provide auto-login if they bypassed OTP via setting but were not logged in 
-                if not request.user.is_authenticated and phone and len(phone) > 5:
-                    try:
-                        user, created = User.objects.get_or_create(phone_number=phone)
-                        if created:
-                            user.username = phone
-                            user.save()
-                        login(request, user)
-                    except Exception as e:
-                        print(f"Auto-login failed after bypass: {e}")
-
-                # Immediately confirm booking and send notifications
-                bookings = Booking.objects.filter(booking_group_id=group_id)
-                first_booking = bookings.first()
-                if first_booking:
-                    if first_booking.customer_email:
-                        utils.send_booking_emails_async(first_booking, request)
-                    utils.send_confirmation_sms(first_booking.customer_phone, f"Confirmed! Date: {first_booking.date} Time: {first_booking.time}")
-
-                # Store for success page
-                request.session['last_booking_group_id'] = str(group_id)
-
-                # Cleanup selection session
-                if 'selected_service_ids' in request.session: del request.session['selected_service_ids']
-                if 'selected_date' in request.session: del request.session['selected_date']
-                if 'selected_time' in request.session: del request.session['selected_time']
-
-                return redirect('booking_success')
-            else:
-                # Send OTP (Voice)
-                sms_sent = utils.send_voice_otp_2factor(phone, plain_otp)
-                if not sms_sent:
-                     # Fallback logging
-                     print(f"CRITICAL: Failed to send Voice OTP. OTP was: {plain_otp}")
-                
-                # Store ID in session for verification step
-                request.session['pending_group_id'] = str(group_id)
-                
-                # Clear selection session data
-                if 'selected_service_ids' in request.session: del request.session['selected_service_ids']
-                if 'selected_date' in request.session: del request.session['selected_date']
-                if 'selected_time' in request.session: del request.session['selected_time']
-                
-                return redirect('otp_verification')
-        
-        # If invalid, re-render confirmation
-        selected_service_ids = request.session.get('selected_service_ids')
-        overrides = addon_utils.sync_combo_overrides(selected_service_ids or [])
-        request.session['combo_price_overrides'] = overrides
-        priced_rows = addon_utils.build_priced_services(selected_service_ids or [], overrides)
-        services = [row['service'] for row in priced_rows]
-        subtotal = sum((row['price'] for row in priced_rows), Decimal('0.00'))
-        applied_coupon_code = request.session.get('applied_coupon_code', '')
-        discount_amount = 0
-        payable_total = subtotal
-        if applied_coupon_code:
-            try:
-                coupon, discount_amount = coupon_utils.validate_and_apply_coupon(
-                    applied_coupon_code,
-                    subtotal,
-                    customer_phone=form.data.get('customer_phone', ''),
-                    priced_rows=priced_rows,
-                )
-                applied_coupon_code = coupon.code
-                payable_total = subtotal - discount_amount
-            except coupon_utils.CouponError:
-                request.session.pop('applied_coupon_code', None)
-                applied_coupon_code = ''
-                discount_amount = 0
-                payable_total = subtotal
-
-        eligible_coupons = coupon_utils.get_eligible_coupons(
-            customer_phone=form.data.get('customer_phone', ''),
-            subtotal=subtotal,
-            priced_rows=priced_rows,
-        )
-        upsell_addons = addon_utils.get_upsell_carousel_items(selected_service_ids or [], overrides)
-
-        shop_setting = ShopSetting.objects.first()
-        is_otp_enabled = shop_setting.is_otp_enabled if shop_setting else True
-
-        return render(request, 'bookings/confirmation.html', {
-            'services': services,
-            'priced_services': priced_rows,
-            'subtotal': subtotal,
-            'total_price': payable_total,
-            'discount_amount': discount_amount,
-            'applied_coupon_code': applied_coupon_code,
-            'coupon_error': '',
-            'eligible_coupons': eligible_coupons,
-            'upsell_addons': upsell_addons,
-            'show_upsell_carousel': bool(upsell_addons),
-            'date': request.session.get('selected_date'),
-            'time': request.session.get('selected_time'),
-            'form': form,
-            'is_otp_enabled': is_otp_enabled,
-            'error': 'Please correct the errors below.'
-        })
+        # Booking is initiated via AJAX; keep POST as a safe redirect
+        if not request.user.is_authenticated:
+            return redirect('service_list')
+        return redirect('booking_confirmation')
 
 class OTPVerificationView(View):
     def get(self, request):
